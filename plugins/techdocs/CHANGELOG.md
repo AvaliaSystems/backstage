@@ -1,5 +1,11 @@
 # @backstage/plugin-techdocs
 
+## 1.1.1-next.2
+
+### Patch Changes
+
+- 1af133f779: Updated dependency `event-source-polyfill` to `1.0.26`.
+
 ## 1.1.1-next.1
 
 ### Patch Changes
