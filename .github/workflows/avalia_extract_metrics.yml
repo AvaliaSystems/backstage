@@ -1,0 +1,16 @@
+name: Avalia - extract git metrics
+
+on: [workflow_dispatch]
+
+jobs:
+  clone_whole_history_and_run:
+    runs-on: ubuntu-latest
+    name: Extract git metrics
+    steps:
+      - name: Checkout (whole history)
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Extract metrics
+        id: extract_metrics
+        uses: avaliasystems/gh-actions-git-metrics@0.1.3
