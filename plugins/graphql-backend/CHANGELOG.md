@@ -1,5 +1,42 @@
 # @backstage/plugin-graphql-backend
 
+## 0.1.28
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/backend-common@0.16.0
+  - @backstage/config@1.0.4
+  - @backstage/plugin-catalog-graphql@0.3.15
+
+## 0.1.28-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/backend-common@0.16.0-next.1
+  - @backstage/config@1.0.4-next.0
+  - @backstage/plugin-catalog-graphql@0.3.15-next.0
+
+## 0.1.28-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/backend-common@0.16.0-next.0
+  - @backstage/config@1.0.4-next.0
+  - @backstage/plugin-catalog-graphql@0.3.15-next.0
+
+## 0.1.27
+
+### Patch Changes
+
+- 2d3a5f09ab: Use `response.json` rather than `response.send` where appropriate, as outlined in `SECURITY.md`
+- Updated dependencies
+  - @backstage/backend-common@0.15.2
+  - @backstage/plugin-catalog-graphql@0.3.14
+  - @backstage/config@1.0.3
+
 ## 0.1.27-next.2
 
 ### Patch Changes

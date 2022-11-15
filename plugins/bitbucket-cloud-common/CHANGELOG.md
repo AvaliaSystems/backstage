@@ -1,5 +1,37 @@
 # @backstage/plugin-bitbucket-cloud-common
 
+## 0.2.1
+
+### Patch Changes
+
+- d089fbe7dc: Add interfaces for Bitbucket Cloud (webhook) events.
+- Updated dependencies
+  - @backstage/integration@1.4.0
+
+## 0.2.1-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/integration@1.4.0-next.0
+
+## 0.2.0
+
+### Minor Changes
+
+- ad74723fbf: Update Bitbucket Cloud models to latest OAS version.
+
+  The latest specification contained some BREAKING CHANGES
+  due to removed fields.
+
+  All of these fields are not used at other plugins, though.
+  Therefore, this change has no impact on other modules here.
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/integration@1.3.2
+
 ## 0.2.0-next.2
 
 ### Patch Changes
