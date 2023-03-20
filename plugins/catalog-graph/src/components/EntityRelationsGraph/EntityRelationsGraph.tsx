@@ -67,11 +67,9 @@ const useStyles = makeStyles(
 );
 
 /**
- * Core building block for custom entity relations diagrams.
- *
  * @public
  */
-export const EntityRelationsGraph = (props: {
+export type EntityRelationsGraphProps = {
   rootEntityNames: CompoundEntityRef | CompoundEntityRef[];
   maxDepth?: number;
   unidirectional?: boolean;
@@ -86,10 +84,17 @@ export const EntityRelationsGraph = (props: {
   renderNode?: DependencyGraphTypes.RenderNodeFunction<EntityNode>;
   renderLabel?: DependencyGraphTypes.RenderLabelFunction<EntityEdge>;
   curve?: 'curveStepBefore' | 'curveMonotoneX';
-}) => {
+};
+
+/**
+ * Core building block for custom entity relations diagrams.
+ *
+ * @public
+ */
+export const EntityRelationsGraph = (props: EntityRelationsGraphProps) => {
   const {
     rootEntityNames,
-    maxDepth = Number.POSITIVE_INFINITY,
+    maxDepth = 2,
     unidirectional = true,
     mergeRelations = true,
     kinds,

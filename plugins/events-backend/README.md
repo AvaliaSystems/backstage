@@ -170,8 +170,8 @@ const http = HttpPostIngressEventPublisher.fromConfig({
     },
   },
   logger: env.logger,
-  router: httpRouter,
 });
+http.bind(router);
 
 await new EventsBackend(env.logger)
   .addPublishers(http)
@@ -186,9 +186,9 @@ import { eventsExtensionPoint } from '@backstage/plugin-events-node';
 
 // [...]
 
-export const yourModuleEventsModule = createBackendModule({
+export const eventsModuleYourFeature = createBackendModule({
   pluginId: 'events',
-  moduleId: 'yourModule',
+  moduleId: 'yourFeature',
   register(env) {
     // [...]
     env.registerInit({

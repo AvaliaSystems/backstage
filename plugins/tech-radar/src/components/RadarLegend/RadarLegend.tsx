@@ -45,6 +45,7 @@ const useStyles = makeStyles<Theme>(theme => ({
   },
   ringEmpty: {
     color: theme.palette.text.secondary,
+    fontSize: '12px',
   },
   ringHeading: {
     pointerEvents: 'none',
@@ -68,8 +69,16 @@ const useStyles = makeStyles<Theme>(theme => ({
     userSelect: 'none',
     fontSize: '11px',
   },
+  activeEntry: {
+    pointerEvents: 'visiblePainted',
+    userSelect: 'none',
+    fontSize: '11px',
+    background: '#6f6f6f',
+    color: theme.palette.common.white,
+  },
   entryLink: {
     pointerEvents: 'visiblePainted',
+    cursor: 'pointer',
   },
 }));
 

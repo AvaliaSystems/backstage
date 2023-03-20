@@ -27,7 +27,7 @@ import os from 'os';
 import { PassThrough } from 'stream';
 import { createFetchCookiecutterAction } from './cookiecutter';
 import { join } from 'path';
-import type { ActionContext } from '@backstage/plugin-scaffolder-backend';
+import type { ActionContext } from '@backstage/plugin-scaffolder-node';
 
 const executeShellCommand = jest.fn();
 const commandExists = jest.fn();
@@ -75,7 +75,6 @@ describe('fetch:cookiecutter', () => {
 
   const mockReader: UrlReader = {
     readUrl: jest.fn(),
-    read: jest.fn(),
     readTree: jest.fn(),
     search: jest.fn(),
   };
@@ -222,6 +221,18 @@ describe('fetch:cookiecutter', () => {
       expect.objectContaining({
         imageName,
       }),
+    );
+  });
+
+  it('should throw error if cookiecutter is not installed and containerRunner is undefined', async () => {
+    commandExists.mockResolvedValue(false);
+    const ccAction = createFetchCookiecutterAction({
+      integrations,
+      reader: mockReader,
+    });
+
+    await expect(ccAction.handler(mockContext)).rejects.toThrow(
+      /Invalid state: containerRunner cannot be undefined when cookiecutter is not installed/,
     );
   });
 });

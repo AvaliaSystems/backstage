@@ -15,6 +15,7 @@
  */
 
 import { useRouteRef } from '@backstage/core-plugin-api';
+import { BackstageTheme } from '@backstage/theme';
 import IconButton from '@material-ui/core/IconButton';
 import ListItemIcon from '@material-ui/core/ListItemIcon';
 import ListItemText from '@material-ui/core/ListItemText';
@@ -27,18 +28,18 @@ import Edit from '@material-ui/icons/Edit';
 import List from '@material-ui/icons/List';
 import MoreVert from '@material-ui/icons/MoreVert';
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate } from 'react-router-dom';
 import {
   actionsRouteRef,
   editRouteRef,
   scaffolderListTaskRouteRef,
 } from '../../routes';
 
-const useStyles = makeStyles({
+const useStyles = makeStyles<BackstageTheme>(theme => ({
   button: {
-    color: 'white',
+    color: theme.page.fontColor,
   },
-});
+}));
 
 export type ScaffolderPageContextMenuProps = {
   editor?: boolean;

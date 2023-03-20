@@ -1,5 +1,284 @@
 # @backstage/plugin-tech-insights
 
+## 0.3.8
+
+### Patch Changes
+
+- 65454876fb2: Minor API report tweaks
+- 52b0022dab7: Updated dependency `msw` to `^1.0.0`.
+- Updated dependencies
+  - @backstage/core-components@0.12.5
+  - @backstage/plugin-catalog-react@1.4.0
+  - @backstage/errors@1.1.5
+  - @backstage/core-plugin-api@1.5.0
+  - @backstage/catalog-model@1.2.1
+  - @backstage/theme@0.2.18
+  - @backstage/types@1.0.2
+  - @backstage/plugin-tech-insights-common@0.2.10
+
+## 0.3.8-next.2
+
+### Patch Changes
+
+- 65454876fb2: Minor API report tweaks
+- Updated dependencies
+  - @backstage/core-components@0.12.5-next.2
+  - @backstage/plugin-catalog-react@1.4.0-next.2
+  - @backstage/core-plugin-api@1.5.0-next.2
+
+## 0.3.8-next.1
+
+### Patch Changes
+
+- 52b0022dab7: Updated dependency `msw` to `^1.0.0`.
+- Updated dependencies
+  - @backstage/core-components@0.12.5-next.1
+  - @backstage/errors@1.1.5-next.0
+  - @backstage/core-plugin-api@1.4.1-next.1
+  - @backstage/theme@0.2.18-next.0
+  - @backstage/plugin-catalog-react@1.4.0-next.1
+  - @backstage/catalog-model@1.2.1-next.1
+  - @backstage/types@1.0.2
+  - @backstage/plugin-tech-insights-common@0.2.10
+
+## 0.3.8-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-catalog-react@1.4.0-next.0
+  - @backstage/core-plugin-api@1.4.1-next.0
+  - @backstage/catalog-model@1.2.1-next.0
+  - @backstage/core-components@0.12.5-next.0
+  - @backstage/errors@1.1.4
+  - @backstage/theme@0.2.17
+  - @backstage/types@1.0.2
+  - @backstage/plugin-tech-insights-common@0.2.10
+
+## 0.3.7
+
+### Patch Changes
+
+- 4024b37449: TechInsightsApi interface now has getFactSchemas() method.
+  TechInsightsClient now implements method getFactSchemas().
+
+  **BREAKING** FactSchema type moved from @backstage/plugin-tech-insights-node into @backstage/plugin-tech-insights-common
+
+  These changes are **required** if you were importing this type directly.
+
+  ```diff
+  - import { FactSchema } from '@backstage/plugin-tech-insights-node';
+  + import { FactSchema } from '@backstage/plugin-tech-insights-common';
+  ```
+
+- Updated dependencies
+  - @backstage/core-components@0.12.4
+  - @backstage/plugin-tech-insights-common@0.2.10
+  - @backstage/catalog-model@1.2.0
+  - @backstage/theme@0.2.17
+  - @backstage/core-plugin-api@1.4.0
+  - @backstage/plugin-catalog-react@1.3.0
+  - @backstage/errors@1.1.4
+  - @backstage/types@1.0.2
+
+## 0.3.7-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.2.0-next.1
+  - @backstage/core-components@0.12.4-next.1
+  - @backstage/core-plugin-api@1.3.0
+  - @backstage/errors@1.1.4
+  - @backstage/theme@0.2.16
+  - @backstage/types@1.0.2
+  - @backstage/plugin-catalog-react@1.3.0-next.2
+  - @backstage/plugin-tech-insights-common@0.2.10-next.0
+
+## 0.3.7-next.1
+
+### Patch Changes
+
+- 4024b37449: TechInsightsApi interface now has getFactSchemas() method.
+  TechInsightsClient now implements method getFactSchemas().
+
+  **BREAKING** FactSchema type moved from @backstage/plugin-tech-insights-node into @backstage/plugin-tech-insights-common
+
+  These changes are **required** if you were importing this type directly.
+
+  ```diff
+  - import { FactSchema } from '@backstage/plugin-tech-insights-node';
+  + import { FactSchema } from '@backstage/plugin-tech-insights-common';
+  ```
+
+- Updated dependencies
+  - @backstage/plugin-tech-insights-common@0.2.10-next.0
+  - @backstage/core-components@0.12.4-next.0
+  - @backstage/plugin-catalog-react@1.3.0-next.1
+  - @backstage/catalog-model@1.1.6-next.0
+  - @backstage/core-plugin-api@1.3.0
+  - @backstage/errors@1.1.4
+  - @backstage/theme@0.2.16
+  - @backstage/types@1.0.2
+
+## 0.3.7-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-catalog-react@1.3.0-next.0
+  - @backstage/catalog-model@1.1.6-next.0
+
+## 0.3.6
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.1.5
+  - @backstage/plugin-catalog-react@1.2.4
+  - @backstage/core-components@0.12.3
+  - @backstage/core-plugin-api@1.3.0
+  - @backstage/errors@1.1.4
+  - @backstage/theme@0.2.16
+  - @backstage/types@1.0.2
+  - @backstage/plugin-tech-insights-common@0.2.9
+
+## 0.3.6-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-plugin-api@1.3.0-next.1
+  - @backstage/plugin-catalog-react@1.2.4-next.2
+  - @backstage/catalog-model@1.1.5-next.1
+  - @backstage/core-components@0.12.3-next.2
+  - @backstage/errors@1.1.4
+  - @backstage/theme@0.2.16
+  - @backstage/types@1.0.2
+  - @backstage/plugin-tech-insights-common@0.2.9
+
+## 0.3.6-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.1.5-next.1
+  - @backstage/core-components@0.12.3-next.1
+  - @backstage/core-plugin-api@1.2.1-next.0
+  - @backstage/errors@1.1.4
+  - @backstage/theme@0.2.16
+  - @backstage/types@1.0.2
+  - @backstage/plugin-catalog-react@1.2.4-next.1
+  - @backstage/plugin-tech-insights-common@0.2.9
+
+## 0.3.6-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.1.5-next.0
+  - @backstage/plugin-catalog-react@1.2.4-next.0
+  - @backstage/core-components@0.12.3-next.0
+  - @backstage/core-plugin-api@1.2.0
+  - @backstage/errors@1.1.4
+  - @backstage/theme@0.2.16
+  - @backstage/types@1.0.2
+  - @backstage/plugin-tech-insights-common@0.2.9
+
+## 0.3.5
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.12.2
+  - @backstage/plugin-catalog-react@1.2.3
+
+## 0.3.4
+
+### Patch Changes
+
+- 3280711113: Updated dependency `msw` to `^0.49.0`.
+- Updated dependencies
+  - @backstage/core-plugin-api@1.2.0
+  - @backstage/core-components@0.12.1
+  - @backstage/errors@1.1.4
+  - @backstage/plugin-catalog-react@1.2.2
+  - @backstage/types@1.0.2
+  - @backstage/catalog-model@1.1.4
+  - @backstage/theme@0.2.16
+  - @backstage/plugin-tech-insights-common@0.2.9
+
+## 0.3.4-next.4
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.12.1-next.4
+  - @backstage/plugin-catalog-react@1.2.2-next.4
+  - @backstage/catalog-model@1.1.4-next.1
+  - @backstage/core-plugin-api@1.2.0-next.2
+  - @backstage/errors@1.1.4-next.1
+  - @backstage/theme@0.2.16
+  - @backstage/types@1.0.2-next.1
+  - @backstage/plugin-tech-insights-common@0.2.9-next.1
+
+## 0.3.4-next.3
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.12.1-next.3
+  - @backstage/catalog-model@1.1.4-next.1
+  - @backstage/core-plugin-api@1.2.0-next.2
+  - @backstage/errors@1.1.4-next.1
+  - @backstage/theme@0.2.16
+  - @backstage/types@1.0.2-next.1
+  - @backstage/plugin-catalog-react@1.2.2-next.3
+  - @backstage/plugin-tech-insights-common@0.2.9-next.1
+
+## 0.3.4-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-plugin-api@1.2.0-next.2
+  - @backstage/core-components@0.12.1-next.2
+  - @backstage/plugin-catalog-react@1.2.2-next.2
+  - @backstage/catalog-model@1.1.4-next.1
+  - @backstage/errors@1.1.4-next.1
+  - @backstage/theme@0.2.16
+  - @backstage/types@1.0.2-next.1
+  - @backstage/plugin-tech-insights-common@0.2.9-next.1
+
+## 0.3.4-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.12.1-next.1
+  - @backstage/core-plugin-api@1.1.1-next.1
+  - @backstage/types@1.0.2-next.1
+  - @backstage/plugin-catalog-react@1.2.2-next.1
+  - @backstage/catalog-model@1.1.4-next.1
+  - @backstage/errors@1.1.4-next.1
+  - @backstage/theme@0.2.16
+  - @backstage/plugin-tech-insights-common@0.2.9-next.1
+
+## 0.3.4-next.0
+
+### Patch Changes
+
+- 3280711113: Updated dependency `msw` to `^0.49.0`.
+- Updated dependencies
+  - @backstage/core-components@0.12.1-next.0
+  - @backstage/core-plugin-api@1.1.1-next.0
+  - @backstage/types@1.0.2-next.0
+  - @backstage/plugin-catalog-react@1.2.2-next.0
+  - @backstage/catalog-model@1.1.4-next.0
+  - @backstage/errors@1.1.4-next.0
+  - @backstage/theme@0.2.16
+  - @backstage/plugin-tech-insights-common@0.2.9-next.0
+
 ## 0.3.3
 
 ### Patch Changes

@@ -1,5 +1,220 @@
 # @backstage/plugin-techdocs-react
 
+## 1.1.4
+
+### Patch Changes
+
+- 65454876fb2: Minor API report tweaks
+- 928a12a9b3e: Internal refactor of `/alpha` exports.
+- 8adfda60ae1: Updated dependency `jss` to `~10.10.0`.
+- Updated dependencies
+  - @backstage/core-components@0.12.5
+  - @backstage/core-plugin-api@1.5.0
+  - @backstage/catalog-model@1.2.1
+  - @backstage/config@1.0.7
+  - @backstage/version-bridge@1.0.3
+
+## 1.1.4-next.2
+
+### Patch Changes
+
+- 65454876fb2: Minor API report tweaks
+- Updated dependencies
+  - @backstage/core-components@0.12.5-next.2
+  - @backstage/core-plugin-api@1.5.0-next.2
+  - @backstage/config@1.0.7-next.0
+
+## 1.1.4-next.1
+
+### Patch Changes
+
+- 8adfda60ae1: Updated dependency `jss` to `~10.10.0`.
+- Updated dependencies
+  - @backstage/core-components@0.12.5-next.1
+  - @backstage/core-plugin-api@1.4.1-next.1
+  - @backstage/config@1.0.7-next.0
+  - @backstage/catalog-model@1.2.1-next.1
+  - @backstage/version-bridge@1.0.3
+
+## 1.1.4-next.0
+
+### Patch Changes
+
+- 928a12a9b3: Internal refactor of `/alpha` exports.
+- Updated dependencies
+  - @backstage/core-plugin-api@1.4.1-next.0
+  - @backstage/catalog-model@1.2.1-next.0
+  - @backstage/config@1.0.6
+  - @backstage/core-components@0.12.5-next.0
+  - @backstage/version-bridge@1.0.3
+
+## 1.1.3
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.12.4
+  - @backstage/catalog-model@1.2.0
+  - @backstage/core-plugin-api@1.4.0
+  - @backstage/config@1.0.6
+  - @backstage/version-bridge@1.0.3
+
+## 1.1.3-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.2.0-next.1
+  - @backstage/core-components@0.12.4-next.1
+  - @backstage/config@1.0.6
+  - @backstage/core-plugin-api@1.3.0
+  - @backstage/version-bridge@1.0.3
+
+## 1.1.3-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.12.4-next.0
+  - @backstage/catalog-model@1.1.6-next.0
+  - @backstage/config@1.0.6
+  - @backstage/core-plugin-api@1.3.0
+  - @backstage/version-bridge@1.0.3
+
+## 1.1.3-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.1.6-next.0
+
+## 1.1.2
+
+### Patch Changes
+
+- 7115c7389b: Updated dependency `jss` to `~10.9.0`.
+- b8269de9f1: Explicitly declaring children as optional props to facilitate react 18 changes
+- Updated dependencies
+  - @backstage/catalog-model@1.1.5
+  - @backstage/core-components@0.12.3
+  - @backstage/core-plugin-api@1.3.0
+  - @backstage/config@1.0.6
+  - @backstage/version-bridge@1.0.3
+
+## 1.1.2-next.2
+
+### Patch Changes
+
+- b8269de9f1: Explicitly declaring children as optional props to facilitate react 18 changes
+- Updated dependencies
+  - @backstage/core-plugin-api@1.3.0-next.1
+  - @backstage/catalog-model@1.1.5-next.1
+  - @backstage/config@1.0.6-next.0
+  - @backstage/core-components@0.12.3-next.2
+  - @backstage/version-bridge@1.0.3
+
+## 1.1.2-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/config@1.0.6-next.0
+  - @backstage/catalog-model@1.1.5-next.1
+  - @backstage/core-components@0.12.3-next.1
+  - @backstage/core-plugin-api@1.2.1-next.0
+  - @backstage/version-bridge@1.0.3
+
+## 1.1.2-next.0
+
+### Patch Changes
+
+- 7115c7389b: Updated dependency `jss` to `~10.9.0`.
+- Updated dependencies
+  - @backstage/catalog-model@1.1.5-next.0
+  - @backstage/core-components@0.12.3-next.0
+  - @backstage/config@1.0.5
+  - @backstage/core-plugin-api@1.2.0
+  - @backstage/version-bridge@1.0.3
+
+## 1.1.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.12.2
+
+## 1.1.0
+
+### Minor Changes
+
+- 786f1b1419: Support older versions of react-router
+
+### Patch Changes
+
+- cb716004ef: Internal refactor to improve tests
+- Updated dependencies
+  - @backstage/core-plugin-api@1.2.0
+  - @backstage/core-components@0.12.1
+  - @backstage/version-bridge@1.0.3
+  - @backstage/catalog-model@1.1.4
+  - @backstage/config@1.0.5
+
+## 1.0.7-next.4
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.12.1-next.4
+  - @backstage/catalog-model@1.1.4-next.1
+  - @backstage/config@1.0.5-next.1
+  - @backstage/core-plugin-api@1.2.0-next.2
+  - @backstage/version-bridge@1.0.3-next.0
+
+## 1.0.7-next.3
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.12.1-next.3
+  - @backstage/catalog-model@1.1.4-next.1
+  - @backstage/config@1.0.5-next.1
+  - @backstage/core-plugin-api@1.2.0-next.2
+  - @backstage/version-bridge@1.0.3-next.0
+
+## 1.0.7-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-plugin-api@1.2.0-next.2
+  - @backstage/core-components@0.12.1-next.2
+  - @backstage/catalog-model@1.1.4-next.1
+  - @backstage/config@1.0.5-next.1
+  - @backstage/version-bridge@1.0.3-next.0
+
+## 1.0.7-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.12.1-next.1
+  - @backstage/version-bridge@1.0.3-next.0
+  - @backstage/core-plugin-api@1.1.1-next.1
+  - @backstage/config@1.0.5-next.1
+  - @backstage/catalog-model@1.1.4-next.1
+
+## 1.0.7-next.0
+
+### Patch Changes
+
+- cb716004ef: Internal refactor to improve tests
+- Updated dependencies
+  - @backstage/core-components@0.12.1-next.0
+  - @backstage/core-plugin-api@1.1.1-next.0
+  - @backstage/catalog-model@1.1.4-next.0
+  - @backstage/config@1.0.5-next.0
+  - @backstage/version-bridge@1.0.2
+
 ## 1.0.6
 
 ### Patch Changes

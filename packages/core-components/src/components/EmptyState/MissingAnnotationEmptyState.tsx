@@ -13,15 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import React from 'react';
-import { makeStyles } from '@material-ui/core/styles';
-import Button from '@material-ui/core/Button';
-import Typography from '@material-ui/core/Typography';
 import { BackstageTheme } from '@backstage/theme';
+import Box from '@material-ui/core/Box';
+import Button from '@material-ui/core/Button';
+import { makeStyles } from '@material-ui/core/styles';
+import Typography from '@material-ui/core/Typography';
+import React from 'react';
+
+import { CodeSnippet } from '../CodeSnippet';
 import { Link } from '../Link';
 import { EmptyState } from './EmptyState';
-import { CodeSnippet } from '../CodeSnippet';
 
 const COMPONENT_YAML_TEMPLATE = `apiVersion: backstage.io/v1alpha1
 kind: Component
@@ -53,7 +54,8 @@ const useStyles = makeStyles<BackstageTheme>(
     code: {
       borderRadius: 6,
       margin: `${theme.spacing(2)}px 0px`,
-      background: theme.palette.type === 'dark' ? '#444' : '#fff',
+      background:
+        theme.palette.type === 'dark' ? '#444' : theme.palette.common.white,
     },
   }),
   { name: 'BackstageMissingAnnotationEmptyState' },
@@ -109,7 +111,7 @@ export function MissingAnnotationEmptyState(props: Props) {
             Add the annotation to your component YAML as shown in the
             highlighted example below:
           </Typography>
-          <div className={classes.code}>
+          <Box className={classes.code}>
             <CodeSnippet
               text={generateComponentYaml(annotations)}
               language="yaml"
@@ -117,7 +119,7 @@ export function MissingAnnotationEmptyState(props: Props) {
               highlightedNumbers={generateLineNumbers(annotations.length)}
               customStyle={{ background: 'inherit', fontSize: '115%' }}
             />
-          </div>
+          </Box>
           <Button color="primary" component={Link} to={url}>
             Read more
           </Button>

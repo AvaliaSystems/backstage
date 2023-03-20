@@ -39,11 +39,14 @@ import {
   parseEntityFilterParams,
   parseEntityPaginationParams,
   parseEntityTransformParams,
+  parseQueryEntitiesParams,
 } from './request';
 import { parseEntityFacetParams } from './request/parseEntityFacetParams';
+import { parseEntityOrderParams } from './request/parseEntityOrderParams';
 import { LocationService, RefreshOptions, RefreshService } from './types';
 import {
   disallowReadonlyMode,
+  encodeCursor,
   locationInput,
   validateRequestBody,
 } from './util';
@@ -113,6 +116,7 @@ export async function createRouter(
         const { entities, pageInfo } = await entitiesCatalog.entities({
           filter: parseEntityFilterParams(req.query),
           fields: parseEntityTransformParams(req.query),
+          order: parseEntityOrderParams(req.query),
           pagination: parseEntityPaginationParams(req.query),
           authorizationToken: getBearerToken(req.header('authorization')),
         });
@@ -127,6 +131,26 @@ export async function createRouter(
 
         // TODO(freben): encode the pageInfo in the response
         res.json(entities);
+      })
+      .get('/entities/by-query', async (req, res) => {
+        const { items, pageInfo, totalItems } =
+          await entitiesCatalog.queryEntities({
+            ...parseQueryEntitiesParams(req.query),
+            authorizationToken: getBearerToken(req.header('authorization')),
+          });
+
+        res.json({
+          items,
+          totalItems,
+          pageInfo: {
+            ...(pageInfo.nextCursor && {
+              nextCursor: encodeCursor(pageInfo.nextCursor),
+            }),
+            ...(pageInfo.prevCursor && {
+              prevCursor: encodeCursor(pageInfo.prevCursor),
+            }),
+          },
+        });
       })
       .get('/entities/by-uid/:uid', async (req, res) => {
         const { uid } = req.params;
@@ -179,7 +203,7 @@ export async function createRouter(
         const token = getBearerToken(req.header('authorization'));
         const response = await entitiesCatalog.entitiesBatch({
           entityRefs: request.entityRefs,
-          fields: parseEntityTransformParams(req.query),
+          fields: parseEntityTransformParams(req.query, request.fields),
           authorizationToken: token,
         });
         res.status(200).json(response);

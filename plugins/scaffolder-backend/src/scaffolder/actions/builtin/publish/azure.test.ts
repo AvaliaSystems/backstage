@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 jest.mock('azure-devops-node-api', () => ({
   WebApi: jest.fn(),
   getPersonalAccessTokenHandler: jest.fn().mockReturnValue(() => {}),
@@ -61,7 +62,7 @@ describe('publish:azure', () => {
   (WebApi as unknown as jest.Mock).mockImplementation(() => mockGitApi);
 
   beforeEach(() => {
-    jest.restoreAllMocks();
+    jest.clearAllMocks();
   });
 
   it('should throw an error when the repoUrl is not well formed', async () => {
@@ -182,7 +183,12 @@ describe('publish:azure', () => {
       id: '709e891c-dee7-4f91-b963-534713c0737f',
     }));
 
-    await action.handler(mockContext);
+    await action.handler({
+      ...mockContext,
+      input: {
+        repoUrl: 'dev.azure.com?repo=bob&owner=owner&organization=org',
+      },
+    });
 
     expect(WebApi).toHaveBeenCalledWith(
       'https://dev.azure.com/org',
@@ -233,7 +239,7 @@ describe('publish:azure', () => {
     expect(initRepoAndPush).toHaveBeenCalledWith({
       dir: mockContext.workspacePath,
       remoteUrl: 'https://dev.azure.com/organization/project/_git/repo',
-      defaultBranch: 'master',
+      defaultBranch: 'main',
       auth: { username: 'notempty', password: 'tokenlols' },
       logger: mockContext.logger,
       commitMessage: 'initial commit',

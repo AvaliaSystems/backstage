@@ -20,9 +20,9 @@ import { AwsS3Integration, ScmIntegrations } from '@backstage/integration';
 import {
   EntityProvider,
   EntityProviderConnection,
-  LocationSpec,
   locationSpecToLocationEntity,
-} from '@backstage/plugin-catalog-backend';
+} from '@backstage/plugin-catalog-node';
+import { LocationSpec } from '@backstage/plugin-catalog-common';
 import { AwsCredentials } from '../credentials/AwsCredentials';
 import { readAwsS3Configs } from './config';
 import { AwsS3Config } from './types';
@@ -131,7 +131,7 @@ export class AwsS3EntityProvider implements EntityProvider {
           try {
             await this.refresh(logger);
           } catch (error) {
-            logger.error(error);
+            logger.error(`${this.getProviderName()} refresh failed`, error);
           }
         },
       });

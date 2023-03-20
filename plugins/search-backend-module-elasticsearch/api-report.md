@@ -68,6 +68,11 @@ export interface BaseElasticSearchClientOptions {
 }
 
 // @public (undocumented)
+export function decodeElasticSearchPageCursor(pageCursor?: string): {
+  page: number;
+};
+
+// @public (undocumented)
 export interface ElasticSearchAgentOptions {
   // (undocumented)
   keepAlive?: boolean;
@@ -322,12 +327,9 @@ export class ElasticSearchSearchEngine implements SearchEngine {
     highlightOptions?: ElasticSearchHighlightOptions,
   );
   // (undocumented)
-  static fromConfig({
-    logger,
-    config,
-    aliasPostfix,
-    indexPrefix,
-  }: ElasticSearchOptions): Promise<ElasticSearchSearchEngine>;
+  static fromConfig(
+    options: ElasticSearchOptions,
+  ): Promise<ElasticSearchSearchEngine>;
   // (undocumented)
   getIndexer(type: string): Promise<ElasticSearchSearchEngineIndexer>;
   newClient<T>(create: (options: ElasticSearchClientOptions) => T): T;
@@ -421,7 +423,7 @@ export interface OpenSearchElasticSearchClientOptions
   // (undocumented)
   nodes?: string | string[] | OpenSearchNodeOptions | OpenSearchNodeOptions[];
   // (undocumented)
-  provider?: 'aws';
+  provider?: 'aws' | 'opensearch';
 }
 
 // @public (undocumented)

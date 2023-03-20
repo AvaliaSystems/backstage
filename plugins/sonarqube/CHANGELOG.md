@@ -1,5 +1,257 @@
 # @backstage/plugin-sonarqube
 
+## 0.6.5
+
+### Patch Changes
+
+- 65454876fb2: Minor API report tweaks
+- 928a12a9b3e: Internal refactor of `/alpha` exports.
+- 52b0022dab7: Updated dependency `msw` to `^1.0.0`.
+- 8ae65a0bc1d: Moved imports from `/alpha` to main public exports.
+- d3d624e8e8d: Show a more appropriate icon if there are no code smells and/or vulnerabilities.
+- Updated dependencies
+  - @backstage/core-components@0.12.5
+  - @backstage/plugin-catalog-react@1.4.0
+  - @backstage/core-plugin-api@1.5.0
+  - @backstage/plugin-sonarqube-react@0.1.4
+  - @backstage/catalog-model@1.2.1
+  - @backstage/theme@0.2.18
+
+## 0.6.5-next.2
+
+### Patch Changes
+
+- 65454876fb2: Minor API report tweaks
+- Updated dependencies
+  - @backstage/core-components@0.12.5-next.2
+  - @backstage/plugin-catalog-react@1.4.0-next.2
+  - @backstage/core-plugin-api@1.5.0-next.2
+  - @backstage/plugin-sonarqube-react@0.1.4-next.2
+
+## 0.6.5-next.1
+
+### Patch Changes
+
+- 52b0022dab7: Updated dependency `msw` to `^1.0.0`.
+- Updated dependencies
+  - @backstage/core-components@0.12.5-next.1
+  - @backstage/core-plugin-api@1.4.1-next.1
+  - @backstage/theme@0.2.18-next.0
+  - @backstage/plugin-catalog-react@1.4.0-next.1
+  - @backstage/catalog-model@1.2.1-next.1
+  - @backstage/plugin-sonarqube-react@0.1.4-next.1
+
+## 0.6.5-next.0
+
+### Patch Changes
+
+- 928a12a9b3: Internal refactor of `/alpha` exports.
+- 8ae65a0bc1: Moved imports from `/alpha` to main public exports.
+- d3d624e8e8: Show a more appropriate icon if there are no code smells and/or vulnerabilities.
+- Updated dependencies
+  - @backstage/plugin-catalog-react@1.4.0-next.0
+  - @backstage/core-plugin-api@1.4.1-next.0
+  - @backstage/plugin-sonarqube-react@0.1.4-next.0
+  - @backstage/catalog-model@1.2.1-next.0
+  - @backstage/core-components@0.12.5-next.0
+  - @backstage/theme@0.2.17
+
+## 0.6.3
+
+### Patch Changes
+
+- 6310eacc11: Additional export added in order to bind SonarQubeClient to its apiref
+- Updated dependencies
+  - @backstage/core-components@0.12.4
+  - @backstage/catalog-model@1.2.0
+  - @backstage/theme@0.2.17
+  - @backstage/core-plugin-api@1.4.0
+  - @backstage/plugin-catalog-react@1.3.0
+  - @backstage/plugin-sonarqube-react@0.1.2
+
+## 0.6.3-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.2.0-next.1
+  - @backstage/core-components@0.12.4-next.1
+  - @backstage/core-plugin-api@1.3.0
+  - @backstage/theme@0.2.16
+  - @backstage/plugin-catalog-react@1.3.0-next.2
+  - @backstage/plugin-sonarqube-react@0.1.2-next.1
+
+## 0.6.3-next.1
+
+### Patch Changes
+
+- 6310eacc11: Additional export added in order to bind SonarQubeClient to its apiref
+- Updated dependencies
+  - @backstage/core-components@0.12.4-next.0
+  - @backstage/plugin-catalog-react@1.3.0-next.1
+  - @backstage/catalog-model@1.1.6-next.0
+  - @backstage/core-plugin-api@1.3.0
+  - @backstage/theme@0.2.16
+  - @backstage/plugin-sonarqube-react@0.1.2-next.0
+
+## 0.6.3-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-catalog-react@1.3.0-next.0
+  - @backstage/catalog-model@1.1.6-next.0
+  - @backstage/plugin-sonarqube-react@0.1.2-next.0
+
+## 0.6.2
+
+### Patch Changes
+
+- 80ce4e8c29: Small updates to some components to ensure theme typography properties are inherited correctly.
+- Updated dependencies
+  - @backstage/catalog-model@1.1.5
+  - @backstage/plugin-catalog-react@1.2.4
+  - @backstage/core-components@0.12.3
+  - @backstage/core-plugin-api@1.3.0
+  - @backstage/theme@0.2.16
+  - @backstage/plugin-sonarqube-react@0.1.1
+
+## 0.6.2-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-plugin-api@1.3.0-next.1
+  - @backstage/plugin-catalog-react@1.2.4-next.2
+  - @backstage/catalog-model@1.1.5-next.1
+  - @backstage/core-components@0.12.3-next.2
+  - @backstage/theme@0.2.16
+  - @backstage/plugin-sonarqube-react@0.1.1-next.2
+
+## 0.6.2-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.1.5-next.1
+  - @backstage/core-components@0.12.3-next.1
+  - @backstage/core-plugin-api@1.2.1-next.0
+  - @backstage/theme@0.2.16
+  - @backstage/plugin-catalog-react@1.2.4-next.1
+  - @backstage/plugin-sonarqube-react@0.1.1-next.1
+
+## 0.6.2-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.1.5-next.0
+  - @backstage/plugin-catalog-react@1.2.4-next.0
+  - @backstage/core-components@0.12.3-next.0
+  - @backstage/core-plugin-api@1.2.0
+  - @backstage/theme@0.2.16
+  - @backstage/plugin-sonarqube-react@0.1.1-next.0
+
+## 0.6.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.12.2
+  - @backstage/plugin-catalog-react@1.2.3
+
+## 0.6.0
+
+### Minor Changes
+
+- 6b59903bfa: Parts of plugin-sonarqube have been moved into a new plugin-sonarqube-react package. Additionally some types that were
+  previously internal to plugin-sonarqube have been made public and will allow access for third-parties. As the sonarqube
+  plugin has not yet reached 1.0 breaking changes are expected in the future. As such exports of plugin-sonarqube-react
+  require importing via the `/alpha` entrypoint:
+
+  ```ts
+  import { sonarQubeApiRef } from '@backstage/plugin-sonarqube-react/alpha';
+
+  const sonarQubeApi = useApi(sonarQubeApiRef);
+  ```
+
+  Moved from plugin-sonarqube to plugin-sonarqube-react:
+
+  - isSonarQubeAvailable
+  - SONARQUBE_PROJECT_KEY_ANNOTATION
+
+  Exports that been introduced to plugin-sonarqube-react are documented in the [API report](https://github.com/backstage/backstage/blob/master/plugins/sonarqube-react/api-report.md).
+
+### Patch Changes
+
+- 3280711113: Updated dependency `msw` to `^0.49.0`.
+- 17a8e32f39: Updated dependency `rc-progress` to `3.4.1`.
+- 3dee2f5ad0: Added links to the frontend and backend plugins in the readme.
+- Updated dependencies
+  - @backstage/core-plugin-api@1.2.0
+  - @backstage/core-components@0.12.1
+  - @backstage/plugin-catalog-react@1.2.2
+  - @backstage/plugin-sonarqube-react@0.1.0
+  - @backstage/catalog-model@1.1.4
+  - @backstage/theme@0.2.16
+
+## 0.5.1-next.4
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.12.1-next.4
+  - @backstage/plugin-catalog-react@1.2.2-next.4
+  - @backstage/catalog-model@1.1.4-next.1
+  - @backstage/core-plugin-api@1.2.0-next.2
+  - @backstage/theme@0.2.16
+
+## 0.5.1-next.3
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.12.1-next.3
+  - @backstage/catalog-model@1.1.4-next.1
+  - @backstage/core-plugin-api@1.2.0-next.2
+  - @backstage/theme@0.2.16
+  - @backstage/plugin-catalog-react@1.2.2-next.3
+
+## 0.5.1-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-plugin-api@1.2.0-next.2
+  - @backstage/core-components@0.12.1-next.2
+  - @backstage/plugin-catalog-react@1.2.2-next.2
+  - @backstage/catalog-model@1.1.4-next.1
+  - @backstage/theme@0.2.16
+
+## 0.5.1-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.12.1-next.1
+  - @backstage/core-plugin-api@1.1.1-next.1
+  - @backstage/plugin-catalog-react@1.2.2-next.1
+  - @backstage/catalog-model@1.1.4-next.1
+  - @backstage/theme@0.2.16
+
+## 0.5.1-next.0
+
+### Patch Changes
+
+- 3280711113: Updated dependency `msw` to `^0.49.0`.
+- 17a8e32f39: Updated dependency `rc-progress` to `3.4.1`.
+- Updated dependencies
+  - @backstage/core-components@0.12.1-next.0
+  - @backstage/core-plugin-api@1.1.1-next.0
+  - @backstage/plugin-catalog-react@1.2.2-next.0
+  - @backstage/catalog-model@1.1.4-next.0
+  - @backstage/theme@0.2.16
+
 ## 0.5.0
 
 ### Minor Changes

@@ -1,8 +1,8 @@
 ---
 id: how-to-guides
-title: TechDocs "HOW TO" guides
-sidebar_label: "HOW TO" guides
-description: TechDocs "HOW TO" guides related to TechDocs
+title: TechDocs How-To guides
+sidebar_label: How-To guides
+description: TechDocs How-To guides related to TechDocs
 ---
 
 ## How to migrate from TechDocs Basic to Recommended deployment approach?
@@ -433,7 +433,7 @@ const app = createApp({
 
 ## How to add the documentation setup to your software templates
 
-[Software Templates](https://backstage.io/docs/features/software-templates/software-templates-index)
+[Software Templates](https://backstage.io/docs/features/software-templates/)
 in Backstage is a tool that can help your users to create new components out of
 already configured templates. It comes with a set of default templates to use,
 but you can also

@@ -1,5 +1,313 @@
 # @backstage/plugin-search-react
 
+## 1.5.1
+
+### Patch Changes
+
+- 65454876fb2: Minor API report tweaks
+- 553f3c95011: Correctly disable next button in `SearchPagination` on last page
+- Updated dependencies
+  - @backstage/core-components@0.12.5
+  - @backstage/core-plugin-api@1.5.0
+  - @backstage/theme@0.2.18
+  - @backstage/types@1.0.2
+  - @backstage/version-bridge@1.0.3
+  - @backstage/plugin-search-common@1.2.2
+
+## 1.5.1-next.2
+
+### Patch Changes
+
+- 65454876fb2: Minor API report tweaks
+- 553f3c95011: Correctly disable next button in `SearchPagination` on last page
+- Updated dependencies
+  - @backstage/core-components@0.12.5-next.2
+  - @backstage/core-plugin-api@1.5.0-next.2
+
+## 1.5.1-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.12.5-next.1
+  - @backstage/core-plugin-api@1.4.1-next.1
+  - @backstage/theme@0.2.18-next.0
+  - @backstage/types@1.0.2
+  - @backstage/version-bridge@1.0.3
+  - @backstage/plugin-search-common@1.2.2-next.0
+
+## 1.5.1-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-plugin-api@1.4.1-next.0
+  - @backstage/core-components@0.12.5-next.0
+  - @backstage/theme@0.2.17
+  - @backstage/types@1.0.2
+  - @backstage/version-bridge@1.0.3
+  - @backstage/plugin-search-common@1.2.1
+
+## 1.5.0
+
+### Minor Changes
+
+- 0eaa579f89: - Create the search results extensions, for more details see the documentation [here](https://backstage.io/docs/features/search/how-to-guides#how-to-render-search-results-using-extensions);
+  - Update the `SearchResult`, `SearchResultList` and `SearchResultGroup` components to use extensions and default their props to optionally accept a query, when the query is not passed, the component tries to get it from the search context.
+
+### Patch Changes
+
+- 66e2aab4c4: `ListItem` wrapper component moved to `SearchResultListItemExtension` for all `*SearchResultListItems` that are exported as extensions. This is to make sure the list only contains list elements.
+
+  Note: If you have implemented a custom result list item, we recommend you to remove the list item wrapper to avoid nested `<li>` elements.
+
+- Updated dependencies
+  - @backstage/core-components@0.12.4
+  - @backstage/theme@0.2.17
+  - @backstage/core-plugin-api@1.4.0
+  - @backstage/types@1.0.2
+  - @backstage/version-bridge@1.0.3
+  - @backstage/plugin-search-common@1.2.1
+
+## 1.5.0-next.1
+
+### Patch Changes
+
+- 66e2aab4c4: `ListItem` wrapper component moved to `SearchResultListItemExtension` for all `*SearchResultListItems` that are exported as extensions. This is to make sure the list only contains list elements.
+
+  Note: If you have implemented a custom result list item, we recommend you to remove the list item wrapper to avoid nested `<li>` elements.
+
+- Updated dependencies
+  - @backstage/core-components@0.12.4-next.1
+  - @backstage/core-plugin-api@1.3.0
+  - @backstage/theme@0.2.16
+  - @backstage/types@1.0.2
+  - @backstage/version-bridge@1.0.3
+  - @backstage/plugin-search-common@1.2.1
+
+## 1.5.0-next.0
+
+### Minor Changes
+
+- 0eaa579f89: - Create the search results extensions, for more details see the documentation [here](https://backstage.io/docs/features/search/how-to-guides#how-to-render-search-results-using-extensions);
+  - Update the `SearchResult`, `SearchResultList` and `SearchResultGroup` components to use extensions and default their props to optionally accept a query, when the query is not passed, the component tries to get it from the search context.
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.12.4-next.0
+  - @backstage/core-plugin-api@1.3.0
+  - @backstage/theme@0.2.16
+  - @backstage/types@1.0.2
+  - @backstage/version-bridge@1.0.3
+  - @backstage/plugin-search-common@1.2.1
+
+## 1.4.0
+
+### Minor Changes
+
+- 6d9a93def8: Allow customizing empty state component through `noResultsComponent` property.
+
+  Example:
+
+  ```jsx
+  <SearchResult noResultsComponent={<>No results were found</>}>
+    {({ results }) => (
+      <List>
+        {results.map(({ type, document }) => {
+          switch (type) {
+            case 'custom-result-item':
+              return (
+                <CustomResultListItem
+                  key={document.location}
+                  result={document}
+                />
+              );
+            default:
+              return (
+                <DefaultResultListItem
+                  key={document.location}
+                  result={document}
+                />
+              );
+          }
+        })}
+      </List>
+    )}
+  </SearchResult>
+  ```
+
+### Patch Changes
+
+- 80ce4e8c29: Small updates to some components to ensure theme typography properties are inherited correctly.
+- Updated dependencies
+  - @backstage/core-components@0.12.3
+  - @backstage/core-plugin-api@1.3.0
+  - @backstage/theme@0.2.16
+  - @backstage/types@1.0.2
+  - @backstage/version-bridge@1.0.3
+  - @backstage/plugin-search-common@1.2.1
+
+## 1.4.0-next.2
+
+### Minor Changes
+
+- 6d9a93def8: Allow customizing empty state component through `noResultsComponent` property.
+
+  Example:
+
+  ```jsx
+  <SearchResult noResultsComponent={<>No results were found</>}>
+    {({ results }) => (
+      <List>
+        {results.map(({ type, document }) => {
+          switch (type) {
+            case 'custom-result-item':
+              return (
+                <CustomResultListItem
+                  key={document.location}
+                  result={document}
+                />
+              );
+            default:
+              return (
+                <DefaultResultListItem
+                  key={document.location}
+                  result={document}
+                />
+              );
+          }
+        })}
+      </List>
+    )}
+  </SearchResult>
+  ```
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-plugin-api@1.3.0-next.1
+  - @backstage/core-components@0.12.3-next.2
+  - @backstage/theme@0.2.16
+  - @backstage/types@1.0.2
+  - @backstage/version-bridge@1.0.3
+  - @backstage/plugin-search-common@1.2.1-next.0
+
+## 1.3.2-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.12.3-next.1
+  - @backstage/core-plugin-api@1.2.1-next.0
+  - @backstage/theme@0.2.16
+  - @backstage/types@1.0.2
+  - @backstage/version-bridge@1.0.3
+  - @backstage/plugin-search-common@1.2.1-next.0
+
+## 1.3.2-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.12.3-next.0
+  - @backstage/core-plugin-api@1.2.0
+  - @backstage/theme@0.2.16
+  - @backstage/types@1.0.2
+  - @backstage/version-bridge@1.0.3
+  - @backstage/plugin-search-common@1.2.0
+
+## 1.3.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.12.2
+
+## 1.3.0
+
+### Minor Changes
+
+- 29ebc43a0b: The `value` of a search analytics event is now set as the total number of search results (when available)
+
+### Patch Changes
+
+- 2e701b3796: Internal refactor to use `react-router-dom` rather than `react-router`.
+- a19cffbeed: Update search links to only have header as linkable text
+- Updated dependencies
+  - @backstage/core-plugin-api@1.2.0
+  - @backstage/core-components@0.12.1
+  - @backstage/version-bridge@1.0.3
+  - @backstage/types@1.0.2
+  - @backstage/plugin-search-common@1.2.0
+  - @backstage/theme@0.2.16
+
+## 1.3.0-next.4
+
+### Patch Changes
+
+- 2e701b3796: Internal refactor to use `react-router-dom` rather than `react-router`.
+- Updated dependencies
+  - @backstage/core-components@0.12.1-next.4
+  - @backstage/core-plugin-api@1.2.0-next.2
+  - @backstage/theme@0.2.16
+  - @backstage/types@1.0.2-next.1
+  - @backstage/version-bridge@1.0.3-next.0
+  - @backstage/plugin-search-common@1.2.0-next.3
+
+## 1.3.0-next.3
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.12.1-next.3
+  - @backstage/core-plugin-api@1.2.0-next.2
+  - @backstage/theme@0.2.16
+  - @backstage/types@1.0.2-next.1
+  - @backstage/version-bridge@1.0.3-next.0
+  - @backstage/plugin-search-common@1.2.0-next.2
+
+## 1.3.0-next.2
+
+### Minor Changes
+
+- 29ebc43a0b: The `value` of a search analytics event is now set as the total number of search results (when available)
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-plugin-api@1.2.0-next.2
+  - @backstage/core-components@0.12.1-next.2
+  - @backstage/plugin-search-common@1.2.0-next.2
+  - @backstage/theme@0.2.16
+  - @backstage/types@1.0.2-next.1
+  - @backstage/version-bridge@1.0.3-next.0
+
+## 1.2.2-next.1
+
+### Patch Changes
+
+- a19cffbeed: Update search links to only have header as linkable text
+- Updated dependencies
+  - @backstage/core-components@0.12.1-next.1
+  - @backstage/version-bridge@1.0.3-next.0
+  - @backstage/core-plugin-api@1.1.1-next.1
+  - @backstage/types@1.0.2-next.1
+  - @backstage/theme@0.2.16
+  - @backstage/plugin-search-common@1.1.2-next.1
+
+## 1.2.2-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-components@0.12.1-next.0
+  - @backstage/core-plugin-api@1.1.1-next.0
+  - @backstage/types@1.0.2-next.0
+  - @backstage/theme@0.2.16
+  - @backstage/version-bridge@1.0.2
+  - @backstage/plugin-search-common@1.1.2-next.0
+
 ## 1.2.1
 
 ### Patch Changes

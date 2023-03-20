@@ -31,6 +31,7 @@ kubernetes:
           dashboardUrl: http://127.0.0.1:64713 # url copied from running the command: minikube service kubernetes-dashboard -n kubernetes-dashboard
           dashboardApp: standard
           caData: ${K8S_CONFIG_CA_DATA}
+          caFile: '' # local path to CA file
           customResources:
             - group: 'argoproj.io'
               apiVersion: 'v1alpha1'
@@ -159,8 +160,9 @@ auth:
         audience: ${AUTH_OKTA_AUDIENCE}
 ```
 
-The following values are supported out-of-the-box by the frontend: `google`, `microsoft`,
-`okta`, `onelogin`.
+The following values are supported out-of-the-box by the frontend: `gitlab` (the
+application whose `clientId` is used by the auth provider should be granted the
+`openid` scope), `google`, `microsoft`, `okta`, `onelogin`.
 
 Take note that `oidcTokenProvider` is just the issuer for the token, you can use any
 of these with an OIDC enabled cluster, like using `microsoft` as the issuer for a EKS
@@ -248,8 +250,8 @@ kubernetes:
 ##### `clusters.\*.caData` (optional)
 
 Base64-encoded certificate authority bundle in PEM format. The Kubernetes client
-will verify that TLS certificate presented by the API server is signed by this
-CA.
+will verify that the TLS certificate presented by the API server is signed by
+this CA.
 
 This value could be obtained via inspecting the kubeconfig file (usually
 at `~/.kube/config`) under `clusters[*].cluster.certificate-authority-data`. For
@@ -264,6 +266,14 @@ gcloud container clusters describe <YOUR_CLUSTER_NAME> \
 See also
 https://cloud.google.com/kubernetes-engine/docs/how-to/api-server-authentication#environments-without-gcloud
 for complete docs about GKE without `gcloud`.
+
+##### `clusters.\*.caFile` (optional)
+
+Filesystem path (on the host where the Backstage process is running) to a
+certificate authority bundle in PEM format. The Kubernetes client will verify
+that the TLS certificate presented by the API server is signed by this CA. Note
+that only clusters defined in the app-config via the [`config`](#config)
+cluster locator method can be configured in this way.
 
 ##### `clusters.\*.customResources` (optional)
 
@@ -393,6 +403,41 @@ view the Kubernetes API docs for your Kubernetes version (e.g.
 [API Groups for v1.22](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#-strong-api-groups-strong-)
 )
 
+### `objectTypes` (optional)
+
+Overrides for the Kubernetes object types fetched from the cluster. The default object types are:
+
+- pods
+- services
+- configmaps
+- limitranges
+- deployments
+- replicasets
+- horizontalpodautoscalers
+- jobs
+- cronjobs
+- ingresses
+- statefulsets
+- daemonsets
+
+You may use this config to override the default object types if you only want a subset of
+the default ones. However, it's currently not supported to fetch object types other
+than the ones specified in the default types.
+
+Example:
+
+```yaml
+---
+kubernetes:
+  objectTypes:
+    - configmaps
+    - deployments
+    - limitranges
+    - pods
+    - services
+    - statefulsets
+```
+
 ### Role Based Access Control
 
 The current RBAC permissions required are read-only cluster wide, the below
@@ -432,6 +477,13 @@ rules:
       - get
       - list
       - watch
+  - apiGroups:
+      - metrics.k8s.io
+    resources:
+      - pods
+    verbs:
+      - get
+      - list
 ```
 
 ## Surfacing your Kubernetes components as part of an entity

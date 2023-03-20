@@ -76,10 +76,10 @@ import { DefaultCatalogRulesEnforcer } from '../ingestion/CatalogRules';
 import { Config } from '@backstage/config';
 import { Logger } from 'winston';
 import { connectEntityProviders } from '../processing/connectEntityProviders';
-import {
-  CatalogPermissionRule,
-  permissionRules as catalogPermissionRules,
-} from '../permissions/rules';
+import { PermissionRuleParams } from '@backstage/plugin-permission-common';
+import { EntitiesSearchFilter } from '../catalog/types';
+import { permissionRules as catalogPermissionRules } from '../permissions/rules';
+import { PermissionRule } from '@backstage/plugin-permission-node';
 import {
   PermissionAuthorizer,
   PermissionEvaluator,
@@ -94,8 +94,19 @@ import { basicEntityFilter } from './request/basicEntityFilter';
 import {
   catalogPermissions,
   RESOURCE_TYPE_CATALOG_ENTITY,
-} from '@backstage/plugin-catalog-common';
+} from '@backstage/plugin-catalog-common/alpha';
 import { AuthorizedLocationService } from './AuthorizedLocationService';
+import { DefaultProviderDatabase } from '../database/DefaultProviderDatabase';
+import { DefaultCatalogDatabase } from '../database/DefaultCatalogDatabase';
+
+/**
+ * This is a duplicate of the alpha `CatalogPermissionRule` type, for use in the stable API.
+ *
+ * @public
+ */
+export type CatalogPermissionRuleInput<
+  TParams extends PermissionRuleParams = PermissionRuleParams,
+> = PermissionRule<Entity, EntitiesSearchFilter, 'catalog-entity', TParams>;
 
 /** @public */
 export type CatalogEnvironment = {
@@ -152,8 +163,9 @@ export class CatalogBuilder {
       maxSeconds: 150,
     });
   private locationAnalyzer: LocationAnalyzer | undefined = undefined;
-  private readonly permissionRules: CatalogPermissionRule[];
+  private readonly permissionRules: CatalogPermissionRuleInput[];
   private allowedLocationType: string[];
+  private legacySingleProcessorValidation = false;
 
   /**
    * Creates a catalog builder.
@@ -376,14 +388,14 @@ export class CatalogBuilder {
    * {@link @backstage/plugin-permission-node#PermissionRule}.
    *
    * @param permissionRules - Additional permission rules
-   * @alpha
    */
   addPermissionRules(
     ...permissionRules: Array<
-      CatalogPermissionRule | Array<CatalogPermissionRule>
+      CatalogPermissionRuleInput | Array<CatalogPermissionRuleInput>
     >
   ) {
     this.permissionRules.push(...permissionRules.flat());
+    return this;
   }
 
   /**
@@ -393,6 +405,15 @@ export class CatalogBuilder {
    */
   setAllowedLocationTypes(allowedLocationTypes: string[]): CatalogBuilder {
     this.allowedLocationType = allowedLocationTypes;
+    return this;
+  }
+
+  /**
+   * Enables the legacy behaviour of canceling validation early whenever only a
+   * single processor declares an entity kind to be valid.
+   */
+  useLegacySingleProcessorValidation(): this {
+    this.legacySingleProcessorValidation = true;
     return this;
   }
 
@@ -420,6 +441,14 @@ export class CatalogBuilder {
       logger,
       refreshInterval: this.processingInterval,
     });
+    const providerDatabase = new DefaultProviderDatabase({
+      database: dbClient,
+      logger,
+    });
+    const catalogDatabase = new DefaultCatalogDatabase({
+      database: dbClient,
+      logger,
+    });
     const integrations = ScmIntegrations.fromConfig(config);
     const rulesEnforcer = DefaultCatalogRulesEnforcer.fromConfig(config);
     const orchestrator = new DefaultCatalogProcessingOrchestrator({
@@ -429,12 +458,14 @@ export class CatalogBuilder {
       logger,
       parser,
       policy,
+      legacySingleProcessorValidation: this.legacySingleProcessorValidation,
     });
     const stitcher = new Stitcher(dbClient, logger);
-    const unauthorizedEntitiesCatalog = new DefaultEntitiesCatalog(
-      dbClient,
+    const unauthorizedEntitiesCatalog = new DefaultEntitiesCatalog({
+      database: dbClient,
+      logger,
       stitcher,
-    );
+    });
 
     let permissionEvaluator: PermissionEvaluator;
     if ('authorizeConditional' in permissions) {
@@ -508,7 +539,7 @@ export class CatalogBuilder {
       permissionEvaluator,
     );
     const refreshService = new AuthorizedRefreshService(
-      new DefaultRefreshService({ database: processingDatabase }),
+      new DefaultRefreshService({ database: catalogDatabase }),
       permissionEvaluator,
     );
     const router = await createRouter({
@@ -522,7 +553,7 @@ export class CatalogBuilder {
       permissionIntegrationRouter,
     });
 
-    await connectEntityProviders(processingDatabase, entityProviders);
+    await connectEntityProviders(providerDatabase, entityProviders);
 
     return {
       processingEngine,

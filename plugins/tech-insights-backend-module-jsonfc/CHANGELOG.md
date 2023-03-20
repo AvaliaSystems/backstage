@@ -1,5 +1,180 @@
 # @backstage/plugin-tech-insights-backend-module-jsonfc
 
+## 0.1.27
+
+### Patch Changes
+
+- 65454876fb2: Minor API report tweaks
+- Updated dependencies
+  - @backstage/backend-common@0.18.3
+  - @backstage/errors@1.1.5
+  - @backstage/config@1.0.7
+  - @backstage/plugin-tech-insights-common@0.2.10
+  - @backstage/plugin-tech-insights-node@0.4.1
+
+## 0.1.27-next.2
+
+### Patch Changes
+
+- 65454876fb2: Minor API report tweaks
+- Updated dependencies
+  - @backstage/backend-common@0.18.3-next.2
+  - @backstage/plugin-tech-insights-node@0.4.1-next.2
+  - @backstage/config@1.0.7-next.0
+
+## 0.1.27-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/errors@1.1.5-next.0
+  - @backstage/backend-common@0.18.3-next.1
+  - @backstage/config@1.0.7-next.0
+  - @backstage/plugin-tech-insights-common@0.2.10
+  - @backstage/plugin-tech-insights-node@0.4.1-next.1
+
+## 0.1.27-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/backend-common@0.18.3-next.0
+  - @backstage/config@1.0.6
+  - @backstage/errors@1.1.4
+  - @backstage/plugin-tech-insights-common@0.2.10
+  - @backstage/plugin-tech-insights-node@0.4.1-next.0
+
+## 0.1.26
+
+### Patch Changes
+
+- d6b912f963: Surface the cause of the json rules engine
+- Updated dependencies
+  - @backstage/backend-common@0.18.2
+  - @backstage/plugin-tech-insights-common@0.2.10
+  - @backstage/plugin-tech-insights-node@0.4.0
+  - @backstage/config@1.0.6
+  - @backstage/errors@1.1.4
+
+## 0.1.26-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/backend-common@0.18.2-next.2
+  - @backstage/config@1.0.6
+  - @backstage/errors@1.1.4
+  - @backstage/plugin-tech-insights-common@0.2.10-next.0
+  - @backstage/plugin-tech-insights-node@0.4.0-next.2
+
+## 0.1.26-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-tech-insights-common@0.2.10-next.0
+  - @backstage/plugin-tech-insights-node@0.4.0-next.1
+  - @backstage/backend-common@0.18.2-next.1
+  - @backstage/config@1.0.6
+  - @backstage/errors@1.1.4
+
+## 0.1.26-next.0
+
+### Patch Changes
+
+- d6b912f963: Surface the cause of the json rules engine
+- Updated dependencies
+  - @backstage/backend-common@0.18.2-next.0
+  - @backstage/plugin-tech-insights-node@0.3.10-next.0
+
+## 0.1.24
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/backend-common@0.18.0
+  - @backstage/config@1.0.6
+  - @backstage/errors@1.1.4
+  - @backstage/plugin-tech-insights-common@0.2.9
+  - @backstage/plugin-tech-insights-node@0.3.8
+
+## 0.1.24-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/backend-common@0.18.0-next.1
+  - @backstage/plugin-tech-insights-node@0.3.8-next.1
+  - @backstage/config@1.0.6-next.0
+  - @backstage/errors@1.1.4
+  - @backstage/plugin-tech-insights-common@0.2.9
+
+## 0.1.24-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/backend-common@0.18.0-next.0
+  - @backstage/config@1.0.6-next.0
+  - @backstage/errors@1.1.4
+  - @backstage/plugin-tech-insights-common@0.2.9
+  - @backstage/plugin-tech-insights-node@0.3.8-next.0
+
+## 0.1.23
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/backend-common@0.17.0
+  - @backstage/errors@1.1.4
+  - @backstage/config@1.0.5
+  - @backstage/plugin-tech-insights-common@0.2.9
+  - @backstage/plugin-tech-insights-node@0.3.7
+
+## 0.1.23-next.3
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/backend-common@0.17.0-next.3
+  - @backstage/config@1.0.5-next.1
+  - @backstage/errors@1.1.4-next.1
+  - @backstage/plugin-tech-insights-common@0.2.9-next.1
+  - @backstage/plugin-tech-insights-node@0.3.7-next.3
+
+## 0.1.23-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/backend-common@0.17.0-next.2
+  - @backstage/plugin-tech-insights-node@0.3.7-next.2
+  - @backstage/config@1.0.5-next.1
+  - @backstage/errors@1.1.4-next.1
+  - @backstage/plugin-tech-insights-common@0.2.9-next.1
+
+## 0.1.23-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/backend-common@0.17.0-next.1
+  - @backstage/plugin-tech-insights-node@0.3.7-next.1
+  - @backstage/config@1.0.5-next.1
+  - @backstage/errors@1.1.4-next.1
+  - @backstage/plugin-tech-insights-common@0.2.9-next.1
+
+## 0.1.23-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/backend-common@0.16.1-next.0
+  - @backstage/config@1.0.5-next.0
+  - @backstage/errors@1.1.4-next.0
+  - @backstage/plugin-tech-insights-common@0.2.9-next.0
+  - @backstage/plugin-tech-insights-node@0.3.7-next.0
+
 ## 0.1.22
 
 ### Patch Changes

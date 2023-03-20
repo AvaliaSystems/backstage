@@ -23,19 +23,18 @@ import {
 } from '@backstage/catalog-model';
 import { TableColumn, TableProps } from '@backstage/core-components';
 import {
-  createPlugin,
   IdentityApi,
   identityApiRef,
-  PluginProvider,
   ProfileInfo,
   storageApiRef,
 } from '@backstage/core-plugin-api';
 import {
   catalogApiRef,
   entityRouteRef,
-  starredEntitiesApiRef,
   MockStarredEntitiesApi,
+  starredEntitiesApiRef,
 } from '@backstage/plugin-catalog-react';
+import { MockPluginProvider } from '@backstage/test-utils/alpha';
 import {
   mockBreakpoint,
   MockStorageApi,
@@ -135,22 +134,6 @@ describe('DefaultCatalogPage', () => {
   };
   const storageApi = MockStorageApi.create();
 
-  type TestInputPluginOptions = {
-    'key-1': string;
-  };
-
-  type TestPluginOptions = {
-    'key-1': string;
-    'key-2': string;
-  };
-
-  const plugin = createPlugin({
-    id: 'my-plugin',
-    __experimentalConfigure(_: TestInputPluginOptions): TestPluginOptions {
-      return { 'key-1': 'value-1', 'key-2': 'value-2' };
-    },
-  });
-
   const renderWrapped = (children: React.ReactNode) =>
     renderWithEffects(
       wrapInTestApp(
@@ -162,7 +145,7 @@ describe('DefaultCatalogPage', () => {
             [starredEntitiesApiRef, new MockStarredEntitiesApi()],
           ]}
         >
-          <PluginProvider plugin={plugin}>{children}</PluginProvider>
+          <MockPluginProvider>{children}</MockPluginProvider>
         </TestApiProvider>,
         {
           mountedRoutes: {
@@ -215,10 +198,12 @@ describe('DefaultCatalogPage', () => {
   it('should render the default actions of an item in the grid', async () => {
     await renderWrapped(<DefaultCatalogPage />);
     fireEvent.click(screen.getByTestId('user-picker-owned'));
-    expect(await screen.findByText(/Owned \(1\)/)).toBeInTheDocument();
-    expect(await screen.findByTitle(/View/)).toBeInTheDocument();
-    expect(await screen.findByTitle(/Edit/)).toBeInTheDocument();
-    expect(await screen.findByTitle(/Add to favorites/)).toBeInTheDocument();
+    await expect(screen.findByText(/Owned \(1\)/)).resolves.toBeInTheDocument();
+    await expect(screen.findByTitle(/View/)).resolves.toBeInTheDocument();
+    await expect(screen.findByTitle(/Edit/)).resolves.toBeInTheDocument();
+    await expect(
+      screen.findByTitle(/Add to favorites/),
+    ).resolves.toBeInTheDocument();
   }, 20_000);
 
   it('should render the custom actions of an item passed as prop', async () => {
@@ -243,10 +228,12 @@ describe('DefaultCatalogPage', () => {
 
     await renderWrapped(<DefaultCatalogPage actions={actions} />);
     fireEvent.click(screen.getByTestId('user-picker-owned'));
-    expect(await screen.findByText(/Owned \(1\)/)).toBeInTheDocument();
-    expect(await screen.findByTitle(/Foo Action/)).toBeInTheDocument();
-    expect(await screen.findByTitle(/Bar Action/)).toBeInTheDocument();
-    expect((await screen.findByTitle(/Bar Action/)).firstChild).toBeDisabled();
+    await expect(screen.findByText(/Owned \(1\)/)).resolves.toBeInTheDocument();
+    await expect(screen.findByTitle(/Foo Action/)).resolves.toBeInTheDocument();
+    await expect(screen.findByTitle(/Bar Action/)).resolves.toBeInTheDocument();
+    await expect(
+      screen.findByTitle(/Bar Action/).then(e => e.firstChild),
+    ).resolves.toBeDisabled();
   }, 20_000);
 
   // this test right now causes some red lines in the log output when running tests
@@ -273,7 +260,7 @@ describe('DefaultCatalogPage', () => {
     await expect(screen.findByText(/Owned \(1\)/)).resolves.toBeInTheDocument();
     // The "Starred" menu option should initially be disabled, since there
     // aren't any starred entities.
-    await expect(screen.getByTestId('user-picker-starred')).toHaveAttribute(
+    expect(screen.getByTestId('user-picker-starred')).toHaveAttribute(
       'aria-disabled',
       'true',
     );
@@ -286,7 +273,7 @@ describe('DefaultCatalogPage', () => {
 
     // Now that we've starred an entity, the "Starred" menu option should be
     // enabled.
-    await expect(screen.getByTestId('user-picker-starred')).not.toHaveAttribute(
+    expect(screen.getByTestId('user-picker-starred')).not.toHaveAttribute(
       'aria-disabled',
       'true',
     );

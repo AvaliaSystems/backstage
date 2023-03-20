@@ -34,9 +34,10 @@ import {
   NotModifiedError,
 } from '@backstage/errors';
 import { Readable } from 'stream';
+import { parseLastModified } from './util';
 
 /**
- * Implements a {@link UrlReader} for the Gitea v1 api.
+ * Implements a {@link @backstage/backend-plugin-api#UrlReaderService} for the Gitea v1 api.
  *
  * @public
  */
@@ -86,6 +87,9 @@ export class GiteaUrlReader implements UrlReader {
           Readable.from(Buffer.from(content, 'base64')),
           {
             etag: response.headers.get('ETag') ?? undefined,
+            lastModifiedAt: parseLastModified(
+              response.headers.get('Last-Modified'),
+            ),
           },
         );
       }

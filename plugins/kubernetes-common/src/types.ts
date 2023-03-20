@@ -127,7 +127,7 @@ export type FetchResponse =
   | ServiceFetchResponse
   | ConfigMapFetchResponse
   | DeploymentFetchResponse
-  | LimitRangeFetchReponse
+  | LimitRangeFetchResponse
   | ReplicaSetsFetchResponse
   | HorizontalPodAutoscalersFetchResponse
   | JobsFetchResponse
@@ -169,7 +169,7 @@ export interface ReplicaSetsFetchResponse {
 }
 
 /** @public */
-export interface LimitRangeFetchReponse {
+export interface LimitRangeFetchResponse {
   type: 'limitranges';
   resources: Array<V1LimitRange>;
 }
@@ -223,10 +223,19 @@ export interface PodStatusFetchResponse {
 }
 
 /** @public */
-export interface KubernetesFetchError {
+export type KubernetesFetchError = StatusError | RawFetchError;
+
+/** @public */
+export interface StatusError {
   errorType: KubernetesErrorTypes;
   statusCode?: number;
   resourcePath?: string;
+}
+
+/** @public */
+export interface RawFetchError {
+  errorType: 'FETCH_ERROR';
+  message: string;
 }
 
 /** @public */

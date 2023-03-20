@@ -44,6 +44,7 @@ const gitlabProcessor = new GitlabUrlReader(
         host: 'gitlab.com',
         apiBaseUrl: 'https://gitlab.com/api/v4',
         baseUrl: 'https://gitlab.com',
+        token: 'gl-dummy-token',
       }),
     ),
   ),
@@ -57,6 +58,7 @@ const hostedGitlabProcessor = new GitlabUrlReader(
         host: 'gitlab.mycompany.com',
         apiBaseUrl: 'https://gitlab.mycompany.com/api/v4',
         baseUrl: 'https://gitlab.mycompany.com',
+        token: 'gl-dummy-token',
       }),
     ),
   ),
@@ -182,7 +184,7 @@ describe('GitlabUrlReader', () => {
       treeResponseFactory,
     });
 
-    it('should throw NotModified on HTTP 304', async () => {
+    it('should throw NotModified on HTTP 304 from etag', async () => {
       worker.use(
         rest.get('*/api/v4/projects/:name', (_, res, ctx) =>
           res(ctx.status(200), ctx.json({ id: 12345 })),
@@ -203,13 +205,44 @@ describe('GitlabUrlReader', () => {
       ).rejects.toThrow(NotModifiedError);
     });
 
-    it('should return etag in response', async () => {
+    it('should throw NotModified on HTTP 304 from lastModifiedAt', async () => {
+      worker.use(
+        rest.get('*/api/v4/projects/:name', (_, res, ctx) =>
+          res(ctx.status(200), ctx.json({ id: 12345 })),
+        ),
+        rest.get('*', (req, res, ctx) => {
+          expect(req.headers.get('If-Modified-Since')).toBe(
+            new Date('2019 12 31 23:59:59 GMT').toUTCString(),
+          );
+          return res(ctx.status(304));
+        }),
+      );
+
+      await expect(
+        reader.readUrl!(
+          'https://gitlab.com/groupA/teams/teamA/subgroupA/repoA/-/blob/branch/my/path/to/file.yaml',
+          {
+            lastModifiedAfter: new Date('2019 12 31 23:59:59 GMT'),
+          },
+        ),
+      ).rejects.toThrow(NotModifiedError);
+    });
+
+    it('should return etag and last-modified in response', async () => {
       worker.use(
         rest.get('*/api/v4/projects/:name', (_, res, ctx) =>
           res(ctx.status(200), ctx.json({ id: 12345 })),
         ),
         rest.get('*', (_req, res, ctx) => {
-          return res(ctx.status(200), ctx.set('ETag', '999'), ctx.body('foo'));
+          return res(
+            ctx.status(200),
+            ctx.set('ETag', '999'),
+            ctx.set(
+              'Last-Modified',
+              new Date('2020 01 01 00:0:00 GMT').toUTCString(),
+            ),
+            ctx.body('foo'),
+          );
         }),
       );
 
@@ -217,6 +250,7 @@ describe('GitlabUrlReader', () => {
         'https://gitlab.com/groupA/teams/teamA/subgroupA/repoA/-/blob/branch/my/path/to/file.yaml',
       );
       expect(result.etag).toBe('999');
+      expect(result.lastModifiedAt).toEqual(new Date('2020 01 01 00:0:00 GMT'));
       const content = await result.buffer();
       expect(content.toString()).toBe('foo');
     });
@@ -227,22 +261,28 @@ describe('GitlabUrlReader', () => {
       path.resolve(__dirname, '__fixtures__/gitlab-archive.tar.gz'),
     );
 
-    const projectGitlabApiResponse = {
-      id: 11111111,
-      default_branch: 'main',
-    };
+    let projectGitlabApiResponse: any;
+    let commitsGitlabApiResponse: any;
+    let specificPathCommitsGitlabApiResponse: any;
 
-    const commitsGitlabApiResponse = [
-      {
-        id: 'sha123abc',
-      },
-    ];
+    beforeEach(() => {
+      projectGitlabApiResponse = {
+        id: 11111111,
+        default_branch: 'main',
+      };
 
-    const specificPathCommitsGitlabApiResponse = [
-      {
-        id: 'sha456def',
-      },
-    ];
+      commitsGitlabApiResponse = [
+        {
+          id: 'sha123abc',
+        },
+      ];
+
+      specificPathCommitsGitlabApiResponse = [
+        {
+          id: 'sha456def',
+        },
+      ];
+    });
 
     beforeEach(() => {
       worker.use(
@@ -492,6 +532,23 @@ describe('GitlabUrlReader', () => {
       };
       await expect(fnGitlab).rejects.toThrow(NotFoundError);
     });
+
+    it('should gracefully handle no matching commits', async () => {
+      commitsGitlabApiResponse = [];
+
+      const response = await gitlabProcessor.readTree(
+        'https://gitlab.com/backstage/mock/tree/main',
+      );
+
+      const files = await response.files();
+      expect(files.length).toBe(2);
+
+      const indexMarkdownFile = await files[0].content();
+      const mkDocsFile = await files[1].content();
+
+      expect(mkDocsFile.toString()).toBe('site_name: Test\n');
+      expect(indexMarkdownFile.toString()).toBe('# Test\n');
+    });
   });
 
   describe('search', () => {
@@ -572,6 +629,105 @@ describe('GitlabUrlReader', () => {
           { etag: 'sha123abc' },
         ),
       ).rejects.toThrow(NotModifiedError);
+    });
+  });
+
+  describe('getGitlabFetchUrl', () => {
+    beforeEach(() => {
+      worker.use(
+        rest.get(
+          '*/api/v4/projects/group%2Fsubgroup%2Fproject',
+          (_, res, ctx) => res(ctx.status(200), ctx.json({ id: 12345 })),
+        ),
+      );
+    });
+    it('should fall back to getGitLabFileFetchUrl for blob urls', async () => {
+      await expect(
+        (gitlabProcessor as any).getGitlabFetchUrl(
+          'https://gitlab.com/group/subgroup/project/-/blob/branch/my/path/to/file.yaml',
+        ),
+      ).resolves.toEqual(
+        'https://gitlab.com/api/v4/projects/12345/repository/files/my%2Fpath%2Fto%2Ffile.yaml/raw?ref=branch',
+      );
+    });
+    it('should work for job artifact urls', async () => {
+      await expect(
+        (gitlabProcessor as any).getGitlabFetchUrl(
+          'https://gitlab.com/group/subgroup/project/-/jobs/artifacts/branch/raw/my/path/to/file.yaml?job=myJob',
+        ),
+      ).resolves.toEqual(
+        'https://gitlab.com/api/v4/projects/12345/jobs/artifacts/branch/raw/my/path/to/file.yaml?job=myJob',
+      );
+    });
+    it('should fail on unfamiliar or non-Gitlab urls', async () => {
+      await expect(
+        (gitlabProcessor as any).getGitlabFetchUrl(
+          'https://gitlab.com/some/random/endpoint',
+        ),
+      ).rejects.toThrow('Please provide full path to yaml file from GitLab');
+    });
+  });
+
+  describe('getGitlabArtifactFetchUrl', () => {
+    beforeEach(() => {
+      worker.use(
+        rest.get(
+          '*/api/v4/projects/group%2Fsubgroup%2Fproject',
+          (_, res, ctx) => res(ctx.status(200), ctx.json({ id: 12345 })),
+        ),
+      );
+      worker.use(
+        rest.get(
+          '*/api/v4/projects/groupA%2Fsubgroup%2Fproject',
+          (_, res, ctx) => res(ctx.status(404)),
+        ),
+      );
+    });
+    it('should reject urls that are not for the job artifacts API', async () => {
+      await expect(
+        (gitlabProcessor as any).getGitlabArtifactFetchUrl(
+          new URL('https://gitlab.com/some/url'),
+        ),
+      ).rejects.toThrow('Unable to process url as an GitLab artifact');
+    });
+    it('should work for job artifact urls', async () => {
+      await expect(
+        (gitlabProcessor as any).getGitlabArtifactFetchUrl(
+          new URL(
+            'https://gitlab.com/group/subgroup/project/-/jobs/artifacts/branch/raw/my/path/to/file.yaml?job=myJob',
+          ),
+        ),
+      ).resolves.toEqual(
+        new URL(
+          'https://gitlab.com/api/v4/projects/12345/jobs/artifacts/branch/raw/my/path/to/file.yaml?job=myJob',
+        ),
+      );
+    });
+    it('errors in mapping the project ID should be captured', async () => {
+      await expect(
+        (gitlabProcessor as any).getGitlabArtifactFetchUrl(
+          new URL(
+            'https://gitlab.com/groupA/subgroup/project/-/jobs/artifacts/branch/raw/my/path/to/file.yaml?job=myJob',
+          ),
+        ),
+      ).rejects.toThrow(/^Unable to translate GitLab artifact URL:/);
+    });
+  });
+
+  describe('resolveProjectToId', () => {
+    it('should resolve the project path to a valid project id', async () => {
+      worker.use(
+        rest.get('*/api/v4/projects/some%2Fproject', (req, res, ctx) => {
+          // the private-token header must be included on API calls
+          expect(req.headers.get('private-token')).toBe('gl-dummy-token');
+          return res(ctx.status(200), ctx.json({ id: 12345 }));
+        }),
+      );
+      await expect(
+        (gitlabProcessor as any).resolveProjectToId(
+          new URL('https://gitlab.com/some/project'),
+        ),
+      ).resolves.toEqual(12345);
     });
   });
 });

@@ -5,14 +5,26 @@
 ```ts
 /// <reference types="react" />
 
+import { ApiRef } from '@backstage/core-plugin-api';
 import { BackstagePlugin } from '@backstage/core-plugin-api';
 import { CardExtensionProps } from '@backstage/plugin-home';
 import { ReactNode } from 'react';
+import { ResultHighlight } from '@backstage/plugin-search-common';
 
 // @public
 export const HomePageStackOverflowQuestions: (
   props: CardExtensionProps<StackOverflowQuestionsContentProps>,
 ) => JSX.Element;
+
+// @public (undocumented)
+export type StackOverflowApi = {
+  listQuestions(options?: {
+    requestParams: StackOverflowQuestionsRequestParams;
+  }): Promise<StackOverflowQuestion[]>;
+};
+
+// @public (undocumented)
+export const stackOverflowApiRef: ApiRef<StackOverflowApi>;
 
 // @public
 export const StackOverflowIcon: () => JSX.Element;
@@ -45,5 +57,6 @@ export const StackOverflowSearchResultListItem: (props: {
   result: any;
   icon?: ReactNode;
   rank?: number | undefined;
+  highlight?: ResultHighlight | undefined;
 }) => JSX.Element;
 ```

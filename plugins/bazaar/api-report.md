@@ -5,7 +5,9 @@
 ```ts
 /// <reference types="react" />
 
+import { ApiHolder } from '@backstage/core-plugin-api';
 import { BackstagePlugin } from '@backstage/core-plugin-api';
+import { Entity } from '@backstage/catalog-model';
 import { RouteRef } from '@backstage/core-plugin-api';
 
 // @public (undocumented)
@@ -15,12 +17,20 @@ export const BazaarOverviewCard: (
 
 // @public (undocumented)
 export type BazaarOverviewCardProps = {
+  title?: string;
   order: 'latest' | 'random';
   fullWidth?: boolean;
+  fullHeight?: boolean;
 };
 
 // @public (undocumented)
-export const BazaarPage: () => JSX.Element;
+export const BazaarPage: (props: BazaarPageProps) => JSX.Element;
+
+// @public (undocumented)
+export type BazaarPageProps = {
+  title?: string;
+  subtitle?: string;
+};
 
 // @public (undocumented)
 export const bazaarPlugin: BackstagePlugin<
@@ -33,6 +43,14 @@ export const bazaarPlugin: BackstagePlugin<
 
 // @public (undocumented)
 export const EntityBazaarInfoCard: () => JSX.Element | null;
+
+// @public (undocumented)
+export const isBazaarAvailable: (
+  entity: Entity,
+  context: {
+    apis: ApiHolder;
+  },
+) => Promise<boolean>;
 
 // @public (undocumented)
 export const SortView: () => JSX.Element;

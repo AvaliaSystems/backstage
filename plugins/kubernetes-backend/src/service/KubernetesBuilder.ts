@@ -13,36 +13,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { CatalogApi } from '@backstage/catalog-client';
 import { Config } from '@backstage/config';
 import express from 'express';
 import Router from 'express-promise-router';
-import { Logger } from 'winston';
 import { Duration } from 'luxon';
+import { Logger } from 'winston';
+
 import { getCombinedClusterSupplier } from '../cluster-locator';
+import { addResourceRoutesToRouter } from '../routes/resourcesRoutes';
 import { MultiTenantServiceLocator } from '../service-locator/MultiTenantServiceLocator';
 import {
-  KubernetesObjectTypes,
-  ServiceLocatorMethod,
   CustomResource,
-  KubernetesObjectsProvider,
-  ObjectsByEntityRequest,
   KubernetesClustersSupplier,
   KubernetesFetcher,
-  KubernetesServiceLocator,
+  KubernetesObjectsProvider,
   KubernetesObjectsProviderOptions,
+  KubernetesObjectTypes,
+  KubernetesServiceLocator,
+  ObjectsByEntityRequest,
+  ServiceLocatorMethod,
 } from '../types/types';
-import { KubernetesClientProvider } from './KubernetesClientProvider';
 import {
   DEFAULT_OBJECTS,
   KubernetesFanOutHandler,
 } from './KubernetesFanOutHandler';
 import { KubernetesClientBasedFetcher } from './KubernetesFetcher';
-import { addResourceRoutesToRouter } from '../routes/resourcesRoutes';
-import { CatalogApi } from '@backstage/catalog-client';
+import { KubernetesProxy } from './KubernetesProxy';
 
 /**
  *
- * @alpha
+ * @public
  */
 export interface KubernetesEnvironment {
   logger: Logger;
@@ -53,20 +54,21 @@ export interface KubernetesEnvironment {
 /**
  * The return type of the `KubernetesBuilder.build` method
  *
- * @alpha
+ * @public
  */
 export type KubernetesBuilderReturn = Promise<{
   router: express.Router;
   clusterSupplier: KubernetesClustersSupplier;
   customResources: CustomResource[];
   fetcher: KubernetesFetcher;
+  proxy: KubernetesProxy;
   objectsProvider: KubernetesObjectsProvider;
   serviceLocator: KubernetesServiceLocator;
 }>;
 
 /**
  *
- * @alpha
+ * @public
  */
 export class KubernetesBuilder {
   private clusterSupplier?: KubernetesClustersSupplier;
@@ -76,6 +78,7 @@ export class KubernetesBuilder {
   private objectsProvider?: KubernetesObjectsProvider;
   private fetcher?: KubernetesFetcher;
   private serviceLocator?: KubernetesServiceLocator;
+  private proxy?: KubernetesProxy;
 
   static createBuilder(env: KubernetesEnvironment) {
     return new KubernetesBuilder(env);
@@ -102,36 +105,34 @@ export class KubernetesBuilder {
     }
     const customResources = this.buildCustomResources();
 
-    const fetcher = this.fetcher ?? this.buildFetcher();
+    const fetcher = this.getFetcher();
 
-    const clusterSupplier =
-      this.clusterSupplier ??
-      this.buildClusterSupplier(this.defaultClusterRefreshInterval);
+    const clusterSupplier = this.getClusterSupplier();
 
-    const serviceLocator =
-      this.serviceLocator ??
-      this.buildServiceLocator(this.getServiceLocatorMethod(), clusterSupplier);
+    const proxy = this.getProxy(logger, clusterSupplier);
 
-    const objectsProvider =
-      this.objectsProvider ??
-      this.buildObjectsProvider({
-        logger,
-        fetcher,
-        serviceLocator,
-        customResources,
-        objectTypesToFetch: this.getObjectTypesToFetch(),
-      });
+    const serviceLocator = this.getServiceLocator();
+
+    const objectsProvider = this.getObjectsProvider({
+      logger,
+      fetcher,
+      serviceLocator,
+      customResources,
+      objectTypesToFetch: this.getObjectTypesToFetch(),
+    });
 
     const router = this.buildRouter(
       objectsProvider,
       clusterSupplier,
       this.env.catalogApi,
+      proxy,
     );
 
     return {
       clusterSupplier,
       customResources,
       fetcher,
+      proxy,
       objectsProvider,
       router,
       serviceLocator,
@@ -163,6 +164,11 @@ export class KubernetesBuilder {
     return this;
   }
 
+  public setProxy(proxy?: KubernetesProxy) {
+    this.proxy = proxy;
+    return this;
+  }
+
   protected buildCustomResources() {
     const customResources: CustomResource[] = (
       this.env.config.getOptionalConfigArray('kubernetes.customResources') ?? []
@@ -186,24 +192,28 @@ export class KubernetesBuilder {
     refreshInterval: Duration,
   ): KubernetesClustersSupplier {
     const config = this.env.config;
-    return getCombinedClusterSupplier(
+    this.clusterSupplier = getCombinedClusterSupplier(
       config,
       this.env.catalogApi,
       refreshInterval,
     );
+
+    return this.clusterSupplier;
   }
 
   protected buildObjectsProvider(
     options: KubernetesObjectsProviderOptions,
   ): KubernetesObjectsProvider {
-    return new KubernetesFanOutHandler(options);
+    this.objectsProvider = new KubernetesFanOutHandler(options);
+    return this.objectsProvider;
   }
 
   protected buildFetcher(): KubernetesFetcher {
-    return new KubernetesClientBasedFetcher({
-      kubernetesClientProvider: new KubernetesClientProvider(),
+    this.fetcher = new KubernetesClientBasedFetcher({
       logger: this.env.logger,
     });
+
+    return this.fetcher;
   }
 
   protected buildServiceLocator(
@@ -212,14 +222,19 @@ export class KubernetesBuilder {
   ): KubernetesServiceLocator {
     switch (method) {
       case 'multiTenant':
-        return this.buildMultiTenantServiceLocator(clusterSupplier);
+        this.serviceLocator =
+          this.buildMultiTenantServiceLocator(clusterSupplier);
+        break;
       case 'http':
-        return this.buildHttpServiceLocator(clusterSupplier);
+        this.serviceLocator = this.buildHttpServiceLocator(clusterSupplier);
+        break;
       default:
         throw new Error(
           `Unsupported kubernetes.clusterLocatorMethod "${method}"`,
         );
     }
+
+    return this.serviceLocator;
   }
 
   protected buildMultiTenantServiceLocator(
@@ -234,13 +249,23 @@ export class KubernetesBuilder {
     throw new Error('not implemented');
   }
 
+  protected buildProxy(
+    logger: Logger,
+    clusterSupplier: KubernetesClustersSupplier,
+  ): KubernetesProxy {
+    this.proxy = new KubernetesProxy(logger, clusterSupplier);
+    return this.proxy;
+  }
+
   protected buildRouter(
     objectsProvider: KubernetesObjectsProvider,
     clusterSupplier: KubernetesClustersSupplier,
     catalogApi: CatalogApi,
+    proxy: KubernetesProxy,
   ): express.Router {
     const logger = this.env.logger;
     const router = Router();
+    router.use('/proxy', proxy.createRequestHandler());
     router.use(express.json());
 
     // @deprecated
@@ -296,6 +321,31 @@ export class KubernetesBuilder {
     ) as ServiceLocatorMethod;
   }
 
+  protected getFetcher(): KubernetesFetcher {
+    return this.fetcher ?? this.buildFetcher();
+  }
+
+  protected getClusterSupplier() {
+    return (
+      this.clusterSupplier ??
+      this.buildClusterSupplier(this.defaultClusterRefreshInterval)
+    );
+  }
+
+  protected getServiceLocator(): KubernetesServiceLocator {
+    return (
+      this.serviceLocator ??
+      this.buildServiceLocator(
+        this.getServiceLocatorMethod(),
+        this.getClusterSupplier(),
+      )
+    );
+  }
+
+  protected getObjectsProvider(options: KubernetesObjectsProviderOptions) {
+    return this.objectsProvider ?? this.buildObjectsProvider(options);
+  }
+
   protected getObjectTypesToFetch() {
     const objectTypesToFetchStrings = this.env.config.getOptionalStringArray(
       'kubernetes.objectTypes',
@@ -324,5 +374,12 @@ export class KubernetesBuilder {
     }
 
     return objectTypesToFetch;
+  }
+
+  protected getProxy(
+    logger: Logger,
+    clusterSupplier: KubernetesClustersSupplier,
+  ) {
+    return this.proxy ?? this.buildProxy(logger, clusterSupplier);
   }
 }

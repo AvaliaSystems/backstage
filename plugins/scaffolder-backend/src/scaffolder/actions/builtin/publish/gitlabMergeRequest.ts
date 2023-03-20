@@ -13,7 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { createTemplateAction } from '../../createTemplateAction';
+
+import { createTemplateAction } from '@backstage/plugin-scaffolder-node';
 import { Gitlab } from '@gitbeaker/node';
 import { Types } from '@gitbeaker/core';
 import path from 'path';
@@ -126,7 +127,7 @@ export const createPublishGitlabMergeRequestAction = (options: {
             title: 'Gitlab Project path',
             type: 'string',
           },
-          mergeRequestURL: {
+          mergeRequestUrl: {
             title: 'MergeRequest(MR) URL',
             type: 'string',
             description: 'Link to the merge request in GitLab',

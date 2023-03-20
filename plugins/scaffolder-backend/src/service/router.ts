@@ -23,9 +23,10 @@ import {
   stringifyEntityRef,
   UserEntity,
 } from '@backstage/catalog-model';
-import { Config, JsonObject, JsonValue } from '@backstage/config';
+import { Config } from '@backstage/config';
 import { InputError, NotFoundError, stringifyError } from '@backstage/errors';
 import { ScmIntegrations } from '@backstage/integration';
+import { JsonObject, JsonValue } from '@backstage/types';
 import {
   TaskSpec,
   TemplateEntityV1beta3,
@@ -42,7 +43,6 @@ import {
   DatabaseTaskStore,
   TaskBroker,
   TaskWorker,
-  TemplateAction,
   TemplateActionRegistry,
 } from '../scaffolder';
 import { createDryRunner } from '../scaffolder/dryrun';
@@ -52,6 +52,7 @@ import {
   IdentityApi,
   IdentityApiGetIdentityRequest,
 } from '@backstage/plugin-auth-node';
+import { TemplateAction } from '@backstage/plugin-scaffolder-node';
 
 /**
  * RouterOptions
@@ -65,9 +66,17 @@ export interface RouterOptions {
   database: PluginDatabaseManager;
   catalogClient: CatalogApi;
   scheduler?: PluginTaskScheduler;
-
   actions?: TemplateAction<any>[];
+  /**
+   * @deprecated taskWorkers is deprecated in favor of concurrentTasksLimit option with a single TaskWorker
+   * @defaultValue 1
+   */
   taskWorkers?: number;
+  /**
+   * Sets the number of concurrent tasks that can be run at any given time on the TaskWorker
+   * @defaultValue 10
+   */
+  concurrentTasksLimit?: number;
   taskBroker?: TaskBroker;
   additionalTemplateFilters?: Record<string, TemplateFilter>;
   additionalTemplateGlobals?: Record<string, TemplateGlobal>;
@@ -85,14 +94,11 @@ function isSupportedTemplate(entity: TemplateEntityV1beta3) {
  * until someone explicitly passes an IdentityApi. When we have reasonable confidence that most backstage deployments
  * are using the IdentityApi, we can remove this function.
  */
-function buildDefaultIdentityClient({
-  logger,
-}: {
-  logger: Logger;
-}): IdentityApi {
+function buildDefaultIdentityClient(options: RouterOptions): IdentityApi {
   return {
     getIdentity: async ({ request }: IdentityApiGetIdentityRequest) => {
       const header = request.headers.authorization;
+      const { logger } = options;
 
       if (!header) {
         return undefined;
@@ -120,6 +126,10 @@ function buildDefaultIdentityClient({
         const sub = payload.sub;
         if (typeof sub !== 'string') {
           throw new TypeError('Expected string sub claim');
+        }
+
+        if (sub === 'backstage-server') {
+          return undefined;
         }
 
         // Check that it's a valid ref, otherwise this will throw.
@@ -160,6 +170,7 @@ export async function createRouter(
     catalogClient,
     actions,
     taskWorkers,
+    concurrentTasksLimit,
     scheduler,
     additionalTemplateFilters,
     additionalTemplateGlobals,
@@ -168,8 +179,7 @@ export async function createRouter(
   const logger = parentLogger.child({ plugin: 'scaffolder' });
 
   const identity: IdentityApi =
-    options.identity || buildDefaultIdentityClient({ logger });
-
+    options.identity || buildDefaultIdentityClient(options);
   const workingDirectory = await getWorkingDirectory(config, logger);
   const integrations = ScmIntegrations.fromConfig(config);
 
@@ -202,7 +212,7 @@ export async function createRouter(
   const actionRegistry = new TemplateActionRegistry();
 
   const workers = [];
-  for (let i = 0; i < (taskWorkers || 3); i++) {
+  for (let i = 0; i < (taskWorkers || 1); i++) {
     const worker = await TaskWorker.create({
       taskBroker,
       actionRegistry,
@@ -211,6 +221,7 @@ export async function createRouter(
       workingDirectory,
       additionalTemplateFilters,
       additionalTemplateGlobals,
+      concurrentTasksLimit,
     });
     workers.push(worker);
   }
@@ -259,6 +270,7 @@ export async function createRouter(
           res.json({
             title: template.metadata.title ?? template.metadata.name,
             description: template.metadata.description,
+            'ui:options': template.metadata['ui:options'],
             steps: parameters.map(schema => ({
               title: schema.title ?? 'Please enter the following information',
               description: schema.description,
@@ -279,6 +291,7 @@ export async function createRouter(
         return {
           id: action.id,
           description: action.description,
+          examples: action.examples,
           schema: action.schema,
         };
       });
@@ -400,6 +413,11 @@ export async function createRouter(
       // Do not disclose secrets
       delete task.secrets;
       res.status(200).json(task);
+    })
+    .post('/v2/tasks/:taskId/cancel', async (req, res) => {
+      const { taskId } = req.params;
+      await taskBroker.cancel?.(taskId);
+      res.status(200).json({ status: 'cancelled' });
     })
     .get('/v2/tasks/:taskId/eventstream', async (req, res) => {
       const { taskId } = req.params;

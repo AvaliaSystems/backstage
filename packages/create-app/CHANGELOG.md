@@ -1,5 +1,278 @@
 # @backstage/create-app
 
+## 0.4.38
+
+### Patch Changes
+
+- b4627f23b28: Bumped create-app version.
+- 0eceadb9502: Bumped create-app version.
+- 482dae5de1c: Updated link to docs.
+- 6ace2dd2c58: Added to the template `packages/app/.eslintignore` file to packages to ignore the contents of `packages/app/public`.
+- Updated dependencies
+  - @backstage/cli-common@0.1.12
+
+## 0.4.38-next.2
+
+### Patch Changes
+
+- Bumped create-app version.
+
+## 0.4.38-next.1
+
+### Patch Changes
+
+- 482dae5de1c: Updated link to docs.
+- Updated dependencies
+  - @backstage/cli-common@0.1.12-next.0
+
+## 0.4.38-next.0
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.11
+
+## 0.4.37
+
+### Patch Changes
+
+- 12a7b316ee: Bumped create-app version.
+- 86a8dfd7b0: Added a check to ensure that Yarn v1 is used when creating new projects.
+- 0eaa579f89: Update `SearchPage` template to use `SearchResult` extensions.
+- 02f1316e57: Updated `packages/app/cypress/.eslintrc.json` to remove the unnecessary `import/no-extraneous-dependencies` rule.
+- Updated dependencies
+  - @backstage/cli-common@0.1.11
+
+## 0.4.37-next.2
+
+### Patch Changes
+
+- 02f1316e57: Updated `packages/app/cypress/.eslintrc.json` to remove the unnecessary `import/no-extraneous-dependencies` rule.
+- Updated dependencies
+  - @backstage/cli-common@0.1.11
+
+## 0.4.37-next.1
+
+### Patch Changes
+
+- 86a8dfd7b0: Added a check to ensure that Yarn v1 is used when creating new projects.
+- 0eaa579f89: Update `SearchPage` template to use `SearchResult` extensions.
+- Updated dependencies
+  - @backstage/cli-common@0.1.11
+
+## 0.4.37-next.0
+
+### Patch Changes
+
+- Bumped create-app version.
+
+## 0.4.36
+
+### Patch Changes
+
+- f834622f56: Bumped create-app version.
+- 724b55689b: Avoid potential temporary directory conflict.
+- a2a70504e3: Remove deprecated `create-plugin` script from the `default-app` template's `package.json.hbs`.
+  Also, update the documentation to not mention the `create-plugin` script and instead mention
+  the `new` script.
+- 016a52c28f: Bumped the minimum version of `better-sqlite3`. You can make the following change to your `packages/backend/package.json` to keep your instance of Backstage updated.
+
+  ```diff
+  - "better-sqlite3": "^7.5.0",
+  + "better-sqlite3": "^8.0.0",
+  ```
+
+- Updated dependencies
+  - @backstage/cli-common@0.1.11
+
+## 0.4.36-next.2
+
+### Patch Changes
+
+- 016a52c28f: Bumped the minimum version of `better-sqlite3`. You can make the following change to your `packages/backend/package.json` to keep your instance of Backstage updated.
+
+  ```diff
+  - "better-sqlite3": "^7.5.0",
+  + "better-sqlite3": "^8.0.0",
+  ```
+
+- Updated dependencies
+  - @backstage/cli-common@0.1.11
+
+## 0.4.36-next.1
+
+### Patch Changes
+
+- 724b55689b: Avoid potential temporary directory conflict.
+- a2a70504e3: Remove deprecated `create-plugin` script from the `default-app` template's `package.json.hbs`.
+  Also, update the documentation to not mention the `create-plugin` script and instead mention
+  the `new` script.
+- Updated dependencies
+  - @backstage/cli-common@0.1.11
+
+## 0.4.36-next.0
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.11
+
+## 0.4.35
+
+### Patch Changes
+
+- c4788dbb58: Fix dependency ordering in templated packages.
+- 83d3167594: Bumped create-app version.
+- 2cb6963f9b: Bumped create-app version.
+- 6465ab3686: Bumped create-app version.
+- af1358bb07: added default project name for CI job compatibility
+- 935b66a646: Change step output template examples to use square bracket syntax.
+- dfb269fab2: Updated the template to have the `'/test'` proxy endpoint in `app-config.yaml` be commented out by default.
+- d9b3753f87: Updated the app template to use the new `AppRouter` component instead of `app.getRouter()`, as well as `app.createRoot()` instead of `app.getProvider()`.
+
+  To apply this change to an existing app, make the following change to `packages/app/src/App.tsx`:
+
+  ```diff
+  -import { FlatRoutes } from '@backstage/core-app-api';
+  +import { AppRouter, FlatRoutes } from '@backstage/core-app-api';
+
+   ...
+
+  -const AppProvider = app.getProvider();
+  -const AppRouter = app.getRouter();
+
+   ...
+
+  -const App = () => (
+  +export default app.createRoot(
+  -  <AppProvider>
+  +  <>
+       <AlertDisplay />
+       <OAuthRequestDialog />
+       <AppRouter>
+         <Root>{routes}</Root>
+       </AppRouter>
+  -  </AppProvider>
+  +  </>,
+   );
+  ```
+
+  The final export step should end up looking something like this:
+
+  ```tsx
+  export default app.createRoot(
+    <>
+      <AlertDisplay />
+      <OAuthRequestDialog />
+      <AppRouter>
+        <Root>{routes}</Root>
+      </AppRouter>
+    </>,
+  );
+  ```
+
+  Note that `app.createRoot()` accepts a React element, rather than a component.
+
+- 71e75c0b70: Removed the `react-router` dependency from the app package, using only `react-router-dom` instead.
+
+  This change is just a bit of cleanup and is optional. If you want to apply it to your app, remove the `react-router` dependency from `packages/app/package.json`, and replace any imports from `react-router` with `react-router-dom` instead.
+
+- Updated dependencies
+  - @backstage/cli-common@0.1.11
+
+## 0.4.35-next.4
+
+### Patch Changes
+
+- 935b66a646: Change step output template examples to use square bracket syntax.
+- dfb269fab2: Updated the template to have the `'/test'` proxy endpoint in `app-config.yaml` be commented out by default.
+- d9b3753f87: Updated the app template to use the new `AppRouter` component instead of `app.getRouter()`, as well as `app.createRoot()` instead of `app.getProvider()`.
+
+  To apply this change to an existing app, make the following change to `packages/app/src/App.tsx`:
+
+  ```diff
+  -import { FlatRoutes } from '@backstage/core-app-api';
+  +import { AppRouter, FlatRoutes } from '@backstage/core-app-api';
+
+   ...
+
+  -const AppProvider = app.getProvider();
+  -const AppRouter = app.getRouter();
+
+   ...
+
+  -const App = () => (
+  +export default app.createRoot(
+  -  <AppProvider>
+  +  <>
+       <AlertDisplay />
+       <OAuthRequestDialog />
+       <AppRouter>
+         <Root>{routes}</Root>
+       </AppRouter>
+  -  </AppProvider>
+  +  </>,
+   );
+  ```
+
+  The final export step should end up looking something like this:
+
+  ```tsx
+  export default app.createRoot(
+    <>
+      <AlertDisplay />
+      <OAuthRequestDialog />
+      <AppRouter>
+        <Root>{routes}</Root>
+      </AppRouter>
+    </>,
+  );
+  ```
+
+  Note that `app.createRoot()` accepts a React element, rather than a component.
+
+- 71e75c0b70: Removed the `react-router` dependency from the app package, using only `react-router-dom` instead.
+
+  This change is just a bit of cleanup and is optional. If you want to apply it to your app, remove the `react-router` dependency from `packages/app/package.json`, and replace any imports from `react-router` with `react-router-dom` instead.
+
+- Updated dependencies
+  - @backstage/cli-common@0.1.11-next.0
+
+## 0.4.35-next.3
+
+### Patch Changes
+
+- c4788dbb58: Fix dependency ordering in templated packages.
+- af1358bb07: added default project name for CI job compatibility
+- Updated dependencies
+  - @backstage/cli-common@0.1.11-next.0
+
+## 0.4.35-next.2
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.11-next.0
+
+## 0.4.35-next.1
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.10
+
+## 0.4.35-next.0
+
+### Patch Changes
+
+- Bumped create-app version.
+- Updated dependencies
+  - @backstage/cli-common@0.1.10
+
 ## 0.4.34
 
 ### Patch Changes

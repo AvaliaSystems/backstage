@@ -17,8 +17,9 @@
 import { Config } from '@backstage/config';
 import { InputError } from '@backstage/errors';
 import { Logger } from 'winston';
-import express, { Router } from 'express';
-import { VaultClient } from './vaultApi';
+import express from 'express';
+import Router from 'express-promise-router';
+import { VaultApi, VaultClient } from './vaultApi';
 import { TaskRunner, PluginTaskScheduler } from '@backstage/backend-tasks';
 import { errorHandler } from '@backstage/backend-common';
 
@@ -46,7 +47,7 @@ export type VaultBuilderReturn = {
  * @public
  */
 export class VaultBuilder {
-  private vaultClient?: VaultClient;
+  private vaultApi?: VaultApi;
 
   /**
    * Creates a new instance of the VaultBuilder.
@@ -57,7 +58,8 @@ export class VaultBuilder {
   static createBuilder(env: VaultEnvironment) {
     return new VaultBuilder(env);
   }
-  constructor(protected readonly env: VaultEnvironment) {}
+
+  constructor(private readonly env: VaultEnvironment) {}
 
   /**
    * Builds the routes for Vault.
@@ -78,9 +80,9 @@ export class VaultBuilder {
       };
     }
 
-    this.vaultClient = this.vaultClient ?? new VaultClient(this.env);
+    this.vaultApi = this.vaultApi ?? new VaultClient(this.env);
 
-    const router = this.buildRouter(this.vaultClient);
+    const router = this.buildRouter(this.vaultApi);
 
     return {
       router: router,
@@ -90,11 +92,11 @@ export class VaultBuilder {
   /**
    * Overwrites the current vault client.
    *
-   * @param vaultClient - The new Vault client
+   * @param vaultApi - The new Vault client
    * @returns
    */
-  public setVaultClient(vaultClient: VaultClient) {
-    this.vaultClient = vaultClient;
+  public setVaultClient(vaultApi: VaultApi) {
+    this.vaultApi = vaultApi;
     return this;
   }
 
@@ -115,8 +117,8 @@ export class VaultBuilder {
       id: 'refresh-vault-token',
       fn: async () => {
         this.env.logger.info('Renewing Vault token');
-        const vaultClient = this.vaultClient ?? new VaultClient(this.env);
-        await vaultClient.renewToken();
+        const vaultApi = this.vaultApi ?? new VaultClient(this.env);
+        await vaultApi.renewToken?.();
       },
     });
     return this;
@@ -125,10 +127,10 @@ export class VaultBuilder {
   /**
    * Builds the backend routes for Vault.
    *
-   * @param vaultClient - The Vault client used to list the secrets.
+   * @param vaultApi - The Vault client used to list the secrets.
    * @returns The generated backend router
    */
-  protected buildRouter(vaultClient: VaultClient): express.Router {
+  private buildRouter(vaultApi: VaultApi): express.Router {
     const router = Router();
     router.use(express.json());
 
@@ -142,7 +144,7 @@ export class VaultBuilder {
         throw new InputError(`Invalid path: ${path}`);
       }
 
-      const secrets = await vaultClient.listSecrets(path);
+      const secrets = await vaultApi.listSecrets(path);
       res.json({ items: secrets });
     });
 

@@ -75,14 +75,6 @@ export const EntityOwnerPicker = () => {
     }
   }, [queryParamOwners]);
 
-  useEffect(() => {
-    updateFilters({
-      owners: selectedOwners.length
-        ? new EntityOwnerFilter(selectedOwners)
-        : undefined,
-    });
-  }, [selectedOwners, updateFilters]);
-
   const availableOwners = useMemo(
     () =>
       [
@@ -99,6 +91,15 @@ export const EntityOwnerPicker = () => {
     [backendEntities],
   );
 
+  useEffect(() => {
+    updateFilters({
+      owners:
+        selectedOwners.length && availableOwners.length
+          ? new EntityOwnerFilter(selectedOwners)
+          : undefined,
+    });
+  }, [selectedOwners, updateFilters, availableOwners]);
+
   if (!availableOwners.length) return null;
 
   return (
@@ -107,6 +108,7 @@ export const EntityOwnerPicker = () => {
         Owner
         <Autocomplete
           multiple
+          disableCloseOnSelect
           options={availableOwners}
           value={selectedOwners}
           onChange={(_: object, value: string[]) => setSelectedOwners(value)}

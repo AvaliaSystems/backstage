@@ -1,5 +1,170 @@
 # @backstage/plugin-stack-overflow-backend
 
+## 0.1.12
+
+### Patch Changes
+
+- 52b0022dab7: Updated dependency `msw` to `^1.0.0`.
+- Updated dependencies
+  - @backstage/backend-common@0.18.3
+  - @backstage/config@1.0.7
+  - @backstage/plugin-search-common@1.2.2
+
+## 0.1.12-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/backend-common@0.18.3-next.2
+  - @backstage/config@1.0.7-next.0
+
+## 0.1.12-next.1
+
+### Patch Changes
+
+- 52b0022dab7: Updated dependency `msw` to `^1.0.0`.
+- Updated dependencies
+  - @backstage/backend-common@0.18.3-next.1
+  - @backstage/config@1.0.7-next.0
+  - @backstage/plugin-search-common@1.2.2-next.0
+
+## 0.1.12-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/backend-common@0.18.3-next.0
+  - @backstage/config@1.0.6
+  - @backstage/plugin-search-common@1.2.1
+
+## 0.1.11
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/backend-common@0.18.2
+  - @backstage/config@1.0.6
+  - @backstage/plugin-search-common@1.2.1
+
+## 0.1.11-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/backend-common@0.18.2-next.2
+  - @backstage/config@1.0.6
+  - @backstage/plugin-search-common@1.2.1
+
+## 0.1.11-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/backend-common@0.18.2-next.1
+  - @backstage/config@1.0.6
+  - @backstage/plugin-search-common@1.2.1
+
+## 0.1.11-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/backend-common@0.18.2-next.0
+
+## 0.1.9
+
+### Patch Changes
+
+- 06f6a4f0f1: Enable configuration override for StackOverflow backend plugin when instantiating the search indexer. This makes it possible to set different configuration for frontend and backend of the plugin.
+- Updated dependencies
+  - @backstage/backend-common@0.18.0
+  - @backstage/config@1.0.6
+  - @backstage/plugin-search-common@1.2.1
+
+## 0.1.9-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/backend-common@0.18.0-next.1
+  - @backstage/config@1.0.6-next.0
+  - @backstage/plugin-search-common@1.2.1-next.0
+
+## 0.1.9-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/backend-common@0.18.0-next.0
+  - @backstage/config@1.0.6-next.0
+  - @backstage/plugin-search-common@1.2.1-next.0
+
+## 0.1.9-next.0
+
+### Patch Changes
+
+- 06f6a4f0f1: Enable configuration override for StackOverflow backend plugin when instantiating the search indexer. This makes it possible to set different configuration for frontend and backend of the plugin.
+- Updated dependencies
+  - @backstage/backend-common@0.17.0
+  - @backstage/config@1.0.5
+  - @backstage/plugin-search-common@1.2.0
+
+## 0.1.8
+
+### Patch Changes
+
+- fd0ca6f447: Added option to supply API Access Token. This is required in addition to an API key when trying to access the data for a private Stack Overflow Team.
+- Updated dependencies
+  - @backstage/cli@0.22.0
+  - @backstage/plugin-search-common@1.2.0
+  - @backstage/config@1.0.5
+
+## 0.1.8-next.4
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/cli@0.22.0-next.4
+  - @backstage/config@1.0.5-next.1
+  - @backstage/plugin-search-common@1.2.0-next.3
+
+## 0.1.8-next.3
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/cli@0.21.2-next.3
+  - @backstage/config@1.0.5-next.1
+  - @backstage/plugin-search-common@1.2.0-next.2
+
+## 0.1.8-next.2
+
+### Patch Changes
+
+- fd0ca6f447: Added option to supply API Access Token. This is required in addition to an API key when trying to access the data for a private Stack Overflow Team.
+- Updated dependencies
+  - @backstage/cli@0.21.2-next.2
+  - @backstage/plugin-search-common@1.2.0-next.2
+  - @backstage/config@1.0.5-next.1
+
+## 0.1.8-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/cli@0.21.2-next.1
+  - @backstage/config@1.0.5-next.1
+  - @backstage/plugin-search-common@1.1.2-next.1
+
+## 0.1.8-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/cli@0.21.2-next.0
+  - @backstage/config@1.0.5-next.0
+  - @backstage/plugin-search-common@1.1.2-next.0
+
 ## 0.1.7
 
 ### Patch Changes

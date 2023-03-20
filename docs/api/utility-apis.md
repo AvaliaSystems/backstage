@@ -283,16 +283,14 @@ long as they adhere to the contract established by an
 implementation they want.
 
 The figure below shows the relationship between
-<span style="color: #82b366">different Apps</span>, that provide
-<span style="color: #6c8ebf">different implementations</span> of the
-<span style="color: #9673a6">FooApi</span>.
-<span style="color: #d6b656">Components</span> within Plugins then access the
-<span style="color: #9673a6">FooApi</span> via the
-<span style="color: #b85450">fooApiRef</span>.
+<span class="textGreen" className="textGreen">different Apps</span>, that provide
+<span class="textBlue" className="textBlue"> different implementations</span> of the
+<span class="textPurple" className="textPurple"> FooApi</span>.
+<span class="textYellow" className="textYellow"> Components</span> within Plugins then access the
+<span class="textPurple" className="textPurple"> FooApi</span> via the
+<span class="textRed" className="textRed"> fooApiRef</span>.
 
-<div style="text-align:center">
-<img src="../assets/utility-apis-fig1.svg" alt="Figure showing the relationship between utility APIs, the apps that provide them, and the plugins that consume them" />
-</div>
+![Figure showing the relationship between utility APIs, the apps that provide them, and the plugins that consume them](../assets/utility-apis-fig1.svg)
 
 The current method for connecting Utility API providers and consumers is via the
 React tree using an `ApiProvider`, which is added to the `AppProvider` of the

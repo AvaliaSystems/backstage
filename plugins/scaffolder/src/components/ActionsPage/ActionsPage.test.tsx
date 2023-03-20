@@ -14,15 +14,18 @@
  * limitations under the License.
  */
 import React from 'react';
-import { scaffolderApiRef } from '../../api';
 import { ActionsPage } from './ActionsPage';
-import { rootRouteRef } from '../../routes';
+import {
+  scaffolderApiRef,
+  ScaffolderApi,
+} from '@backstage/plugin-scaffolder-react';
 import { renderInTestApp, TestApiRegistry } from '@backstage/test-utils';
 import { ApiProvider } from '@backstage/core-app-api';
-import { ScaffolderApi } from '../../types';
+import { rootRouteRef } from '../../routes';
 
 const scaffolderApiMock: jest.Mocked<ScaffolderApi> = {
   scaffold: jest.fn(),
+  cancelTask: jest.fn(),
   getTemplateParameterSchema: jest.fn(),
   getIntegrationsList: jest.fn(),
   getTask: jest.fn(),
@@ -65,9 +68,9 @@ describe('TemplatePage', () => {
         },
       },
     );
-    expect(rendered.queryByText('Test title')).toBeInTheDocument();
-    expect(rendered.queryByText('example description')).toBeInTheDocument();
-    expect(rendered.queryByText('foobar')).toBeInTheDocument();
+    expect(rendered.getByText('Test title')).toBeInTheDocument();
+    expect(rendered.getByText('example description')).toBeInTheDocument();
+    expect(rendered.getByText('foobar')).toBeInTheDocument();
     expect(rendered.queryByText('output')).not.toBeInTheDocument();
   });
 
@@ -109,10 +112,52 @@ describe('TemplatePage', () => {
         },
       },
     );
-    expect(rendered.queryByText('Test title')).toBeInTheDocument();
-    expect(rendered.queryByText('example description')).toBeInTheDocument();
-    expect(rendered.queryByText('foobar')).toBeInTheDocument();
-    expect(rendered.queryByText('Test output')).toBeInTheDocument();
+    expect(rendered.getByText('Test title')).toBeInTheDocument();
+    expect(rendered.getByText('example description')).toBeInTheDocument();
+    expect(rendered.getByText('foobar')).toBeInTheDocument();
+    expect(rendered.getByText('Test output')).toBeInTheDocument();
+  });
+
+  it('renders action with multipel input types', async () => {
+    scaffolderApiMock.listActions.mockResolvedValue([
+      {
+        id: 'test',
+        description: 'example description',
+        schema: {
+          input: {
+            type: 'object',
+            required: ['foobar'],
+            properties: {
+              foobar: {
+                title: 'Test title',
+                type: ['array', 'number'],
+              },
+            },
+          },
+          output: {
+            type: 'object',
+            properties: {
+              buzz: {
+                title: 'Test output',
+                type: 'string',
+              },
+            },
+          },
+        },
+      },
+    ]);
+    const rendered = await renderInTestApp(
+      <ApiProvider apis={apis}>
+        <ActionsPage />
+      </ApiProvider>,
+      {
+        mountedRoutes: {
+          '/create/actions': rootRouteRef,
+        },
+      },
+    );
+    expect(rendered.getByText('array')).toBeInTheDocument();
+    expect(rendered.getByText('number')).toBeInTheDocument();
   });
 
   it('renders action with oneOf input', async () => {
@@ -160,10 +205,10 @@ describe('TemplatePage', () => {
         },
       },
     );
-    expect(rendered.queryByText('oneOf')).toBeInTheDocument();
-    expect(rendered.queryByText('Foo title')).toBeInTheDocument();
-    expect(rendered.queryByText('Foo description')).toBeInTheDocument();
-    expect(rendered.queryByText('Bar title')).toBeInTheDocument();
-    expect(rendered.queryByText('Bar description')).toBeInTheDocument();
+    expect(rendered.getByText('oneOf')).toBeInTheDocument();
+    expect(rendered.getByText('Foo title')).toBeInTheDocument();
+    expect(rendered.getByText('Foo description')).toBeInTheDocument();
+    expect(rendered.getByText('Bar title')).toBeInTheDocument();
+    expect(rendered.getByText('Bar description')).toBeInTheDocument();
   });
 });

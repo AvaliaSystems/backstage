@@ -1,5 +1,115 @@
 # @backstage/plugin-kubernetes-common
 
+## 0.6.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.2.1
+
+## 0.6.1-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.2.1-next.1
+
+## 0.6.1-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.2.1-next.0
+
+## 0.6.0
+
+### Minor Changes
+
+- 1728c1ef01: **BREAKING**: Renamed misspelled `LimitRangeFetchReponse` to `LimitRangeFetchResponse`.
+
+### Patch Changes
+
+- 2518ef5b8a: New K8s catalog entity annotations added that will replace now deprecated k8s annotations in the catalog-model package. K8s annotation imports should now be made from plugin-kubernetes-common.
+- 628e2bd89a: Updated dependency `@kubernetes/client-node` to `0.18.1`.
+- Updated dependencies
+  - @backstage/catalog-model@1.2.0
+
+## 0.6.0-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.2.0-next.1
+
+## 0.6.0-next.1
+
+### Patch Changes
+
+- 628e2bd89a: Updated dependency `@kubernetes/client-node` to `0.18.1`.
+- Updated dependencies
+  - @backstage/catalog-model@1.1.6-next.0
+
+## 0.6.0-next.0
+
+### Minor Changes
+
+- 1728c1ef01: **BREAKING**: Renamed misspelled `LimitRangeFetchReponse` to `LimitRangeFetchResponse`.
+
+### Patch Changes
+
+- 2518ef5b8a: New K8s catalog entity annotations added that will replace now deprecated k8s annotations in the catalog-model package. K8s annotation imports should now be made from plugin-kubernetes-common.
+- Updated dependencies
+  - @backstage/catalog-model@1.1.6-next.0
+
+## 0.5.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.1.5
+
+## 0.5.1-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.1.5-next.1
+
+## 0.5.1-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.1.5-next.0
+
+## 0.5.0
+
+### Minor Changes
+
+- 2db8acffe7: Kubernetes plugin now gracefully surfaces transport-level errors (like DNS or timeout, or other socket errors) occurring while fetching data. This will be merged into any data that is fetched successfully, fixing a bug where the whole page would be empty if any fetch operation encountered such an error.
+
+### Patch Changes
+
+- 9ce7866ecd: Updated dependency `@kubernetes/client-node` to `0.18.0`.
+- b585179770: Added Kubernetes proxy API route to backend Kubernetes plugin, allowing Backstage plugin developers to read/write new information from Kubernetes (if proper credentials are provided).
+- Updated dependencies
+  - @backstage/catalog-model@1.1.4
+
+## 0.4.5-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.1.4-next.1
+
+## 0.4.5-next.0
+
+### Patch Changes
+
+- b585179770: Added Kubernetes proxy API route to backend Kubernetes plugin, allowing Backstage plugin developers to read/write new information from Kubernetes (if proper credentials are provided).
+- Updated dependencies
+  - @backstage/catalog-model@1.1.4-next.0
+
 ## 0.4.4
 
 ### Patch Changes

@@ -29,8 +29,9 @@ After you have cloned the Backstage repository, you should run the following
 commands once to set things up for development:
 
 ```bash
-$ yarn install  # fetch dependency packages - may take a while
+$ cd backstage  # change to root directory of project
 
+$ yarn install  # fetch dependency packages - may take a while
 $ yarn tsc      # does a first run of type generation and checks
 ```
 
@@ -115,7 +116,7 @@ yarn clean # Remove all output folders and @backstage/cli cache
 
 yarn diff # Make sure all plugins are up to date with the latest plugin template
 
-yarn create-plugin # Create a new plugin
+yarn new # Create a new module
 ```
 
 > See

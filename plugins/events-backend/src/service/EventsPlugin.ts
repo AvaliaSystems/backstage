@@ -15,18 +15,18 @@
  */
 
 import {
-  configServiceRef,
   createBackendPlugin,
-  httpRouterServiceRef,
-  loggerServiceRef,
-  loggerToWinstonLogger,
+  coreServices,
 } from '@backstage/backend-plugin-api';
+import { loggerToWinstonLogger } from '@backstage/backend-common';
+import {
+  eventsExtensionPoint,
+  EventsExtensionPoint,
+} from '@backstage/plugin-events-node/alpha';
 import {
   EventBroker,
   EventPublisher,
   EventSubscriber,
-  eventsExtensionPoint,
-  EventsExtensionPoint,
   HttpPostIngressOptions,
 } from '@backstage/plugin-events-node';
 import { InMemoryEventBroker } from './InMemoryEventBroker';
@@ -82,22 +82,19 @@ class EventsExtensionPointImpl implements EventsExtensionPoint {
  * @alpha
  */
 export const eventsPlugin = createBackendPlugin({
-  id: 'events',
+  pluginId: 'events',
   register(env) {
     const extensionPoint = new EventsExtensionPointImpl();
     env.registerExtensionPoint(eventsExtensionPoint, extensionPoint);
 
     env.registerInit({
       deps: {
-        config: configServiceRef,
-        httpRouter: httpRouterServiceRef,
-        logger: loggerServiceRef,
+        config: coreServices.config,
+        logger: coreServices.logger,
+        router: coreServices.httpRouter,
       },
-      async init({ config, httpRouter, logger }) {
+      async init({ config, logger, router }) {
         const winstonLogger = loggerToWinstonLogger(logger);
-        const eventsRouter = Router();
-        const router = Router();
-        eventsRouter.use('/http', router);
 
         const ingresses = Object.fromEntries(
           extensionPoint.httpPostIngresses.map(ingress => [
@@ -108,23 +105,20 @@ export const eventsPlugin = createBackendPlugin({
 
         const http = HttpPostIngressEventPublisher.fromConfig({
           config,
-          logger: winstonLogger,
-          router,
           ingresses,
+          logger: winstonLogger,
         });
+        const eventsRouter = Router();
+        http.bind(eventsRouter);
+        router.use(eventsRouter);
 
-        if (!extensionPoint.eventBroker) {
-          extensionPoint.setEventBroker(new InMemoryEventBroker(winstonLogger));
-        }
+        const eventBroker =
+          extensionPoint.eventBroker ?? new InMemoryEventBroker(winstonLogger);
 
-        extensionPoint.eventBroker!.subscribe(extensionPoint.subscribers);
+        eventBroker.subscribe(extensionPoint.subscribers);
         [extensionPoint.publishers, http]
           .flat()
-          .forEach(publisher =>
-            publisher.setEventBroker(extensionPoint.eventBroker!),
-          );
-
-        httpRouter.use(eventsRouter);
+          .forEach(publisher => publisher.setEventBroker(eventBroker));
       },
     });
   },

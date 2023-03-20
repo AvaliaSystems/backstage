@@ -27,7 +27,7 @@ import {
   RELATION_PROVIDES_API,
 } from '@backstage/catalog-model';
 import { createApp } from '@backstage/app-defaults';
-import { FlatRoutes } from '@backstage/core-app-api';
+import { AppRouter, FlatRoutes } from '@backstage/core-app-api';
 import {
   AlertDisplay,
   OAuthRequestDialog,
@@ -59,13 +59,13 @@ import { GraphiQLPage } from '@backstage/plugin-graphiql';
 import { HomepageCompositionRoot } from '@backstage/plugin-home';
 import { LighthousePage } from '@backstage/plugin-lighthouse';
 import { NewRelicPage } from '@backstage/plugin-newrelic';
+import { NextScaffolderPage } from '@backstage/plugin-scaffolder/alpha';
 import {
-  ScaffolderFieldExtensions,
   ScaffolderPage,
-  NextScaffolderPage,
   scaffolderPlugin,
   ScaffolderLayouts,
 } from '@backstage/plugin-scaffolder';
+import { ScaffolderFieldExtensions } from '@backstage/plugin-scaffolder-react';
 import { SearchPage } from '@backstage/plugin-search';
 import { TechRadarPage } from '@backstage/plugin-tech-radar';
 import {
@@ -78,6 +78,7 @@ import {
   ExpandableNavigation,
   ReportIssue,
   TextSize,
+  LightBox,
 } from '@backstage/plugin-techdocs-module-addons-contrib';
 import {
   SettingsLayout,
@@ -86,7 +87,7 @@ import {
 import { AdvancedSettings } from './components/advancedSettings';
 import AlarmIcon from '@material-ui/icons/Alarm';
 import React from 'react';
-import { Navigate, Route } from 'react-router';
+import { Navigate, Route } from 'react-router-dom';
 import { apis } from './apis';
 import { entityPage } from './components/catalog/EntityPage';
 import { homePage } from './components/home/HomePage';
@@ -103,10 +104,11 @@ import * as plugins from './plugins';
 import { techDocsPage } from './components/techdocs/TechDocsPage';
 import { ApacheAirflowPage } from '@backstage/plugin-apache-airflow';
 import { RequirePermission } from '@backstage/plugin-permission-react';
-import { catalogEntityCreatePermission } from '@backstage/plugin-catalog-common';
+import { catalogEntityCreatePermission } from '@backstage/plugin-catalog-common/alpha';
 import { PlaylistIndexPage } from '@backstage/plugin-playlist';
 import { TwoColumnLayout } from './components/scaffolder/customScaffolderLayouts';
 import { ScoreBoardPage } from '@oriflame/backstage-plugin-score-card';
+import { StackstormPage } from '@backstage/plugin-stackstorm';
 
 const app = createApp({
   apis,
@@ -115,6 +117,10 @@ const app = createApp({
     // Custom icon example
     alert: AlarmIcon,
   },
+  // Example of application level feature flag
+  // featureFlags: [
+  // { name: 'tech-radar', description: 'Enables the tech radar plugin' },
+  // ],
   components: {
     SignInPage: props => {
       return (
@@ -144,9 +150,6 @@ const app = createApp({
     });
   },
 });
-
-const AppProvider = app.getProvider();
-const AppRouter = app.getRouter();
 
 const routes = (
   <FlatRoutes>
@@ -202,6 +205,7 @@ const routes = (
         <ExpandableNavigation />
         <ReportIssue />
         <TextSize />
+        <LightBox />
       </TechDocsAddons>
     </Route>
     <Route
@@ -243,6 +247,9 @@ const routes = (
       <ScaffolderFieldExtensions>
         <DelayingComponentFieldExtension />
       </ScaffolderFieldExtensions>
+      <ScaffolderLayouts>
+        <TwoColumnLayout />
+      </ScaffolderLayouts>
     </Route>
     <Route path="/explore" element={<ExplorePage />} />
     <Route
@@ -275,17 +282,16 @@ const routes = (
     <Route path="/apache-airflow" element={<ApacheAirflowPage />} />
     <Route path="/playlist" element={<PlaylistIndexPage />} />
     <Route path="/score-board" element={<ScoreBoardPage />} />
+    <Route path="/stackstorm" element={<StackstormPage />} />
   </FlatRoutes>
 );
 
-const App = () => (
-  <AppProvider>
-    <AlertDisplay />
+export default app.createRoot(
+  <>
+    <AlertDisplay transientTimeoutMs={2500} />
     <OAuthRequestDialog />
     <AppRouter>
       <Root>{routes}</Root>
     </AppRouter>
-  </AppProvider>
+  </>,
 );
-
-export default App;

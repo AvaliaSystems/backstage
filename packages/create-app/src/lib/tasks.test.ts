@@ -193,23 +193,54 @@ describe('tasks', () => {
       // requires callback implementation to support `promisify` wrapper
       // https://stackoverflow.com/a/60579617/10044859
       mockExec.mockImplementation((_command, callback) => {
-        callback(null, 'standard out', 'standard error');
+        if (_command === 'yarn --version') {
+          callback(null, { stdout: '1.22.5', stderr: 'standard error' });
+        } else {
+          callback(null, { stdout: 'standard out', stderr: 'standard error' });
+        }
       });
 
       const appDir = 'projects/dir';
       await expect(buildAppTask(appDir)).resolves.not.toThrow();
-      expect(mockChdir).toHaveBeenCalledTimes(2);
+      expect(mockChdir).toHaveBeenCalledTimes(1);
       expect(mockChdir).toHaveBeenNthCalledWith(1, appDir);
-      expect(mockChdir).toHaveBeenNthCalledWith(2, appDir);
-      expect(mockExec).toHaveBeenCalledTimes(2);
+      expect(mockExec).toHaveBeenCalledTimes(3);
       expect(mockExec).toHaveBeenNthCalledWith(
         1,
-        'yarn install',
+        'yarn --version',
         expect.any(Function),
       );
       expect(mockExec).toHaveBeenNthCalledWith(
         2,
+        'yarn install',
+        expect.any(Function),
+      );
+      expect(mockExec).toHaveBeenNthCalledWith(
+        3,
         'yarn tsc',
+        expect.any(Function),
+      );
+    });
+
+    it('should error out on incorrect yarn version', async () => {
+      const mockChdir = jest.spyOn(process, 'chdir');
+
+      // requires callback implementation to support `promisify` wrapper
+      // https://stackoverflow.com/a/60579617/10044859
+      mockExec.mockImplementation((_command, callback) => {
+        callback(null, { stdout: '3.2.1', stderr: 'standard error' });
+      });
+
+      const appDir = 'projects/dir';
+      await expect(buildAppTask(appDir)).rejects.toThrow(
+        /^@backstage\/create-app requires Yarn v1, found '3\.2\.1'/,
+      );
+      expect(mockChdir).toHaveBeenCalledTimes(1);
+      expect(mockChdir).toHaveBeenNthCalledWith(1, appDir);
+      expect(mockExec).toHaveBeenCalledTimes(1);
+      expect(mockExec).toHaveBeenNthCalledWith(
+        1,
+        'yarn --version',
         expect.any(Function),
       );
     });
@@ -284,7 +315,7 @@ describe('tasks', () => {
   });
 
   describe('readGitConfig', () => {
-    const tmpDir = resolvePath(os.tmpdir(), 'git-temp-dir');
+    const tmpDirPrefix = resolvePath(os.tmpdir(), 'git-temp-dir-');
 
     it('should return git config if git package is installed and git credentials are set', async () => {
       mockExec.mockImplementation((_command, _options, callback) => {
@@ -299,17 +330,17 @@ describe('tasks', () => {
       expect(mockExec).toHaveBeenCalledTimes(3);
       expect(mockExec).toHaveBeenCalledWith(
         'git init',
-        { cwd: tmpDir },
+        { cwd: expect.stringContaining(tmpDirPrefix) },
         expect.any(Function),
       );
       expect(mockExec).toHaveBeenCalledWith(
         'git commit --allow-empty -m "Initial commit"',
-        { cwd: tmpDir },
+        { cwd: expect.stringContaining(tmpDirPrefix) },
         expect.any(Function),
       );
       expect(mockExec).toHaveBeenCalledWith(
         'git branch --format="%(refname:short)"',
-        { cwd: tmpDir },
+        { cwd: expect.stringContaining(tmpDirPrefix) },
         expect.any(Function),
       );
     });

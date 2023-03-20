@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-import { lightTheme } from '@backstage/theme';
-import { ThemeProvider } from '@material-ui/core';
-import { render } from '@testing-library/react';
+import { renderInTestApp } from '@backstage/test-utils';
 import React from 'react';
 import GetBBoxPolyfill from '../../utils/polyfills/getBBox';
 
@@ -47,17 +45,30 @@ describe('RadarLegend', () => {
     GetBBoxPolyfill.remove();
   });
 
-  it('should render', () => {
-    const rendered = render(
-      <ThemeProvider theme={lightTheme}>
-        <svg>
-          <RadarLegend {...minProps} />
-        </svg>
-      </ThemeProvider>,
+  it('should render', async () => {
+    const rendered = await renderInTestApp(
+      <svg>
+        <RadarLegend {...minProps} />
+      </svg>,
     );
 
     expect(rendered.getByTestId('radar-legend')).toBeInTheDocument();
     expect(rendered.getAllByTestId('radar-quadrant')).toHaveLength(1);
     expect(rendered.getAllByTestId('radar-ring')).toHaveLength(1);
+  });
+
+  it('should have the correct ring text color', async () => {
+    const rendered = await renderInTestApp(
+      <svg>
+        <RadarLegend {...minProps} />
+      </svg>,
+    );
+
+    expect(rendered.getByTestId('radar-legend')).toBeInTheDocument();
+
+    const legend = rendered.getByTestId('radar-legend-heading');
+    expect(legend).toHaveStyle({
+      color: '#93c47d',
+    });
   });
 });

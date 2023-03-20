@@ -44,7 +44,7 @@ describe('<EntityTagPicker/>', () => {
     );
     await waitFor(() => expect(screen.getByText('Tags')).toBeInTheDocument());
 
-    fireEvent.click(screen.getByTestId('tag-picker-expand'));
+    fireEvent.click(screen.getByTestId('tags-picker-expand'));
     tags.forEach(tag => {
       expect(screen.getByText(tag)).toBeInTheDocument();
     });
@@ -60,7 +60,7 @@ describe('<EntityTagPicker/>', () => {
     );
     await waitFor(() => expect(screen.getByText('Tags')).toBeInTheDocument());
 
-    fireEvent.click(screen.getByTestId('tag-picker-expand'));
+    fireEvent.click(screen.getByTestId('tags-picker-expand'));
 
     expect(screen.getAllByRole('option').map(o => o.textContent)).toEqual([
       'tag1',
@@ -80,7 +80,7 @@ describe('<EntityTagPicker/>', () => {
     );
     await waitFor(() => expect(screen.getByText('Tags')).toBeInTheDocument());
 
-    fireEvent.click(screen.getByTestId('tag-picker-expand'));
+    fireEvent.click(screen.getByTestId('tags-picker-expand'));
 
     expect(screen.getAllByRole('option').map(o => o.textContent)).toEqual([
       'tag1 (0)',
@@ -132,7 +132,7 @@ describe('<EntityTagPicker/>', () => {
       }),
     );
 
-    fireEvent.click(screen.getByTestId('tag-picker-expand'));
+    fireEvent.click(screen.getByTestId('tags-picker-expand'));
     fireEvent.click(screen.getByText('tag1'));
     expect(updateFilters).toHaveBeenLastCalledWith({
       tags: new EntityTagFilter(['tag1']),
@@ -158,7 +158,7 @@ describe('<EntityTagPicker/>', () => {
         tags: new EntityTagFilter(['tag1']),
       }),
     );
-    fireEvent.click(screen.getByTestId('tag-picker-expand'));
+    fireEvent.click(screen.getByTestId('tags-picker-expand'));
     expect(screen.getByLabelText('tag1')).toBeChecked();
 
     fireEvent.click(screen.getByLabelText('tag1'));
@@ -201,5 +201,34 @@ describe('<EntityTagPicker/>', () => {
     expect(updateFilters).toHaveBeenLastCalledWith({
       tags: new EntityTagFilter(['tag2']),
     });
+  });
+  it('removes tags from filters if there are none available', async () => {
+    const updateFilters = jest.fn();
+    const mockCatalogApiRefNoTags = {
+      getEntityFacets: async () => ({
+        facets: {
+          'metadata.tags': {},
+        },
+      }),
+    } as unknown as CatalogApi;
+
+    render(
+      <TestApiProvider apis={[[catalogApiRef, mockCatalogApiRefNoTags]]}>
+        <MockEntityListContextProvider
+          value={{
+            updateFilters,
+            queryParameters: { tags: ['tag1'] },
+          }}
+        >
+          <EntityTagPicker />
+        </MockEntityListContextProvider>
+        ,
+      </TestApiProvider>,
+    );
+    await waitFor(() =>
+      expect(updateFilters).toHaveBeenLastCalledWith({
+        tags: undefined,
+      }),
+    );
   });
 });

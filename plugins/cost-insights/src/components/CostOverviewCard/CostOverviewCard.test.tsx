@@ -15,19 +15,20 @@
  */
 import React from 'react';
 import { fireEvent } from '@testing-library/react';
+import { MockPluginProvider } from '@backstage/test-utils/alpha';
 import { renderInTestApp } from '@backstage/test-utils';
 import { CostOverviewCard } from './CostOverviewCard';
-import { Cost } from '../../types';
+import { Cost } from '@backstage/plugin-cost-insights-common';
 import {
   changeOf,
   getGroupedProducts,
   getGroupedProjects,
   MockAggregatedDailyCosts,
-  trendlineOf,
   MockBillingDateProvider,
   MockConfigProvider,
   MockFilterProvider,
   MockScrollProvider,
+  trendlineOf,
 } from '../../testUtils';
 import { CostInsightsThemeProvider } from '../CostInsightsPage/CostInsightsThemeProvider';
 
@@ -44,7 +45,9 @@ function renderInContext(children: JSX.Element) {
       <MockConfigProvider>
         <MockFilterProvider>
           <MockBillingDateProvider>
-            <MockScrollProvider>{children}</MockScrollProvider>
+            <MockScrollProvider>
+              <MockPluginProvider>{children}</MockPluginProvider>
+            </MockScrollProvider>
           </MockBillingDateProvider>
         </MockFilterProvider>
       </MockConfigProvider>

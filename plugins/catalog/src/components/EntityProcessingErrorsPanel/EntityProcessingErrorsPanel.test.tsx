@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import { AlphaEntity, stringifyEntityRef } from '@backstage/catalog-model';
+import { AlphaEntity } from '@backstage/catalog-model/alpha';
+import { stringifyEntityRef } from '@backstage/catalog-model';
 import { ApiProvider } from '@backstage/core-app-api';
 import {
   CatalogApi,
@@ -226,7 +227,7 @@ describe('<EntityProcessErrors />', () => {
     expect(screen.getByText('Error: Foo')).toBeInTheDocument();
     expect(screen.queryByText('Error: This should not be rendered')).toBeNull();
     expect(
-      screen.queryByText('The error below originates from'),
+      screen.getByText('The error below originates from'),
     ).toBeInTheDocument();
   });
 });

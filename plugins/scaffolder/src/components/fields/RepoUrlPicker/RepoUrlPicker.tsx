@@ -30,7 +30,7 @@ import { parseRepoPickerUrl, serializeRepoPickerUrl } from './utils';
 import { RepoUrlPickerProps } from './schema';
 import { RepoUrlPickerState } from './types';
 import useDebounce from 'react-use/lib/useDebounce';
-import { useTemplateSecrets } from '../../secrets';
+import { useTemplateSecrets } from '@backstage/plugin-scaffolder-react';
 
 export { RepoUrlPickerSchema } from './schema';
 
@@ -60,12 +60,16 @@ export const RepoUrlPicker = (props: RepoUrlPickerProps) => {
     () => uiSchema?.['ui:options']?.allowedOwners ?? [],
     [uiSchema],
   );
+  const allowedProjects = useMemo(
+    () => uiSchema?.['ui:options']?.allowedProjects ?? [],
+    [uiSchema],
+  );
   const allowedRepos = useMemo(
     () => uiSchema?.['ui:options']?.allowedRepos ?? [],
     [uiSchema],
   );
 
-  const { owner, organization, repoName } = state;
+  const { owner, organization, project, repoName } = state;
 
   useEffect(() => {
     onChange(serializeRepoPickerUrl(state));
@@ -91,6 +95,15 @@ export const RepoUrlPicker = (props: RepoUrlPickerProps) => {
   }, [setState, allowedOwners, owner]);
 
   useEffect(() => {
+    if (allowedProjects.length > 0 && !project) {
+      setState(prevState => ({
+        ...prevState,
+        project: allowedProjects[0],
+      }));
+    }
+  }, [setState, allowedProjects, project]);
+
+  useEffect(() => {
     if (allowedRepos.length > 0 && !repoName) {
       setState(prevState => ({ ...prevState, repoName: allowedRepos[0] }));
     }
@@ -107,16 +120,17 @@ export const RepoUrlPicker = (props: RepoUrlPickerProps) => {
     async () => {
       const { requestUserCredentials } = uiSchema?.['ui:options'] ?? {};
 
+      const workspace = state.owner ? state.owner : state.project;
       if (
         !requestUserCredentials ||
-        !(state.host && state.owner && state.repoName)
+        !(state.host && workspace && state.repoName)
       ) {
         return;
       }
 
-      const [encodedHost, encodedOwner, encodedRepoName] = [
+      const [encodedHost, encodedWorkspace, encodedRepoName] = [
         state.host,
-        state.owner,
+        workspace,
         state.repoName,
       ].map(encodeURIComponent);
 
@@ -124,14 +138,14 @@ export const RepoUrlPicker = (props: RepoUrlPickerProps) => {
       // so lets grab them using the scmAuthApi and pass through
       // any additional scopes from the ui:options
       const { token } = await scmAuthApi.getCredentials({
-        url: `https://${encodedHost}/${encodedOwner}/${encodedRepoName}`,
+        url: `https://${encodedHost}/${encodedWorkspace}/${encodedRepoName}`,
         additionalScope: {
           repoWrite: true,
           customScopes: requestUserCredentials.additionalScopes,
         },
       });
 
-      // set the secret using the key provided in the the ui:options for use
+      // set the secret using the key provided in the ui:options for use
       // in the templating the manifest with ${{ secrets[secretsKey] }}
       setSecrets({ [requestUserCredentials.secretsKey]: token });
     },
@@ -169,6 +183,7 @@ export const RepoUrlPicker = (props: RepoUrlPickerProps) => {
       {hostType === 'bitbucket' && (
         <BitbucketRepoPicker
           allowedOwners={allowedOwners}
+          allowedProjects={allowedProjects}
           rawErrors={rawErrors}
           state={state}
           onChange={updateLocalState}

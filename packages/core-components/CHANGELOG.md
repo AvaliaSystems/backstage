@@ -1,5 +1,297 @@
 # @backstage/core-components
 
+## 0.12.5
+
+### Patch Changes
+
+- 8bbf95b5507: Button labels in the sidebar (previously displayed in uppercase) will be displayed in the case that is provided without any transformations.
+  For example, a sidebar button with the label "Search" will appear as Search, "search" will appear as search, "SEARCH" will appear as SEARCH etc.
+  This can potentially affect any overriding styles previously applied to change the appearance of Button labels in the Sidebar.
+- cb8ec97cdeb: Change black & white colors to be theme aware
+- c10384a9235: Switch to using `LinkButton` instead of the deprecated `Button`
+- 52b0022dab7: Updated dependency `msw` to `^1.0.0`.
+- e1aae2f5a0c: Updated the `aria-label` of the `HeaderTabs` component.
+- 6a51a49a810: Fix bug where `<Table />` component would not take into account header styles defined in `columns[*].headerStyle`.
+- fa004f66871: Use media queries to change layout instead of `isMobile` prop in `BackstagePage` component
+- Updated dependencies
+  - @backstage/errors@1.1.5
+  - @backstage/core-plugin-api@1.5.0
+  - @backstage/config@1.0.7
+  - @backstage/theme@0.2.18
+  - @backstage/version-bridge@1.0.3
+
+## 0.12.5-next.2
+
+### Patch Changes
+
+- 8bbf95b5507: Button labels in the sidebar (previously displayed in uppercase) will be displayed in the case that is provided without any transformations.
+  For example, a sidebar button with the label "Search" will appear as Search, "search" will appear as search, "SEARCH" will appear as SEARCH etc.
+  This can potentially affect any overriding styles previously applied to change the appearance of Button labels in the Sidebar.
+- fa004f66871: Use media queries to change layout instead of `isMobile` prop in `BackstagePage` component
+- Updated dependencies
+  - @backstage/core-plugin-api@1.5.0-next.2
+  - @backstage/config@1.0.7-next.0
+
+## 0.12.5-next.1
+
+### Patch Changes
+
+- cb8ec97cdeb: Change black & white colors to be theme aware
+- c10384a9235: Switch to using `LinkButton` instead of the deprecated `Button`
+- 52b0022dab7: Updated dependency `msw` to `^1.0.0`.
+- e1aae2f5a0c: Updated the `aria-label` of the `HeaderTabs` component.
+- Updated dependencies
+  - @backstage/errors@1.1.5-next.0
+  - @backstage/core-plugin-api@1.4.1-next.1
+  - @backstage/config@1.0.7-next.0
+  - @backstage/theme@0.2.18-next.0
+  - @backstage/version-bridge@1.0.3
+
+## 0.12.5-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-plugin-api@1.4.1-next.0
+  - @backstage/config@1.0.6
+  - @backstage/errors@1.1.4
+  - @backstage/theme@0.2.17
+  - @backstage/version-bridge@1.0.3
+
+## 0.12.4
+
+### Patch Changes
+
+- 68ce7d0417: Added aria labels on the support button and sidebar
+- 5637ebed92: Added a global override for `window.open` that helps prevent security vulnerabilities.
+- 910015f5b7: The Button component has been deprecated in favor of the LinkButton component
+- 20840b36b4: Adds new type, TableOptions, extending Material Table Options.
+- e81a6e0ab5: Updated Link URL validation to be more strict.
+- 85b04f659a: Internal refactor to not use deprecated `substr`
+- 66e2aab4c4: Navigation items in mobile sidebar now have aria label.
+- Updated dependencies
+  - @backstage/theme@0.2.17
+  - @backstage/core-plugin-api@1.4.0
+  - @backstage/config@1.0.6
+  - @backstage/errors@1.1.4
+  - @backstage/version-bridge@1.0.3
+
+## 0.12.4-next.1
+
+### Patch Changes
+
+- 66e2aab4c4: Navigation items in mobile sidebar now have aria label.
+- Updated dependencies
+  - @backstage/config@1.0.6
+  - @backstage/core-plugin-api@1.3.0
+  - @backstage/errors@1.1.4
+  - @backstage/theme@0.2.16
+  - @backstage/version-bridge@1.0.3
+
+## 0.12.4-next.0
+
+### Patch Changes
+
+- 910015f5b7: The Button component has been deprecated in favor of the LinkButton component
+- 20840b36b4: Adds new type, TableOptions, extending Material Table Options.
+- 85b04f659a: Internal refactor to not use deprecated `substr`
+- Updated dependencies
+  - @backstage/config@1.0.6
+  - @backstage/core-plugin-api@1.3.0
+  - @backstage/errors@1.1.4
+  - @backstage/theme@0.2.16
+  - @backstage/version-bridge@1.0.3
+
+## 0.12.3
+
+### Patch Changes
+
+- f2ea446de0: Applied fix from v1.9.1
+- 80ce4e8c29: Small updates to some components to ensure theme typography properties are inherited correctly.
+- f23146520e: Ensure that the "Custom User" sign-in makes use of supplied custom tokens, if any
+- Updated dependencies
+  - @backstage/core-plugin-api@1.3.0
+  - @backstage/config@1.0.6
+  - @backstage/errors@1.1.4
+  - @backstage/theme@0.2.16
+  - @backstage/version-bridge@1.0.3
+
+## 0.12.3-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-plugin-api@1.3.0-next.1
+  - @backstage/config@1.0.6-next.0
+  - @backstage/errors@1.1.4
+  - @backstage/theme@0.2.16
+  - @backstage/version-bridge@1.0.3
+
+## 0.12.3-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/config@1.0.6-next.0
+  - @backstage/core-plugin-api@1.2.1-next.0
+  - @backstage/errors@1.1.4
+  - @backstage/theme@0.2.16
+  - @backstage/version-bridge@1.0.3
+
+## 0.12.3-next.0
+
+### Patch Changes
+
+- f2ea446de0: Applied fix from v1.9.1
+- Updated dependencies
+  - @backstage/config@1.0.5
+  - @backstage/core-plugin-api@1.2.0
+  - @backstage/errors@1.1.4
+  - @backstage/theme@0.2.16
+  - @backstage/version-bridge@1.0.3
+
+## 0.12.2
+
+### Patch Changes
+
+- Fixing the UPPERCASED links in the sidebar
+
+## 0.12.1
+
+### Patch Changes
+
+- a236a8830d: Update sidebar icon alignment
+- d3fea4ae0a: Internal fixes to avoid implicit usage of globals
+- b05dcd5530: Move the `zod` dependency to a version that does not collide with other libraries
+- ea4a5be8f3: Create a variable for minimum height and add a prop named 'fit' for determining if the graph height should grow or be contained.
+- 2e701b3796: Internal refactor to use `react-router-dom` rather than `react-router`.
+- d2e3bf6737: Made AlertDisplay not crash on undefined messages
+- 64a579a998: Add items prop to SupportButton. This prop can be used to override the items that would otherwise be grabbed from the config.
+- 5d3058355d: Add `react/forbid-elements` linter rule for button, suggest MUI `Button`
+- 3280711113: Updated dependency `msw` to `^0.49.0`.
+- 19356df560: Updated dependency `zen-observable` to `^0.9.0`.
+- c3fa90e184: Updated dependency `zen-observable` to `^0.10.0`.
+- 5fb6d5e92e: Updated dependency `@react-hookz/web` to `^19.0.0`.
+- 17a8e32f39: Updated dependency `rc-progress` to `3.4.1`.
+- 146378c146: Updated dependency `@react-hookz/web` to `^20.0.0`.
+- dfc8edf9c5: Internal refactor to avoid usage of deprecated symbols.
+- 8015ff1258: Tweaked wording to use inclusive terminology
+- 830687539f: Sync components in @backstage/core-components with the Component Design Guidelines
+- 1ae86ab5fb: Added an option to allow the `AlertMessage` to be self-closing. This is done with a new `display` property that is set to `transient` on the `AlertMessage` when triggering a message to the `AlertApi`. The length of time that these transient messages stay open for can be set using the `transientTimeoutMs` prop on the `AlertDisplay` in the `App.tsx`. Here is an example:
+
+  ```diff
+    const App = () => (
+      <AppProvider>
+  +     <AlertDisplay transientTimeoutMs={2500} />
+        <OAuthRequestDialog />
+        <AppRouter>
+          <Root>{routes}</Root>
+        </AppRouter>
+      </AppProvider>
+    );
+  ```
+
+  The above example will set the transient timeout to 2500ms from the default of 5000ms
+
+- 16e31e690f: InfoCard - Remove subheader container when there is not a subheader or icon
+- a5a2d12298: Added option to pass additional headers to `<ProxiedSignInPage />`, which are passed along with the request to the underlying provider
+- 91bba69ef8: Internal refactor to remove deprecated symbols.
+- Updated dependencies
+  - @backstage/core-plugin-api@1.2.0
+  - @backstage/version-bridge@1.0.3
+  - @backstage/errors@1.1.4
+  - @backstage/config@1.0.5
+  - @backstage/theme@0.2.16
+
+## 0.12.1-next.4
+
+### Patch Changes
+
+- b05dcd5530: Move the `zod` dependency to a version that does not collide with other libraries
+- 2e701b3796: Internal refactor to use `react-router-dom` rather than `react-router`.
+- a5a2d12298: Added option to pass additional headers to `<ProxiedSignInPage />`, which are passed along with the request to the underlying provider
+- Updated dependencies
+  - @backstage/config@1.0.5-next.1
+  - @backstage/core-plugin-api@1.2.0-next.2
+  - @backstage/errors@1.1.4-next.1
+  - @backstage/theme@0.2.16
+  - @backstage/version-bridge@1.0.3-next.0
+
+## 0.12.1-next.3
+
+### Patch Changes
+
+- 91bba69ef8: Internal refactor to remove deprecated symbols.
+- Updated dependencies
+  - @backstage/config@1.0.5-next.1
+  - @backstage/core-plugin-api@1.2.0-next.2
+  - @backstage/errors@1.1.4-next.1
+  - @backstage/theme@0.2.16
+  - @backstage/version-bridge@1.0.3-next.0
+
+## 0.12.1-next.2
+
+### Patch Changes
+
+- d2e3bf6737: Made AlertDisplay not crash on undefined messages
+- 5fb6d5e92e: Updated dependency `@react-hookz/web` to `^19.0.0`.
+- 146378c146: Updated dependency `@react-hookz/web` to `^20.0.0`.
+- 8015ff1258: Tweaked wording to use inclusive terminology
+- 830687539f: Sync components in @backstage/core-components with the Component Design Guidelines
+- 1ae86ab5fb: Added an option to allow the `AlertMessage` to be self-closing. This is done with a new `display` property that is set to `transient` on the `AlertMessage` when triggering a message to the `AlertApi`. The length of time that these transient messages stay open for can be set using the `transientTimeoutMs` prop on the `AlertDisplay` in the `App.tsx`. Here is an example:
+
+  ```diff
+    const App = () => (
+      <AppProvider>
+  +     <AlertDisplay transientTimeoutMs={2500} />
+        <OAuthRequestDialog />
+        <AppRouter>
+          <Root>{routes}</Root>
+        </AppRouter>
+      </AppProvider>
+    );
+  ```
+
+  The above example will set the transient timeout to 2500ms from the default of 5000ms
+
+- 16e31e690f: InfoCard - Remove subheader container when there is not a subheader or icon
+- Updated dependencies
+  - @backstage/core-plugin-api@1.2.0-next.2
+  - @backstage/config@1.0.5-next.1
+  - @backstage/errors@1.1.4-next.1
+  - @backstage/theme@0.2.16
+  - @backstage/version-bridge@1.0.3-next.0
+
+## 0.12.1-next.1
+
+### Patch Changes
+
+- d3fea4ae0a: Internal fixes to avoid implicit usage of globals
+- c3fa90e184: Updated dependency `zen-observable` to `^0.10.0`.
+- Updated dependencies
+  - @backstage/version-bridge@1.0.3-next.0
+  - @backstage/core-plugin-api@1.1.1-next.1
+  - @backstage/config@1.0.5-next.1
+  - @backstage/errors@1.1.4-next.1
+  - @backstage/theme@0.2.16
+
+## 0.12.1-next.0
+
+### Patch Changes
+
+- ea4a5be8f3: Create a variable for minimum height and add a prop named 'fit' for determining if the graph height should grow or be contained.
+- 64a579a998: Add items prop to SupportButton. This prop can be used to override the items that would otherwise be grabbed from the config.
+- 3280711113: Updated dependency `msw` to `^0.49.0`.
+- 19356df560: Updated dependency `zen-observable` to `^0.9.0`.
+- 17a8e32f39: Updated dependency `rc-progress` to `3.4.1`.
+- dfc8edf9c5: Internal refactor to avoid usage of deprecated symbols.
+- Updated dependencies
+  - @backstage/core-plugin-api@1.1.1-next.0
+  - @backstage/config@1.0.5-next.0
+  - @backstage/errors@1.1.4-next.0
+  - @backstage/theme@0.2.16
+  - @backstage/version-bridge@1.0.2
+
 ## 0.12.0
 
 ### Minor Changes

@@ -127,9 +127,19 @@ Options:
 Commands:
   package-roles
   package-scripts
+  package-exports
   package-lint-configs
   react-router-deps
   help [command]
+```
+
+### `backstage-cli migrate package-exports`
+
+```
+Usage: backstage-cli migrate package-exports [options]
+
+Options:
+  -h, --help
 ```
 
 ### `backstage-cli migrate package-lint-configs`
@@ -345,11 +355,13 @@ Options:
   -i, --runInBand
   --runTestsByPath
   --runner
+  --seed
   --selectProjects
   --setupFiles
   --setupFilesAfterEnv
   --shard
   --showConfig
+  --showSeed
   --silent
   --skipFilter
   --snapshotSerializers
@@ -524,11 +536,13 @@ Options:
   -i, --runInBand
   --runTestsByPath
   --runner
+  --seed
   --selectProjects
   --setupFiles
   --setupFilesAfterEnv
   --shard
   --showConfig
+  --showSeed
   --silent
   --skipFilter
   --snapshotSerializers
@@ -565,6 +579,7 @@ Usage: backstage-cli versions:bump [options]
 Options:
   --pattern <glob>
   --release <version|next|main>
+  --skip-install
   -h, --help
 ```
 

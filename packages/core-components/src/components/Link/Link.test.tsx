@@ -23,7 +23,7 @@ import {
 } from '@backstage/test-utils';
 import { analyticsApiRef, configApiRef } from '@backstage/core-plugin-api';
 import { isExternalUri, Link, useResolvedPath } from './Link';
-import { Route, Routes } from 'react-router';
+import { Route, Routes } from 'react-router-dom';
 import { renderHook, WrapperComponent } from '@testing-library/react-hooks';
 import { ConfigReader } from '@backstage/config';
 
@@ -172,5 +172,25 @@ describe('<Link />', () => {
         expect(result.current).toBe(path);
       });
     });
+  });
+
+  it('throws an error when attempting to link to script code', () => {
+    expect(() =>
+      // eslint-disable-next-line no-script-url
+      render(wrapInTestApp(<Link to="javascript:alert('hello')">Script</Link>)),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `"Link component rejected javascript: URL as a security precaution"`,
+    );
+  });
+});
+
+describe('window.open', () => {
+  it('throws an error when attempting to open script code', () => {
+    expect(() =>
+      // eslint-disable-next-line no-script-url
+      window.open("javascript:alert('hello')"),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `"Rejected window.open() with a javascript: URL as a security precaution"`,
+    );
   });
 });

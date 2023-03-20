@@ -29,6 +29,7 @@ export const alertApiRef: ApiRef<AlertApi>;
 export type AlertMessage = {
   message: string;
   severity?: 'success' | 'info' | 'warning' | 'error';
+  display?: 'permanent' | 'transient';
 };
 
 // @public
@@ -241,6 +242,11 @@ export const bitbucketAuthApiRef: ApiRef<
 >;
 
 // @public
+export const bitbucketServerAuthApiRef: ApiRef<
+  OAuthApi & ProfileInfoApi & BackstageIdentityApi & SessionApi
+>;
+
+// @public
 export type BootErrorPageProps = {
   step: 'load-config' | 'load-chunk';
   error: Error;
@@ -424,6 +430,7 @@ export type ExternalRouteRef<
 export type FeatureFlag = {
   name: string;
   pluginId: string;
+  description?: string;
 };
 
 // @public
@@ -475,7 +482,11 @@ export const githubAuthApiRef: ApiRef<
 
 // @public
 export const gitlabAuthApiRef: ApiRef<
-  OAuthApi & ProfileInfoApi & BackstageIdentityApi & SessionApi
+  OAuthApi &
+    OpenIdConnectApi &
+    ProfileInfoApi &
+    BackstageIdentityApi &
+    SessionApi
 >;
 
 // @public
@@ -642,17 +653,6 @@ export type PluginFeatureFlagConfig = {
   name: string;
 };
 
-// @alpha
-export interface PluginOptionsProviderProps {
-  // (undocumented)
-  children: ReactNode;
-  // (undocumented)
-  plugin?: BackstagePlugin;
-}
-
-// @alpha
-export const PluginProvider: (props: PluginOptionsProviderProps) => JSX.Element;
-
 // @public
 export type ProfileInfo = {
   email?: string;
@@ -752,11 +752,6 @@ export function useElementFilter<T>(
   filterFn: (arg: ElementCollection) => T,
   dependencies?: any[],
 ): T;
-
-// @alpha
-export function usePluginOptions<
-  TPluginOptions extends {} = {},
->(): TPluginOptions;
 
 // @public
 export function useRouteRef<Optional extends boolean, Params extends AnyParams>(

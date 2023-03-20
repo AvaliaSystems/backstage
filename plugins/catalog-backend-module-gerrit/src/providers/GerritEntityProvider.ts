@@ -22,7 +22,7 @@ import {
   EntityProviderConnection,
   LocationSpec,
   locationSpecToLocationEntity,
-} from '@backstage/plugin-catalog-backend';
+} from '@backstage/plugin-catalog-node';
 import fetch, { Response } from 'node-fetch';
 import {
   GerritIntegration,
@@ -129,7 +129,7 @@ export class GerritEntityProvider implements EntityProvider {
           try {
             await this.refresh(logger);
           } catch (error) {
-            logger.error(error);
+            logger.error(`${this.getProviderName()} refresh failed`, error);
           }
         },
       });

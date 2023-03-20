@@ -39,6 +39,7 @@ export type GithubLocationAnalyzerOptions = {
   config: Config;
   discovery: PluginEndpointDiscovery;
   tokenManager: TokenManager;
+  githubCredentialsProvider?: GithubCredentialsProvider;
 };
 
 /** @public */
@@ -52,6 +53,7 @@ export class GithubLocationAnalyzer implements ScmLocationAnalyzer {
     this.catalogClient = new CatalogClient({ discoveryApi: options.discovery });
     this.integrations = ScmIntegrations.fromConfig(options.config);
     this.githubCredentialsProvider =
+      options.githubCredentialsProvider ||
       DefaultGithubCredentialsProvider.fromIntegrations(this.integrations);
     this.tokenManager = options.tokenManager;
   }
@@ -61,7 +63,8 @@ export class GithubLocationAnalyzer implements ScmLocationAnalyzer {
     return integration?.type === 'github';
   }
 
-  async analyze({ url, catalogFilename }: AnalyzeOptions) {
+  async analyze(options: AnalyzeOptions) {
+    const { url, catalogFilename } = options;
     const { owner, name: repo } = parseGitUrl(url);
 
     const catalogFile = catalogFilename || 'catalog-info.yaml';

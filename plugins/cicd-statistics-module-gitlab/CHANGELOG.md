@@ -1,5 +1,172 @@
 # @backstage/plugin-cicd-statistics-module-gitlab
 
+## 0.1.12
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-plugin-api@1.5.0
+  - @backstage/catalog-model@1.2.1
+  - @backstage/plugin-cicd-statistics@0.1.18
+
+## 0.1.12-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-plugin-api@1.5.0-next.2
+  - @backstage/plugin-cicd-statistics@0.1.18-next.2
+
+## 0.1.12-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-plugin-api@1.4.1-next.1
+  - @backstage/catalog-model@1.2.1-next.1
+  - @backstage/plugin-cicd-statistics@0.1.18-next.1
+
+## 0.1.12-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-plugin-api@1.4.1-next.0
+  - @backstage/catalog-model@1.2.1-next.0
+  - @backstage/plugin-cicd-statistics@0.1.18-next.0
+
+## 0.1.11
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-cicd-statistics@0.1.17
+  - @backstage/catalog-model@1.2.0
+  - @backstage/core-plugin-api@1.4.0
+
+## 0.1.11-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.2.0-next.1
+  - @backstage/core-plugin-api@1.3.0
+  - @backstage/plugin-cicd-statistics@0.1.17-next.2
+
+## 0.1.11-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-cicd-statistics@0.1.17-next.1
+  - @backstage/catalog-model@1.1.6-next.0
+  - @backstage/core-plugin-api@1.3.0
+
+## 0.1.11-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.1.6-next.0
+  - @backstage/plugin-cicd-statistics@0.1.17-next.0
+
+## 0.1.10
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.1.5
+  - @backstage/core-plugin-api@1.3.0
+  - @backstage/plugin-cicd-statistics@0.1.16
+
+## 0.1.10-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-plugin-api@1.3.0-next.1
+  - @backstage/catalog-model@1.1.5-next.1
+  - @backstage/plugin-cicd-statistics@0.1.16-next.2
+
+## 0.1.10-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.1.5-next.1
+  - @backstage/core-plugin-api@1.2.1-next.0
+  - @backstage/plugin-cicd-statistics@0.1.16-next.1
+
+## 0.1.10-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.1.5-next.0
+  - @backstage/core-plugin-api@1.2.0
+  - @backstage/plugin-cicd-statistics@0.1.16-next.0
+
+## 0.1.9
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-cicd-statistics@0.1.15
+
+## 0.1.8
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-plugin-api@1.2.0
+  - @backstage/plugin-cicd-statistics@0.1.14
+  - @backstage/catalog-model@1.1.4
+
+## 0.1.8-next.4
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.1.4-next.1
+  - @backstage/core-plugin-api@1.2.0-next.2
+  - @backstage/plugin-cicd-statistics@0.1.14-next.4
+
+## 0.1.8-next.3
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.1.4-next.1
+  - @backstage/core-plugin-api@1.2.0-next.2
+  - @backstage/plugin-cicd-statistics@0.1.14-next.3
+
+## 0.1.8-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-plugin-api@1.2.0-next.2
+  - @backstage/plugin-cicd-statistics@0.1.14-next.2
+  - @backstage/catalog-model@1.1.4-next.1
+
+## 0.1.8-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-plugin-api@1.1.1-next.1
+  - @backstage/catalog-model@1.1.4-next.1
+  - @backstage/plugin-cicd-statistics@0.1.14-next.1
+
+## 0.1.8-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/core-plugin-api@1.1.1-next.0
+  - @backstage/catalog-model@1.1.4-next.0
+  - @backstage/plugin-cicd-statistics@0.1.14-next.0
+
 ## 0.1.7
 
 ### Patch Changes

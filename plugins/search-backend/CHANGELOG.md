@@ -1,5 +1,265 @@
 # @backstage/plugin-search-backend
 
+## 1.2.4
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-permission-node@0.7.6
+  - @backstage/plugin-auth-node@0.2.12
+  - @backstage/backend-common@0.18.3
+  - @backstage/errors@1.1.5
+  - @backstage/plugin-permission-common@0.7.4
+  - @backstage/config@1.0.7
+  - @backstage/types@1.0.2
+  - @backstage/plugin-search-backend-node@1.1.4
+  - @backstage/plugin-search-common@1.2.2
+
+## 1.2.4-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-auth-node@0.2.12-next.2
+  - @backstage/backend-common@0.18.3-next.2
+  - @backstage/plugin-permission-node@0.7.6-next.2
+  - @backstage/plugin-search-backend-node@1.1.4-next.2
+  - @backstage/config@1.0.7-next.0
+
+## 1.2.4-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-permission-node@0.7.6-next.1
+  - @backstage/errors@1.1.5-next.0
+  - @backstage/backend-common@0.18.3-next.1
+  - @backstage/plugin-auth-node@0.2.12-next.1
+  - @backstage/plugin-permission-common@0.7.4-next.0
+  - @backstage/config@1.0.7-next.0
+  - @backstage/types@1.0.2
+  - @backstage/plugin-search-backend-node@1.1.4-next.1
+  - @backstage/plugin-search-common@1.2.2-next.0
+
+## 1.2.4-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/backend-common@0.18.3-next.0
+  - @backstage/config@1.0.6
+  - @backstage/errors@1.1.4
+  - @backstage/types@1.0.2
+  - @backstage/plugin-auth-node@0.2.12-next.0
+  - @backstage/plugin-permission-common@0.7.3
+  - @backstage/plugin-permission-node@0.7.6-next.0
+  - @backstage/plugin-search-backend-node@1.1.4-next.0
+  - @backstage/plugin-search-common@1.2.1
+
+## 1.2.3
+
+### Patch Changes
+
+- 1b30c9a0f7: Change the router's response to include the error message instead of its object type in case it fails during a search query because the messages have more info.
+- Updated dependencies
+  - @backstage/backend-common@0.18.2
+  - @backstage/config@1.0.6
+  - @backstage/errors@1.1.4
+  - @backstage/types@1.0.2
+  - @backstage/plugin-auth-node@0.2.11
+  - @backstage/plugin-permission-common@0.7.3
+  - @backstage/plugin-permission-node@0.7.5
+  - @backstage/plugin-search-backend-node@1.1.3
+  - @backstage/plugin-search-common@1.2.1
+
+## 1.2.3-next.2
+
+### Patch Changes
+
+- 1b30c9a0f7: Change the router's response to include the error message instead of its object type in case it fails during a search query because the messages have more info.
+- Updated dependencies
+  - @backstage/backend-common@0.18.2-next.2
+  - @backstage/plugin-auth-node@0.2.11-next.2
+  - @backstage/plugin-permission-node@0.7.5-next.2
+  - @backstage/config@1.0.6
+  - @backstage/errors@1.1.4
+  - @backstage/types@1.0.2
+  - @backstage/plugin-permission-common@0.7.3
+  - @backstage/plugin-search-backend-node@1.1.3-next.2
+  - @backstage/plugin-search-common@1.2.1
+
+## 1.2.3-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/backend-common@0.18.2-next.1
+  - @backstage/config@1.0.6
+  - @backstage/errors@1.1.4
+  - @backstage/types@1.0.2
+  - @backstage/plugin-auth-node@0.2.11-next.1
+  - @backstage/plugin-permission-common@0.7.3
+  - @backstage/plugin-permission-node@0.7.5-next.1
+  - @backstage/plugin-search-backend-node@1.1.3-next.1
+  - @backstage/plugin-search-common@1.2.1
+
+## 1.2.3-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/backend-common@0.18.2-next.0
+  - @backstage/plugin-auth-node@0.2.11-next.0
+  - @backstage/plugin-permission-node@0.7.5-next.0
+  - @backstage/plugin-search-backend-node@1.1.3-next.0
+
+## 1.2.1
+
+### Patch Changes
+
+- bfd66b0478: Allow max page limit for search results to be configurable
+- Updated dependencies
+  - @backstage/backend-common@0.18.0
+  - @backstage/plugin-search-backend-node@1.1.1
+  - @backstage/config@1.0.6
+  - @backstage/errors@1.1.4
+  - @backstage/types@1.0.2
+  - @backstage/plugin-auth-node@0.2.9
+  - @backstage/plugin-permission-common@0.7.3
+  - @backstage/plugin-permission-node@0.7.3
+  - @backstage/plugin-search-common@1.2.1
+
+## 1.2.1-next.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/backend-common@0.18.0-next.1
+  - @backstage/plugin-auth-node@0.2.9-next.1
+  - @backstage/plugin-permission-node@0.7.3-next.1
+  - @backstage/plugin-search-backend-node@1.1.1-next.2
+  - @backstage/config@1.0.6-next.0
+  - @backstage/errors@1.1.4
+  - @backstage/types@1.0.2
+  - @backstage/plugin-permission-common@0.7.3-next.0
+  - @backstage/plugin-search-common@1.2.1-next.0
+
+## 1.2.1-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/backend-common@0.18.0-next.0
+  - @backstage/config@1.0.6-next.0
+  - @backstage/errors@1.1.4
+  - @backstage/types@1.0.2
+  - @backstage/plugin-auth-node@0.2.9-next.0
+  - @backstage/plugin-permission-common@0.7.3-next.0
+  - @backstage/plugin-permission-node@0.7.3-next.0
+  - @backstage/plugin-search-backend-node@1.1.1-next.1
+  - @backstage/plugin-search-common@1.2.1-next.0
+
+## 1.2.1-next.0
+
+### Patch Changes
+
+- bfd66b0478: Allow max page limit for search results to be configurable
+- Updated dependencies
+  - @backstage/plugin-search-backend-node@1.1.1-next.0
+  - @backstage/backend-common@0.17.0
+  - @backstage/config@1.0.5
+  - @backstage/errors@1.1.4
+  - @backstage/types@1.0.2
+  - @backstage/plugin-auth-node@0.2.8
+  - @backstage/plugin-permission-common@0.7.2
+  - @backstage/plugin-permission-node@0.7.2
+  - @backstage/plugin-search-common@1.2.0
+
+## 1.2.0
+
+### Minor Changes
+
+- 29ebc43a0b: numberOfResults is now provided alongside the query result
+
+### Patch Changes
+
+- b05dcd5530: Move the `zod` dependency to a version that does not collide with other libraries
+- Updated dependencies
+  - @backstage/plugin-search-backend-node@1.1.0
+  - @backstage/backend-common@0.17.0
+  - @backstage/plugin-permission-common@0.7.2
+  - @backstage/plugin-permission-node@0.7.2
+  - @backstage/errors@1.1.4
+  - @backstage/plugin-auth-node@0.2.8
+  - @backstage/types@1.0.2
+  - @backstage/plugin-search-common@1.2.0
+  - @backstage/config@1.0.5
+
+## 1.2.0-next.3
+
+### Patch Changes
+
+- b05dcd5530: Move the `zod` dependency to a version that does not collide with other libraries
+- Updated dependencies
+  - @backstage/plugin-permission-common@0.7.2-next.2
+  - @backstage/plugin-permission-node@0.7.2-next.3
+  - @backstage/backend-common@0.17.0-next.3
+  - @backstage/config@1.0.5-next.1
+  - @backstage/errors@1.1.4-next.1
+  - @backstage/types@1.0.2-next.1
+  - @backstage/plugin-auth-node@0.2.8-next.3
+  - @backstage/plugin-search-backend-node@1.1.0-next.3
+  - @backstage/plugin-search-common@1.2.0-next.3
+
+## 1.2.0-next.2
+
+### Minor Changes
+
+- 29ebc43a0b: numberOfResults is now provided alongside the query result
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-search-backend-node@1.1.0-next.2
+  - @backstage/backend-common@0.17.0-next.2
+  - @backstage/plugin-search-common@1.2.0-next.2
+  - @backstage/plugin-auth-node@0.2.8-next.2
+  - @backstage/plugin-permission-node@0.7.2-next.2
+  - @backstage/config@1.0.5-next.1
+  - @backstage/errors@1.1.4-next.1
+  - @backstage/types@1.0.2-next.1
+  - @backstage/plugin-permission-common@0.7.2-next.1
+
+## 1.1.2-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/backend-common@0.17.0-next.1
+  - @backstage/plugin-search-backend-node@1.0.5-next.1
+  - @backstage/types@1.0.2-next.1
+  - @backstage/plugin-auth-node@0.2.8-next.1
+  - @backstage/plugin-permission-node@0.7.2-next.1
+  - @backstage/config@1.0.5-next.1
+  - @backstage/errors@1.1.4-next.1
+  - @backstage/plugin-permission-common@0.7.2-next.1
+  - @backstage/plugin-search-common@1.1.2-next.1
+
+## 1.1.2-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-search-backend-node@1.0.5-next.0
+  - @backstage/backend-common@0.16.1-next.0
+  - @backstage/plugin-auth-node@0.2.8-next.0
+  - @backstage/plugin-permission-common@0.7.2-next.0
+  - @backstage/plugin-permission-node@0.7.2-next.0
+  - @backstage/types@1.0.2-next.0
+  - @backstage/config@1.0.5-next.0
+  - @backstage/errors@1.1.4-next.0
+  - @backstage/plugin-search-common@1.1.2-next.0
+
 ## 1.1.1
 
 ### Patch Changes

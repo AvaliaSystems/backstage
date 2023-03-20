@@ -22,10 +22,13 @@ import {
 } from '@backstage/test-utils';
 import { act, fireEvent } from '@testing-library/react';
 import React from 'react';
-import { scaffolderApiRef } from '../../api';
-import { nextRouteRef, rootRouteRef } from '../../routes';
-import { ScaffolderApi } from '../../types';
+import {
+  ScaffolderApi,
+  scaffolderApiRef,
+  SecretsContextProvider,
+} from '@backstage/plugin-scaffolder-react';
 import { TemplateWizardPage } from './TemplateWizardPage';
+import { rootRouteRef } from '../../routes';
 
 jest.mock('react-router-dom', () => {
   return {
@@ -37,6 +40,7 @@ jest.mock('react-router-dom', () => {
 });
 
 const scaffolderApiMock: jest.Mocked<ScaffolderApi> = {
+  cancelTask: jest.fn(),
   scaffold: jest.fn(),
   getTemplateParameterSchema: jest.fn(),
   getIntegrationsList: jest.fn(),
@@ -73,12 +77,13 @@ describe('TemplateWizardPage', () => {
 
     const { findByRole, getByRole } = await renderInTestApp(
       <ApiProvider apis={apis}>
-        <TemplateWizardPage customFieldExtensions={[]} />,
+        <SecretsContextProvider>
+          <TemplateWizardPage customFieldExtensions={[]} />,
+        </SecretsContextProvider>
       </ApiProvider>,
       {
         mountedRoutes: {
-          '/create': nextRouteRef,
-          '/create-legacy': rootRouteRef,
+          '/create': rootRouteRef,
         },
       },
     );
