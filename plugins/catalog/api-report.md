@@ -160,6 +160,7 @@ export const CatalogTable: {
           }
         | undefined,
     ): TableColumn<CatalogTableRow>;
+    createNamespaceColumn(): TableColumn<CatalogTableRow>;
   }>;
 };
 
@@ -355,6 +356,14 @@ export const EntityListContainer: (props: {
 // @public
 export function EntityOrphanWarning(): JSX.Element;
 
+// @public (undocumented)
+export interface EntityPredicates {
+  // (undocumented)
+  kind?: string | string[];
+  // (undocumented)
+  type?: string | string[];
+}
+
 // @public
 export function EntityProcessingErrorsPanel(): JSX.Element | null;
 
@@ -431,6 +440,11 @@ export interface HasSystemsCardProps {
 // @public
 export function isComponentType(
   types: string | string[],
+): (entity: Entity) => boolean;
+
+// @public
+export function isEntityWith(
+  predicate: EntityPredicates,
 ): (entity: Entity) => boolean;
 
 // @public
