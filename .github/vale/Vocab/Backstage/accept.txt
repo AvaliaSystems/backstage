@@ -188,6 +188,7 @@ learnings
 Leasot
 lerna
 Lerna
+lightbox
 limitranges
 LocalStack
 lockdown
@@ -315,6 +316,7 @@ scaffolded
 scaffolder
 Scaffolder
 scrollbar
+sdks
 seb
 semlas
 semver
@@ -342,6 +344,8 @@ stdout
 storable
 stringified
 stringify
+subcommand
+subcommands
 subcomponent
 subcomponents
 subfolder
@@ -360,6 +364,7 @@ SVGs
 talkdesk
 Talkdesk
 Tanzu
+targetRef
 tasklist
 techdocs
 Telenor
@@ -390,6 +395,7 @@ transpilers
 truthy
 TSDoc
 typeahead
+Uffizzi
 ui
 unbreak
 Unconference
@@ -428,3 +434,5 @@ zod
 Zolotusky
 zoomable
 zsh
+Pulumi
+Lightsail

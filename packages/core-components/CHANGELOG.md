@@ -1,5 +1,53 @@
 # @backstage/core-components
 
+## 0.13.2-next.2
+
+### Patch Changes
+
+- 66ae4d8ca380: Added `exact` prop to `SidebarSubmenuItem` which causes it to only highlight if the current location is an exact match.
+- Updated dependencies
+  - @backstage/theme@0.4.0-next.1
+  - @backstage/config@1.0.7
+  - @backstage/core-plugin-api@1.5.2-next.0
+
+## 0.13.2-next.1
+
+### Patch Changes
+
+- 83bdc3a555c1: Replaced usages of `theme.palette.theme.hint` with `theme.palette.text.secondary` as it has been removed in MUI v5
+- Updated dependencies
+  - @backstage/errors@1.2.0-next.0
+  - @backstage/core-plugin-api@1.5.2-next.0
+  - @backstage/config@1.0.7
+  - @backstage/theme@0.4.0-next.0
+  - @backstage/version-bridge@1.0.4
+
+## 0.13.2-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/theme@0.4.0-next.0
+  - @backstage/config@1.0.7
+  - @backstage/core-plugin-api@1.5.1
+  - @backstage/errors@1.1.5
+  - @backstage/version-bridge@1.0.4
+
+## 0.13.1
+
+### Patch Changes
+
+- 83b45f9df50: Fix accessibility issue with Backstage Table's header style
+- e97769f7c0b: Fix accessibility issue on controlled select input on tab navigation + keyboard enter/space action.
+- b1f13cb38aa: Fix accessibility issue with Edit Metadata Link on screen readers missing notice about opening in a new tab.
+- 26cff1a5dfb: Start capturing sidebar click events in analytics by default.
+- Updated dependencies
+  - @backstage/theme@0.3.0
+  - @backstage/config@1.0.7
+  - @backstage/core-plugin-api@1.5.1
+  - @backstage/errors@1.1.5
+  - @backstage/version-bridge@1.0.4
+
 ## 0.13.1-next.1
 
 ### Patch Changes

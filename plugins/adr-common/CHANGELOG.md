@@ -1,5 +1,24 @@
 # @backstage/plugin-adr-common
 
+## 0.2.10-next.0
+
+### Patch Changes
+
+- 58524588448c: Add utility function for parsing MADR front matter
+- Updated dependencies
+  - @backstage/integration@1.5.0-next.0
+  - @backstage/catalog-model@1.4.0-next.0
+  - @backstage/plugin-search-common@1.2.4-next.0
+
+## 0.2.9
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/integration@1.4.5
+  - @backstage/catalog-model@1.3.0
+  - @backstage/plugin-search-common@1.2.3
+
 ## 0.2.9-next.0
 
 ### Patch Changes
