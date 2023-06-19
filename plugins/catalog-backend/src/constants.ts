@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The Backstage Authors
+ * Copyright 2020 The Backstage Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,30 +14,5 @@
  * limitations under the License.
  */
 
-import { Store } from 'keyv';
-
-/**
- * Storage class compatible with Keyv which always results in a no-op. This is
- * used when no cache store is configured in a Backstage backend instance.
- */
-export class NoStore implements Store<string | undefined> {
-  clear(): void {
-    return;
-  }
-
-  delete(_key: string): boolean {
-    return false;
-  }
-
-  get(_key: string) {
-    return undefined;
-  }
-
-  has(_key: string): boolean {
-    return false;
-  }
-
-  set(_key: string, _value: any): this {
-    return this;
-  }
-}
+/** @public */
+export const CATALOG_CONFLICTS_TOPIC = 'experimental.catalog.conflict';
