@@ -1,5 +1,92 @@
 # @backstage/plugin-catalog-backend-module-incremental-ingestion
 
+## 0.4.0-next.1
+
+### Minor Changes
+
+- b1cc10696f2f: **BREAKING** Allow incremental event handlers to be async; Force event handler
+  to indicate if it made a change. Instead of returning `null` or `undefined` from an event
+  handler to indicate no-oop, instead return the value { type: "ignored" }.
+
+  **before**
+
+  ```javascript
+  import { createDelta, shouldIgnore } from "./my-delta-creater";
+
+  eventHandler: {
+    onEvent(params) {
+      if (shouldIgnore(params)) {
+        return;
+      }
+      return createDelta(params);
+    }
+  }
+  ```
+
+  **after**
+
+  ```javascript
+  import { createDelta, shouldIgnore } from "./my-delta-creater";
+
+  eventHandler: {
+    async onEvent(params) {
+      if (shouldIgnore(params) {
+        return { type: "ignored" };
+      }
+      // code to create delta can now be async if needed
+      return await createDelta(params);
+    }
+  }
+  ```
+
+### Patch Changes
+
+- e1d615757f48: Update readme and instructions
+- Updated dependencies
+  - @backstage/backend-common@0.19.1-next.0
+  - @backstage/backend-plugin-api@0.5.4-next.0
+  - @backstage/backend-tasks@0.5.4-next.0
+  - @backstage/catalog-model@1.4.1-next.0
+  - @backstage/config@1.0.8
+  - @backstage/errors@1.2.1-next.0
+  - @backstage/plugin-catalog-backend@1.11.0-next.0
+  - @backstage/plugin-catalog-node@1.4.0-next.0
+  - @backstage/plugin-events-node@0.2.8-next.0
+  - @backstage/plugin-permission-common@0.7.7-next.0
+
+## 0.3.4-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/errors@1.2.1-next.0
+  - @backstage/backend-common@0.19.1-next.0
+  - @backstage/plugin-catalog-backend@1.11.0-next.0
+  - @backstage/plugin-catalog-node@1.4.0-next.0
+  - @backstage/backend-plugin-api@0.5.4-next.0
+  - @backstage/backend-tasks@0.5.4-next.0
+  - @backstage/catalog-model@1.4.1-next.0
+  - @backstage/config@1.0.8
+  - @backstage/plugin-events-node@0.2.8-next.0
+  - @backstage/plugin-permission-common@0.7.7-next.0
+
+## 0.3.3
+
+### Patch Changes
+
+- 53309661cb5c: Update installation guide to fix inconsistency in type names
+- Updated dependencies
+  - @backstage/backend-common@0.19.0
+  - @backstage/plugin-catalog-backend@1.10.0
+  - @backstage/catalog-model@1.4.0
+  - @backstage/errors@1.2.0
+  - @backstage/backend-plugin-api@0.5.3
+  - @backstage/backend-tasks@0.5.3
+  - @backstage/plugin-catalog-node@1.3.7
+  - @backstage/config@1.0.8
+  - @backstage/plugin-events-node@0.2.7
+  - @backstage/plugin-permission-common@0.7.6
+
 ## 0.3.3-next.2
 
 ### Patch Changes

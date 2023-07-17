@@ -312,6 +312,8 @@ rsync
 ruleset
 runbook
 sam
+sandbox
+sandboxing
 sanitization
 scaffolded
 scaffolder
@@ -400,6 +402,7 @@ Uffizzi
 ui
 unbreak
 Unconference
+unicode
 unmanaged
 unregister
 unregistering
@@ -407,6 +410,7 @@ unregistration
 untracked
 upsert
 upvote
+url
 URIs
 URLs
 utils

@@ -1,5 +1,63 @@
 # @backstage/cli
 
+## 0.22.9-next.1
+
+### Patch Changes
+
+- 4edd1ef71453: semver upgrade to 7.5.3
+- ff45cb559e49: Updated dependency `esbuild` to `^0.18.0`.
+- 8174cf4c0edf: Fixing MUI / Material UI references
+- Updated dependencies
+  - @backstage/cli-node@0.1.2-next.1
+  - @backstage/catalog-model@1.4.1-next.0
+  - @backstage/cli-common@0.1.12
+  - @backstage/config@1.0.8
+  - @backstage/config-loader@1.3.2-next.0
+  - @backstage/errors@1.2.1-next.0
+  - @backstage/eslint-plugin@0.1.3
+  - @backstage/integration@1.5.1-next.0
+  - @backstage/release-manifests@0.0.9
+  - @backstage/types@1.1.0
+
+## 0.22.9-next.0
+
+### Patch Changes
+
+- 6adb6f41711a: Fixed the `--alwaysYarnPack` flag on the`backstage-cli build-workspace` command.
+- Updated dependencies
+  - @backstage/errors@1.2.1-next.0
+  - @backstage/catalog-model@1.4.1-next.0
+  - @backstage/cli-common@0.1.12
+  - @backstage/cli-node@0.1.2-next.0
+  - @backstage/config@1.0.8
+  - @backstage/config-loader@1.3.2-next.0
+  - @backstage/eslint-plugin@0.1.3
+  - @backstage/integration@1.5.1-next.0
+  - @backstage/release-manifests@0.0.9
+  - @backstage/types@1.1.0
+
+## 0.22.8
+
+### Patch Changes
+
+- 314493fa32a0: Introduced the `--alwaysYarnPack` flag on `backstage-cli build-workspace`, which can be passed in cases where accuracy of workspace contents is more important than the
+  speed with which the workspace is built. Useful in rare situations where `yarn pack` and `npm pack` produce different results.
+- 75540599124a: Updated example component for a newly scaffolded app.
+- 5d692f72ebfb: Make sure to include a `fetch` environment for `jsdom` in `jest` tests
+- 6816352500a7: Add discovery feature to the onboard cli command.
+- 20b7da6f1311: Enforcing Material UI v5 specific linting to minimize bundle size.
+- Updated dependencies
+  - @backstage/types@1.1.0
+  - @backstage/config-loader@1.3.1
+  - @backstage/integration@1.5.0
+  - @backstage/catalog-model@1.4.0
+  - @backstage/errors@1.2.0
+  - @backstage/cli-common@0.1.12
+  - @backstage/cli-node@0.1.1
+  - @backstage/config@1.0.8
+  - @backstage/eslint-plugin@0.1.3
+  - @backstage/release-manifests@0.0.9
+
 ## 0.22.8-next.2
 
 ### Patch Changes
@@ -38,7 +96,7 @@
 
 ### Patch Changes
 
-- 20b7da6f1311: Enforcing MUI v5 specific linting to minimize bundle size.
+- 20b7da6f1311: Enforcing Material UI v5 specific linting to minimize bundle size.
 - Updated dependencies
   - @backstage/config-loader@1.3.1-next.0
   - @backstage/config@1.0.7

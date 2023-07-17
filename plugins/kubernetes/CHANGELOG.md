@@ -1,5 +1,64 @@
 # @backstage/plugin-kubernetes
 
+## 0.9.3-next.2
+
+### Patch Changes
+
+- cc27fa4a1aac: Changed Google cloud auth scope to read-only.
+- Updated dependencies
+  - @backstage/plugin-catalog-react@1.8.0-next.2
+  - @backstage/theme@0.4.1-next.1
+  - @backstage/core-plugin-api@1.5.3-next.1
+  - @backstage/core-components@0.13.3-next.2
+  - @backstage/catalog-model@1.4.1-next.0
+  - @backstage/config@1.0.8
+  - @backstage/errors@1.2.1-next.0
+  - @backstage/plugin-kubernetes-common@0.6.5-next.0
+
+## 0.9.3-next.1
+
+### Patch Changes
+
+- d62fc3fe85ba: Make pod drawer headings consistent
+- Updated dependencies
+  - @backstage/theme@0.4.1-next.0
+  - @backstage/core-components@0.13.3-next.1
+  - @backstage/core-plugin-api@1.5.3-next.0
+  - @backstage/plugin-catalog-react@1.7.1-next.1
+  - @backstage/config@1.0.8
+
+## 0.9.3-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/errors@1.2.1-next.0
+  - @backstage/core-components@0.13.3-next.0
+  - @backstage/catalog-model@1.4.1-next.0
+  - @backstage/config@1.0.8
+  - @backstage/core-plugin-api@1.5.2
+  - @backstage/theme@0.4.0
+  - @backstage/plugin-catalog-react@1.7.1-next.0
+  - @backstage/plugin-kubernetes-common@0.6.5-next.0
+
+## 0.9.2
+
+### Patch Changes
+
+- dc3cddf51ab5: Fix cyclical dependency in built output
+- 4e697e88f0e2: Add resource utilization to Pod Drawer
+- 4b230b97660d: Add errors to PodDrawer
+- 73cc0deee48a: Add proposed fix dialog for pod errors
+- Updated dependencies
+  - @backstage/core-plugin-api@1.5.2
+  - @backstage/core-components@0.13.2
+  - @backstage/theme@0.4.0
+  - @backstage/plugin-catalog-react@1.7.0
+  - @backstage/catalog-model@1.4.0
+  - @backstage/errors@1.2.0
+  - @backstage/config@1.0.8
+  - @backstage/plugin-kubernetes-common@0.6.4
+
 ## 0.9.2-next.3
 
 ### Patch Changes
