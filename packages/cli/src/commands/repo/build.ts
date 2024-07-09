@@ -137,7 +137,6 @@ export async function command(opts: OptionValues, cmd: Command): Promise<void> {
       outputs,
       logPrefix: `${chalk.cyan(relativePath(paths.targetRoot, pkg.dir))}: `,
       minify: buildOptions.minify,
-      useApiExtractor: buildOptions.experimentalTypeBuild,
     };
   });
 
@@ -180,6 +179,7 @@ export async function command(opts: OptionValues, cmd: Command): Promise<void> {
         await buildBackend({
           targetDir: pkg.dir,
           skipBuildDependencies: true,
+          minify: buildOptions.minify,
         });
       },
     });

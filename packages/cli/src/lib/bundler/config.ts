@@ -14,37 +14,39 @@
  * limitations under the License.
  */
 
-import fs from 'fs-extra';
-import { resolve as resolvePath, posix as posixPath } from 'path';
+import { BackendBundlingOptions, BundlingOptions } from './types';
+import { posix as posixPath, resolve as resolvePath } from 'path';
+import webpack, { ProvidePlugin } from 'webpack';
+
+import { BackstagePackage } from '@backstage/cli-node';
+import { BundlingPaths } from './paths';
+import { Config } from '@backstage/config';
+import ESLintPlugin from 'eslint-webpack-plugin';
 import ForkTsCheckerWebpackPlugin from 'fork-ts-checker-webpack-plugin';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
+import { LinkedPackageResolvePlugin } from './LinkedPackageResolvePlugin';
 import ModuleScopePlugin from 'react-dev-utils/ModuleScopePlugin';
 import { RunScriptWebpackPlugin } from 'run-script-webpack-plugin';
-import webpack, { ProvidePlugin } from 'webpack';
-import nodeExternals from 'webpack-node-externals';
-import { isChildPath } from '@backstage/cli-common';
-import { getPackages } from '@manypkg/get-packages';
-import { optimization } from './optimization';
-import { Config } from '@backstage/config';
-import { BundlingPaths } from './paths';
-import { transforms } from './transforms';
-import { LinkedPackageResolvePlugin } from './LinkedPackageResolvePlugin';
-import { BundlingOptions, BackendBundlingOptions } from './types';
-import { version } from '../../lib/version';
 import { paths as cliPaths } from '../../lib/paths';
-import { BackstagePackage } from '@backstage/cli-node';
-import { runPlain } from '../run';
-import ESLintPlugin from 'eslint-webpack-plugin';
+import fs from 'fs-extra';
+import { getPackages } from '@manypkg/get-packages';
+import { isChildPath } from '@backstage/cli-common';
+import nodeExternals from 'webpack-node-externals';
+import { optimization } from './optimization';
 import pickBy from 'lodash/pickBy';
-import yn from 'yn';
 import { readEntryPoints } from '../entryPoints';
+import { runPlain } from '../run';
+import { transforms } from './transforms';
+import { version } from '../../lib/version';
+import yn from 'yn';
+import { hasReactDomClient } from './hasReactDomClient';
 
 const BUILD_CACHE_ENV_VAR = 'BACKSTAGE_CLI_EXPERIMENTAL_BUILD_CACHE';
 
 export function resolveBaseUrl(config: Config): URL {
-  const baseUrl = config.getString('app.baseUrl');
+  const baseUrl = config.getOptionalString('app.baseUrl');
   try {
-    return new URL(baseUrl);
+    return new URL(baseUrl ?? '/', 'http://localhost:3000');
   } catch (error) {
     throw new Error(`Invalid app.baseUrl, ${error}`);
   }
@@ -53,18 +55,24 @@ export function resolveBaseUrl(config: Config): URL {
 async function readBuildInfo() {
   const timestamp = Date.now();
 
-  let commit = 'unknown';
+  let commit: string | undefined;
   try {
     commit = await runPlain('git', 'rev-parse', 'HEAD');
   } catch (error) {
-    console.warn(`WARNING: Failed to read git commit, ${error}`);
+    // ignore, see below
   }
 
-  let gitVersion = 'unknown';
+  let gitVersion: string | undefined;
   try {
     gitVersion = await runPlain('git', 'describe', '--always');
   } catch (error) {
-    console.warn(`WARNING: Failed to describe git version, ${error}`);
+    // ignore, see below
+  }
+
+  if (commit === undefined || gitVersion === undefined) {
+    console.info(
+      'NOTE: Did not compute git version or commit hash, could not execute the git command line utility',
+    );
   }
 
   const { version: packageVersion } = await fs.readJson(
@@ -73,10 +81,10 @@ async function readBuildInfo() {
 
   return {
     cliVersion: version,
-    gitVersion,
+    gitVersion: gitVersion ?? 'unknown',
     packageVersion,
     timestamp,
-    commit,
+    commit: commit ?? 'unknown',
   };
 }
 
@@ -84,7 +92,7 @@ export async function createConfig(
   paths: BundlingPaths,
   options: BundlingOptions,
 ): Promise<webpack.Configuration> {
-  const { checksEnabled, isDev, frontendConfig } = options;
+  const { checksEnabled, isDev, frontendConfig, publicSubPath = '' } = options;
 
   const { plugins, loaders } = transforms(options);
   // Any package that is part of the monorepo but outside the monorepo root dir need
@@ -92,9 +100,12 @@ export async function createConfig(
   const { packages } = await getPackages(cliPaths.targetDir);
   const externalPkgs = packages.filter(p => !isChildPath(paths.root, p.dir));
 
-  const baseUrl = frontendConfig.getString('app.baseUrl');
-  const validBaseUrl = new URL(baseUrl);
-  const publicPath = validBaseUrl.pathname.replace(/\/$/, '');
+  const validBaseUrl = resolveBaseUrl(frontendConfig);
+  let publicPath = validBaseUrl.pathname.replace(/\/$/, '');
+  if (publicSubPath) {
+    publicPath = `${publicPath}${publicSubPath}`.replace('//', '/');
+  }
+
   if (checksEnabled) {
     plugins.push(
       new ForkTsCheckerWebpackPlugin({
@@ -119,6 +130,9 @@ export async function createConfig(
 
   plugins.push(
     new HtmlWebpackPlugin({
+      meta: {
+        'backstage-app-mode': options?.appMode ?? 'public',
+      },
       template: paths.targetHtml,
       templateParameters: {
         publicPath,
@@ -135,6 +149,9 @@ export async function createConfig(
         () => JSON.stringify(options.getFrontendAppConfigs()),
         true,
       ),
+      // This allows for conditional imports of react-dom/client, since there's no way
+      // to check for presence of it in source code without module resolution errors.
+      'process.env.HAS_REACT_DOM_CLIENT': JSON.stringify(hasReactDomClient()),
     }),
   );
 
@@ -161,7 +178,7 @@ export async function createConfig(
     },
     devtool: isDev ? 'eval-cheap-module-source-map' : 'source-map',
     context: paths.targetPath,
-    entry: [paths.targetEntry],
+    entry: [...(options.additionalEntryPoints ?? []), paths.targetEntry],
     resolve: {
       extensions: ['.ts', '.tsx', '.mjs', '.js', '.jsx', '.json', '.wasm'],
       mainFields: ['browser', 'module', 'main'],
@@ -210,6 +227,9 @@ export async function createConfig(
           }
         : {}),
     },
+    experiments: {
+      lazyCompilation: yn(process.env.EXPERIMENTAL_LAZY_COMPILATION),
+    },
     plugins,
     ...(withCache
       ? {
@@ -244,9 +264,20 @@ export async function createBackendConfig(
 
   const runScriptNodeArgs = new Array<string>();
   if (options.inspectEnabled) {
-    runScriptNodeArgs.push('--inspect');
+    const inspect =
+      typeof options.inspectEnabled === 'string'
+        ? `--inspect=${options.inspectEnabled}`
+        : '--inspect';
+    runScriptNodeArgs.push(inspect);
   } else if (options.inspectBrkEnabled) {
-    runScriptNodeArgs.push('--inspect-brk');
+    const inspect =
+      typeof options.inspectBrkEnabled === 'string'
+        ? `--inspect-brk=${options.inspectBrkEnabled}`
+        : '--inspect-brk';
+    runScriptNodeArgs.push(inspect);
+  }
+  if (options.require) {
+    runScriptNodeArgs.push(`--require=${options.require}`);
   }
 
   return {

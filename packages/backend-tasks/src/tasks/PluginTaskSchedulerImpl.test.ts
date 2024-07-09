@@ -14,8 +14,11 @@
  * limitations under the License.
  */
 
-import { getVoidLogger } from '@backstage/backend-common';
-import { TestDatabaseId, TestDatabases } from '@backstage/backend-test-utils';
+import {
+  TestDatabaseId,
+  TestDatabases,
+  mockServices,
+} from '@backstage/backend-test-utils';
 import { ConflictError, NotFoundError } from '@backstage/errors';
 import { Duration } from 'luxon';
 import { migrateBackendTasks } from '../database/migrateBackendTasks';
@@ -36,7 +39,7 @@ jest.setTimeout(60_000);
 
 describe('PluginTaskManagerImpl', () => {
   const databases = TestDatabases.create({
-    ids: ['POSTGRES_13', 'POSTGRES_9', 'SQLITE_3'],
+    ids: ['POSTGRES_16', 'POSTGRES_12', 'SQLITE_3'],
   });
 
   beforeAll(async () => {
@@ -51,10 +54,8 @@ describe('PluginTaskManagerImpl', () => {
   async function init(databaseId: TestDatabaseId) {
     const knex = await databases.init(databaseId);
     await migrateBackendTasks(knex);
-    const manager = new PluginTaskSchedulerImpl(
-      async () => knex,
-      getVoidLogger(),
-    );
+    const logger = mockServices.logger.mock();
+    const manager = new PluginTaskSchedulerImpl(async () => knex, logger);
     return { knex, manager };
   }
 

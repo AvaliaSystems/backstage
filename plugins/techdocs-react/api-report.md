@@ -4,7 +4,7 @@
 
 ```ts
 import { ApiRef } from '@backstage/core-plugin-api';
-import { AsyncState } from 'react-use/lib/useAsync';
+import { AsyncState } from 'react-use/esm/useAsync';
 import { ComponentType } from 'react';
 import { CompoundEntityRef } from '@backstage/catalog-model';
 import { Config } from '@backstage/config';
@@ -65,6 +65,10 @@ export interface TechDocsApi {
   // (undocumented)
   getApiOrigin(): Promise<string>;
   // (undocumented)
+  getCookie(): Promise<{
+    expiresAt: string;
+  }>;
+  // (undocumented)
   getEntityMetadata(
     entityId: CompoundEntityRef,
   ): Promise<TechDocsEntityMetadata>;
@@ -91,7 +95,7 @@ export type TechDocsMetadata = {
 
 // @public
 export const TechDocsReaderPageProvider: React_2.MemoExoticComponent<
-  (props: TechDocsReaderPageProviderProps) => JSX.Element
+  (props: TechDocsReaderPageProviderProps) => React_2.JSX.Element
 >;
 
 // @public
@@ -120,7 +124,9 @@ export type TechDocsReaderPageValue = {
 };
 
 // @public
-export const TechDocsShadowDom: (props: TechDocsShadowDomProps) => JSX.Element;
+export const TechDocsShadowDom: (
+  props: TechDocsShadowDomProps,
+) => React_2.JSX.Element;
 
 // @public
 export type TechDocsShadowDomProps = PropsWithChildren<{

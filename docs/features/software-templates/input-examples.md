@@ -110,10 +110,11 @@ parameters:
       arrayObjects:
         title: Array with custom objects
         type: array
+        minItems: 0
         ui:options:
-          addable: false
-          orderable: false
-          removable: false
+          addable: true
+          orderable: true
+          removable: true
         items:
           type: object
           properties:
@@ -180,9 +181,11 @@ parameters:
 
 ## Use parameters as condition in steps
 
+Conditions use Javascript equality operators.
+
 ```yaml
 - name: Only development environments
-  if: ${{ parameters.environment === "staging" and parameters.environment === "development" }}
+  if: ${{ parameters.environment === "staging" or parameters.environment === "development" }}
   action: debug:log
   input:
     message: 'development step'
@@ -192,4 +195,116 @@ parameters:
   action: debug:log
   input:
     message: 'production step'
+
+- name: Non-production environments
+  if: ${{ parameters.environment !== "prod" and parameters.environment !== "production" }}
+  action: debug:log
+  input:
+    message: 'non-production step'
+```
+
+## Use parameters as conditional for fields
+
+```yaml
+parameters:
+  - title: Fill in some steps
+    properties:
+      includeName:
+        title: Include Name?
+        type: boolean
+        default: true
+
+    dependencies:
+      includeName:
+        allOf:
+          - if:
+              properties:
+                includeName:
+                  const: true
+            then:
+              properties:
+                lastName:
+                  title: Last Name
+                  type: string
+              # You can use additional fields of parameters within conditional parameters such as required.
+              required:
+                - lastName
+```
+
+## Conditionally set parameters
+
+The `if` keyword within the parameter uses [nunjucks templating](https://mozilla.github.io/nunjucks/templating.html#if). The `not` keyword is unavailable; instead, use javascript equality.
+
+```yaml
+spec:
+  parameters:
+    - title: Fill in some steps
+      properties:
+        path:
+          title: path
+          type: string
+
+  steps:
+    - id: fetch
+      name: Fetch template
+      action: fetch:template
+      input:
+        url: ${{ parameters.path if parameters.path else '/root' }}
+    - id: fetch_not_example
+      name: Fetch template not example
+      action: fetch:template
+      input:
+        url: ${{ '/root' if parameters.path !== true else parameters.path }}
+```
+
+## Use placeholders to reference remote files
+
+:::note
+
+Testing of this functionality is not yet supported using _create/edit_. In addition, this functionality only works for remote files and not local files. You also cannot nest files.
+
+:::
+
+### template.yaml
+
+```yaml
+spec:
+  parameters:
+    - $yaml: https://github.com/example/path/to/example.yaml
+    - title: Fill in some steps
+      properties:
+        path:
+          title: path
+          type: string
+
+  steps:
+    - $yaml: https://github.com//example/path/to/action.yaml
+
+    - id: fetch
+      name: Fetch template
+      action: fetch:template
+      input:
+        url: ${{ parameters.path if parameters.path else '/root' }}
+```
+
+### example.yaml
+
+```yaml
+title: Provide simple information
+required:
+  - url
+properties:
+  url:
+    title: url
+    type: string
+```
+
+### action.yaml
+
+```yaml
+id: publish
+name: Publish files
+action: publish:github
+input:
+  repoUrl: ${{ parameters.url }}
 ```

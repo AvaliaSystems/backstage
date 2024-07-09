@@ -14,23 +14,26 @@
  * limitations under the License.
  */
 
-import { loggerToWinstonLogger, UrlReaders } from '@backstage/backend-common';
+import { UrlReaders } from '@backstage/backend-common';
 import {
   coreServices,
   createServiceFactory,
 } from '@backstage/backend-plugin-api';
 
-/** @public */
+/**
+ * @public
+ * @deprecated Please import from `@backstage/backend-defaults/urlReader` instead.
+ */
 export const urlReaderServiceFactory = createServiceFactory({
   service: coreServices.urlReader,
   deps: {
-    config: coreServices.config,
+    config: coreServices.rootConfig,
     logger: coreServices.logger,
   },
   async factory({ config, logger }) {
     return UrlReaders.default({
       config,
-      logger: loggerToWinstonLogger(logger),
+      logger,
     });
   },
 });

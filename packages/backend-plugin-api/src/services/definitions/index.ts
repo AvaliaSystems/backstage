@@ -16,14 +16,28 @@
 
 export { coreServices } from './coreServices';
 export type {
+  AuthService,
+  BackstageCredentials,
+  BackstageUserPrincipal,
+  BackstageServicePrincipal,
+  BackstagePrincipalAccessRestrictions,
+  BackstagePrincipalTypes,
+  BackstageNonePrincipal,
+} from './AuthService';
+export type {
   CacheService,
   CacheServiceOptions,
   CacheServiceSetOptions,
 } from './CacheService';
-export type { ConfigService } from './ConfigService';
+export type { RootConfigService } from './RootConfigService';
 export type { DatabaseService } from './DatabaseService';
 export type { DiscoveryService } from './DiscoveryService';
-export type { HttpRouterService } from './HttpRouterService';
+export type { RootHealthService } from './RootHealthService';
+export type {
+  HttpRouterService,
+  HttpRouterServiceAuthPolicy,
+} from './HttpRouterService';
+export type { HttpAuthService } from './HttpAuthService';
 export type {
   LifecycleService,
   LifecycleServiceStartupHook,
@@ -32,12 +46,24 @@ export type {
   LifecycleServiceShutdownOptions,
 } from './LifecycleService';
 export type { LoggerService } from './LoggerService';
-export type { PermissionsService } from './PermissionsService';
+export type {
+  PermissionsService,
+  PermissionsServiceRequestOptions,
+} from './PermissionsService';
 export type { PluginMetadataService } from './PluginMetadataService';
 export type { RootHttpRouterService } from './RootHttpRouterService';
 export type { RootLifecycleService } from './RootLifecycleService';
 export type { RootLoggerService } from './RootLoggerService';
-export type { SchedulerService } from './SchedulerService';
+export { readSchedulerServiceTaskScheduleDefinitionFromConfig } from './SchedulerService';
+export type {
+  SchedulerService,
+  SchedulerServiceTaskDescriptor,
+  SchedulerServiceTaskFunction,
+  SchedulerServiceTaskInvocationDefinition,
+  SchedulerServiceTaskRunner,
+  SchedulerServiceTaskScheduleDefinition,
+  SchedulerServiceTaskScheduleDefinitionConfig,
+} from './SchedulerService';
 export type { TokenManagerService } from './TokenManagerService';
 export type {
   ReadTreeOptions,
@@ -49,6 +75,16 @@ export type {
   SearchOptions,
   SearchResponse,
   SearchResponseFile,
+  UrlReaderServiceReadTreeOptions,
+  UrlReaderServiceReadTreeResponse,
+  UrlReaderServiceReadTreeResponseDirOptions,
+  UrlReaderServiceReadTreeResponseFile,
+  UrlReaderServiceReadUrlResponse,
+  UrlReaderServiceReadUrlOptions,
+  UrlReaderServiceSearchOptions,
+  UrlReaderServiceSearchResponse,
+  UrlReaderServiceSearchResponseFile,
   UrlReaderService,
 } from './UrlReaderService';
+export type { BackstageUserInfo, UserInfoService } from './UserInfoService';
 export type { IdentityService } from './IdentityService';

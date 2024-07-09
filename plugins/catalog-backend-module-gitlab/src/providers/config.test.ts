@@ -15,7 +15,6 @@
  */
 
 import { ConfigReader } from '@backstage/config';
-import { Duration } from 'luxon';
 import { readGitlabConfigs } from './config';
 
 describe('config', () => {
@@ -58,8 +57,10 @@ describe('config', () => {
         groupPattern: /[\s\S]*/,
         userPattern: /[\s\S]*/,
         orgEnabled: false,
+        allowInherited: false,
         schedule: undefined,
         skipForkedRepos: false,
+        restrictUsersToGroup: false,
       }),
     );
   });
@@ -95,8 +96,10 @@ describe('config', () => {
         groupPattern: /[\s\S]*/,
         userPattern: /[\s\S]*/,
         orgEnabled: false,
+        allowInherited: false,
         schedule: undefined,
         skipForkedRepos: false,
+        restrictUsersToGroup: false,
       }),
     );
   });
@@ -133,7 +136,9 @@ describe('config', () => {
         groupPattern: /[\s\S]*/,
         userPattern: /[\s\S]*/,
         orgEnabled: false,
+        allowInherited: false,
         schedule: undefined,
+        restrictUsersToGroup: false,
         skipForkedRepos: true,
       }),
     );
@@ -173,9 +178,11 @@ describe('config', () => {
         groupPattern: /[\s\S]*/,
         userPattern: /[\s\S]*/,
         orgEnabled: false,
+        allowInherited: false,
         skipForkedRepos: false,
+        restrictUsersToGroup: false,
         schedule: {
-          frequency: Duration.fromISO('PT30M'),
+          frequency: { minutes: 30 },
           timeout: {
             minutes: 3,
           },

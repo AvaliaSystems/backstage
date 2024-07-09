@@ -13,14 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import fetch from 'node-fetch';
 import {
   getGitLabRequestOptions,
   GitLabIntegrationConfig,
 } from '@backstage/integration';
-import { Logger } from 'winston';
-import { GitLabGroup, GitLabGroupMembersResponse, GitLabUser } from './types';
+import fetch from 'node-fetch';
+import { LoggerService } from '@backstage/backend-plugin-api';
+
+import {
+  GitLabDescendantGroupsResponse,
+  GitLabGroup,
+  GitLabGroupMembersResponse,
+  GitLabProject,
+  GitLabUser,
+  PagedResponse,
+} from './types';
 
 export type CommonListOptions = {
   [key: string]: string | number | boolean | undefined;
@@ -30,6 +37,7 @@ export type CommonListOptions = {
 };
 
 interface ListProjectOptions extends CommonListOptions {
+  archived?: boolean;
   group?: string;
 }
 
@@ -38,16 +46,14 @@ interface UserListOptions extends CommonListOptions {
   exclude_internal?: boolean | undefined;
 }
 
-export type PagedResponse<T> = {
-  items: T[];
-  nextPage?: number;
-};
-
 export class GitLabClient {
   private readonly config: GitLabIntegrationConfig;
-  private readonly logger: Logger;
+  private readonly logger: LoggerService;
 
-  constructor(options: { config: GitLabIntegrationConfig; logger: Logger }) {
+  constructor(options: {
+    config: GitLabIntegrationConfig;
+    logger: LoggerService;
+  }) {
     this.config = options.config;
     this.logger = options.logger;
   }
@@ -75,6 +81,49 @@ export class GitLabClient {
     return this.pagedRequest(`/projects`, options);
   }
 
+  async getProjectById(
+    projectId: number,
+    options?: CommonListOptions,
+  ): Promise<GitLabProject> {
+    // Make the request to the GitLab API
+    const response = await this.nonPagedRequest(
+      `/projects/${projectId}`,
+      options,
+    );
+
+    return response;
+  }
+
+  async getGroupById(
+    groupId: number,
+    options?: CommonListOptions,
+  ): Promise<GitLabGroup> {
+    // Make the request to the GitLab API
+    const response = await this.nonPagedRequest(`/groups/${groupId}`, options);
+
+    return response;
+  }
+
+  async getUserById(
+    userId: number,
+    options?: CommonListOptions,
+  ): Promise<GitLabUser> {
+    // Make the request to the GitLab API
+    const response = await this.nonPagedRequest(`/users/${userId}`, options);
+
+    return response;
+  }
+
+  async listGroupMembers(
+    groupPath: string,
+    options?: CommonListOptions,
+  ): Promise<PagedResponse<GitLabUser>> {
+    return this.pagedRequest(
+      `/groups/${encodeURIComponent(groupPath)}/members/all`,
+      options,
+    );
+  }
+
   async listUsers(
     options?: UserListOptions,
   ): Promise<PagedResponse<GitLabUser>> {
@@ -85,18 +134,34 @@ export class GitLabClient {
     });
   }
 
+  async listSaaSUsers(
+    groupPath: string,
+    options?: CommonListOptions,
+  ): Promise<PagedResponse<GitLabUser>> {
+    return this.listGroupMembers(groupPath, {
+      ...options,
+      show_seat_info: true,
+    }).then(resp => {
+      resp.items = resp.items.filter(user => user.is_using_seat);
+      return resp;
+    });
+  }
+
   async listGroups(
     options?: CommonListOptions,
   ): Promise<PagedResponse<GitLabGroup>> {
     return this.pagedRequest(`/groups`, options);
   }
 
-  async getGroupMembers(groupPath: string): Promise<number[]> {
-    const memberIds = [];
+  async listDescendantGroups(
+    groupPath: string,
+  ): Promise<PagedResponse<GitLabGroup>> {
+    const items: GitLabGroup[] = [];
     let hasNextPage: boolean = false;
     let endCursor: string | null = null;
+
     do {
-      const response: GitLabGroupMembersResponse = await fetch(
+      const response: GitLabDescendantGroupsResponse = await fetch(
         `${this.config.baseUrl}/api/graphql`,
         {
           method: 'POST',
@@ -106,21 +171,113 @@ export class GitLabClient {
           },
           body: JSON.stringify({
             variables: { group: groupPath, endCursor },
-            query: `query($group: ID!, $endCursor: String) {
-              group(fullPath: $group) {
-                groupMembers(first: 100, relations: [DIRECT], after: $endCursor) {
-                  nodes {
-                    user {
+            query: /* GraphQL */ `
+              query listDescendantGroups($group: ID!, $endCursor: String) {
+                group(fullPath: $group) {
+                  descendantGroups(first: 100, after: $endCursor) {
+                    nodes {
                       id
+                      name
+                      description
+                      fullPath
+                      visibility
+                      parent {
+                        id
+                      }
                     }
-                  }
-                  pageInfo {
-                    endCursor
-                    hasNextPage
+                    pageInfo {
+                      endCursor
+                      hasNextPage
+                    }
                   }
                 }
               }
-            }`,
+            `,
+          }),
+        },
+      ).then(r => r.json());
+      if (response.errors) {
+        throw new Error(`GraphQL errors: ${JSON.stringify(response.errors)}`);
+      }
+
+      if (!response.data.group?.descendantGroups?.nodes) {
+        this.logger.warn(
+          `Couldn't get groups under ${groupPath}. The provided token might not have sufficient permissions`,
+        );
+        continue;
+      }
+
+      for (const groupItem of response.data.group.descendantGroups.nodes.filter(
+        group => group?.id,
+      )) {
+        const formattedGroupResponse = {
+          id: Number(groupItem.id.replace(/^gid:\/\/gitlab\/Group\//, '')),
+          name: groupItem.name,
+          description: groupItem.description,
+          full_path: groupItem.fullPath,
+          visibility: groupItem.visibility,
+          parent_id: Number(
+            groupItem.parent.id.replace(/^gid:\/\/gitlab\/Group\//, ''),
+          ),
+        };
+
+        items.push(formattedGroupResponse);
+      }
+      ({ hasNextPage, endCursor } =
+        response.data.group.descendantGroups.pageInfo);
+    } while (hasNextPage);
+    return { items };
+  }
+
+  async getGroupMembers(
+    groupPath: string,
+    relations: string[],
+  ): Promise<PagedResponse<GitLabUser>> {
+    const items: GitLabUser[] = [];
+    let hasNextPage: boolean = false;
+    let endCursor: string | null = null;
+    do {
+      const response: GitLabGroupMembersResponse = await fetch(
+        `${this.config.baseUrl}/api/graphql`,
+        {
+          method: 'POST',
+          headers: {
+            ...getGitLabRequestOptions(this.config).headers,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            variables: { group: groupPath, relations: relations, endCursor },
+            query: /* GraphQL */ `
+              query getGroupMembers(
+                $group: ID!
+                $relations: [GroupMemberRelation!]
+                $endCursor: String
+              ) {
+                group(fullPath: $group) {
+                  groupMembers(
+                    first: 100
+                    relations: $relations
+                    after: $endCursor
+                  ) {
+                    nodes {
+                      user {
+                        id
+                        username
+                        publicEmail
+                        name
+                        state
+                        webUrl
+                        avatarUrl
+                      }
+                    }
+                    pageInfo {
+                      endCursor
+                      hasNextPage
+                    }
+                  }
+                }
+              }
+            `,
           }),
         },
       ).then(r => r.json());
@@ -135,16 +292,24 @@ export class GitLabClient {
         continue;
       }
 
-      memberIds.push(
-        ...response.data.group.groupMembers.nodes
-          .filter(n => n.user)
-          .map(node =>
-            Number(node.user.id.replace(/^gid:\/\/gitlab\/User\//, '')),
-          ),
-      );
+      for (const userItem of response.data.group.groupMembers.nodes.filter(
+        user => user.user?.id,
+      )) {
+        const formattedUserResponse = {
+          id: Number(userItem.user.id.replace(/^gid:\/\/gitlab\/User\//, '')),
+          username: userItem.user.username,
+          email: userItem.user.publicEmail,
+          name: userItem.user.name,
+          state: userItem.user.state,
+          web_url: userItem.user.webUrl,
+          avatar_url: userItem.user.avatarUrl,
+        };
+
+        items.push(formattedUserResponse);
+      }
       ({ hasNextPage, endCursor } = response.data.group.groupMembers.pageInfo);
     } while (hasNextPage);
-    return memberIds;
+    return { items };
   }
 
   /**
@@ -201,9 +366,13 @@ export class GitLabClient {
     options?: CommonListOptions,
   ): Promise<PagedResponse<T>> {
     const request = new URL(`${this.config.apiBaseUrl}${endpoint}`);
+
     for (const key in options) {
-      if (options[key]) {
-        request.searchParams.append(key, options[key]!.toString());
+      if (options.hasOwnProperty(key)) {
+        const value = options[key];
+        if (value !== undefined && value !== '') {
+          request.searchParams.append(key, value.toString());
+        }
       }
     }
 
@@ -212,6 +381,7 @@ export class GitLabClient {
       request.toString(),
       getGitLabRequestOptions(this.config),
     );
+
     if (!response.ok) {
       throw new Error(
         `Unexpected response when fetching ${request.toString()}. Expected 200 but got ${
@@ -219,6 +389,7 @@ export class GitLabClient {
         } - ${response.statusText}`,
       );
     }
+
     return response.json().then(items => {
       const nextPage = response.headers.get('x-next-page');
 
@@ -227,6 +398,37 @@ export class GitLabClient {
         nextPage: nextPage ? Number(nextPage) : null,
       } as PagedResponse<any>;
     });
+  }
+
+  async nonPagedRequest<T = any>(
+    endpoint: string,
+    options?: CommonListOptions,
+  ): Promise<T> {
+    const request = new URL(`${this.config.apiBaseUrl}${endpoint}`);
+
+    for (const key in options) {
+      if (options.hasOwnProperty(key)) {
+        const value = options[key];
+        if (value !== undefined && value !== '') {
+          request.searchParams.append(key, value.toString());
+        }
+      }
+    }
+
+    const response = await fetch(
+      request.toString(),
+      getGitLabRequestOptions(this.config),
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `Unexpected response when fetching ${request.toString()}. Expected 200 but got ${
+          response.status
+        } - ${response.statusText}`,
+      );
+    }
+
+    return response.json();
   }
 }
 

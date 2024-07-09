@@ -25,8 +25,9 @@ export interface BaseConfigSourcesOptions {
   remote?: Pick<RemoteConfigSourceOptions, 'reloadInterval'>;
   // (undocumented)
   rootDir?: string;
-  // (undocumented)
   substitutionFunc?: EnvFunc;
+  // (undocumented)
+  watch?: boolean;
 }
 
 // @public
@@ -142,6 +143,7 @@ export class FileConfigSource implements ConfigSource {
 export interface FileConfigSourceOptions {
   path: string;
   substitutionFunc?: EnvFunc;
+  watch?: boolean;
 }
 
 // @public @deprecated
@@ -271,6 +273,7 @@ export type TransformFunc<T extends number | string | boolean> = (
   value: T,
   context: {
     visibility: ConfigVisibility;
+    path: string;
   },
 ) => T | undefined;
 ```

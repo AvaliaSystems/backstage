@@ -16,7 +16,7 @@
 
 import { makeStyles } from '@material-ui/core/styles';
 import React, { useEffect, useState } from 'react';
-import SwaggerUI from 'swagger-ui-react';
+import SwaggerUI, { SwaggerUIProps } from 'swagger-ui-react';
 import 'swagger-ui-react/swagger-ui.css';
 
 const useStyles = makeStyles(theme => ({
@@ -34,7 +34,9 @@ const useStyles = makeStyles(theme => ({
       [`& .opblock-tag,
           .opblock-tag small,
           table thead tr td,
-          table thead tr th`]: {
+          table thead tr th,
+          table tbody tr td,
+          table tbody tr th`]: {
         fontFamily: theme.typography.fontFamily,
         color: theme.palette.text.primary,
         borderColor: theme.palette.divider,
@@ -136,9 +138,12 @@ const useStyles = makeStyles(theme => ({
 
 export type OpenApiDefinitionProps = {
   definition: string;
-};
+} & Omit<SwaggerUIProps, 'spec'>;
 
-export const OpenApiDefinition = ({ definition }: OpenApiDefinitionProps) => {
+export const OpenApiDefinition = ({
+  definition,
+  ...swaggerUiProps
+}: OpenApiDefinitionProps) => {
   const classes = useStyles();
 
   // Due to a bug in the swagger-ui-react component, the component needs
@@ -152,7 +157,13 @@ export const OpenApiDefinition = ({ definition }: OpenApiDefinitionProps) => {
 
   return (
     <div className={classes.root}>
-      <SwaggerUI spec={def} url="" deepLinking />
+      <SwaggerUI
+        spec={def}
+        url=""
+        deepLinking
+        oauth2RedirectUrl={`${window.location.protocol}//${window.location.host}/oauth2-redirect.html`}
+        {...swaggerUiProps}
+      />
     </div>
   );
 };

@@ -14,15 +14,15 @@ import { createScaffolderLayout as createScaffolderLayout_2 } from '@backstage/p
 import { CustomFieldExtensionSchema as CustomFieldExtensionSchema_2 } from '@backstage/plugin-scaffolder-react';
 import { CustomFieldValidator as CustomFieldValidator_2 } from '@backstage/plugin-scaffolder-react';
 import { DiscoveryApi } from '@backstage/core-plugin-api';
-import { Entity } from '@backstage/catalog-model';
 import { ExternalRouteRef } from '@backstage/core-plugin-api';
 import { FetchApi } from '@backstage/core-plugin-api';
 import { FieldExtensionComponent as FieldExtensionComponent_2 } from '@backstage/plugin-scaffolder-react';
 import { FieldExtensionComponentProps as FieldExtensionComponentProps_2 } from '@backstage/plugin-scaffolder-react';
 import { FieldExtensionOptions as FieldExtensionOptions_2 } from '@backstage/plugin-scaffolder-react';
-import { FieldValidation } from '@rjsf/core';
+import { FieldValidation } from '@rjsf/utils';
+import { FormProps } from '@backstage/plugin-scaffolder-react';
 import { IdentityApi } from '@backstage/core-plugin-api';
-import { JsonObject } from '@backstage/types';
+import { JSX as JSX_2 } from 'react';
 import { LayoutOptions as LayoutOptions_2 } from '@backstage/plugin-scaffolder-react';
 import { LayoutTemplate as LayoutTemplate_2 } from '@backstage/plugin-scaffolder-react';
 import { ListActionsResponse as ListActionsResponse_2 } from '@backstage/plugin-scaffolder-react';
@@ -32,6 +32,7 @@ import { PathParams } from '@backstage/core-plugin-api';
 import { PropsWithChildren } from 'react';
 import { default as React_2 } from 'react';
 import { ReactNode } from 'react';
+import { ReviewStepProps } from '@backstage/plugin-scaffolder-react';
 import { RouteRef } from '@backstage/core-plugin-api';
 import { ScaffolderApi as ScaffolderApi_2 } from '@backstage/plugin-scaffolder-react';
 import { ScaffolderDryRunOptions as ScaffolderDryRunOptions_2 } from '@backstage/plugin-scaffolder-react';
@@ -49,8 +50,10 @@ import { ScaffolderUseTemplateSecrets as ScaffolderUseTemplateSecrets_2 } from '
 import { ScmIntegrationRegistry } from '@backstage/integration';
 import { SubRouteRef } from '@backstage/core-plugin-api';
 import { TemplateEntityV1beta3 } from '@backstage/plugin-scaffolder-common';
+import { TemplateGroupFilter } from '@backstage/plugin-scaffolder-react';
+import { TemplateListPageProps } from '@backstage/plugin-scaffolder/alpha';
 import { TemplateParameterSchema as TemplateParameterSchema_2 } from '@backstage/plugin-scaffolder-react';
-import { UiSchema } from '@rjsf/utils';
+import { TemplateWizardPageProps } from '@backstage/plugin-scaffolder/alpha';
 import { z } from 'zod';
 
 // @public @deprecated (undocumented)
@@ -76,9 +79,7 @@ export const EntityNamePickerFieldExtension: FieldExtensionComponent_2<
 export const EntityPickerFieldExtension: FieldExtensionComponent_2<
   string,
   {
-    allowedKinds?: string[] | undefined;
     defaultKind?: string | undefined;
-    allowArbitraryValues?: boolean | undefined;
     defaultNamespace?: string | false | undefined;
     catalogFilter?:
       | Record<
@@ -98,6 +99,8 @@ export const EntityPickerFieldExtension: FieldExtensionComponent_2<
             }
         >[]
       | undefined;
+    allowedKinds?: string[] | undefined;
+    allowArbitraryValues?: boolean | undefined;
   }
 >;
 
@@ -105,9 +108,7 @@ export const EntityPickerFieldExtension: FieldExtensionComponent_2<
 export const EntityPickerFieldSchema: FieldSchema<
   string,
   {
-    allowedKinds?: string[] | undefined;
     defaultKind?: string | undefined;
-    allowArbitraryValues?: boolean | undefined;
     defaultNamespace?: string | false | undefined;
     catalogFilter?:
       | Record<
@@ -127,6 +128,8 @@ export const EntityPickerFieldSchema: FieldSchema<
             }
         >[]
       | undefined;
+    allowedKinds?: string[] | undefined;
+    allowArbitraryValues?: boolean | undefined;
   }
 >;
 
@@ -138,9 +141,9 @@ export type EntityPickerUiOptions =
 export const EntityTagsPickerFieldExtension: FieldExtensionComponent_2<
   string[],
   {
-    kinds?: string[] | undefined;
-    showCounts?: boolean | undefined;
     helperText?: string | undefined;
+    showCounts?: boolean | undefined;
+    kinds?: string[] | undefined;
   }
 >;
 
@@ -148,9 +151,9 @@ export const EntityTagsPickerFieldExtension: FieldExtensionComponent_2<
 export const EntityTagsPickerFieldSchema: FieldSchema<
   string[],
   {
-    kinds?: string[] | undefined;
-    showCounts?: boolean | undefined;
     helperText?: string | undefined;
+    showCounts?: boolean | undefined;
+    kinds?: string[] | undefined;
   }
 >;
 
@@ -208,6 +211,34 @@ export function makeFieldSchemaFromZod<
 >;
 
 // @public
+export const MultiEntityPickerFieldExtension: FieldExtensionComponent_2<
+  string[],
+  {
+    defaultKind?: string | undefined;
+    defaultNamespace?: string | false | undefined;
+    catalogFilter?:
+      | Record<
+          string,
+          | string
+          | string[]
+          | {
+              exists?: boolean | undefined;
+            }
+        >
+      | Record<
+          string,
+          | string
+          | string[]
+          | {
+              exists?: boolean | undefined;
+            }
+        >[]
+      | undefined;
+    allowArbitraryValues?: boolean | undefined;
+  }
+>;
+
+// @public
 export const MyGroupsPickerFieldExtension: FieldExtensionComponent_2<
   string,
   {
@@ -236,10 +267,28 @@ export type MyGroupsPickerUiOptions =
 export const OwnedEntityPickerFieldExtension: FieldExtensionComponent_2<
   string,
   {
-    allowedKinds?: string[] | undefined;
     defaultKind?: string | undefined;
-    allowArbitraryValues?: boolean | undefined;
     defaultNamespace?: string | false | undefined;
+    catalogFilter?:
+      | Record<
+          string,
+          | string
+          | string[]
+          | {
+              exists?: boolean | undefined;
+            }
+        >
+      | Record<
+          string,
+          | string
+          | string[]
+          | {
+              exists?: boolean | undefined;
+            }
+        >[]
+      | undefined;
+    allowedKinds?: string[] | undefined;
+    allowArbitraryValues?: boolean | undefined;
   }
 >;
 
@@ -247,10 +296,28 @@ export const OwnedEntityPickerFieldExtension: FieldExtensionComponent_2<
 export const OwnedEntityPickerFieldSchema: FieldSchema<
   string,
   {
-    allowedKinds?: string[] | undefined;
     defaultKind?: string | undefined;
-    allowArbitraryValues?: boolean | undefined;
     defaultNamespace?: string | false | undefined;
+    catalogFilter?:
+      | Record<
+          string,
+          | string
+          | string[]
+          | {
+              exists?: boolean | undefined;
+            }
+        >
+      | Record<
+          string,
+          | string
+          | string[]
+          | {
+              exists?: boolean | undefined;
+            }
+        >[]
+      | undefined;
+    allowedKinds?: string[] | undefined;
+    allowArbitraryValues?: boolean | undefined;
   }
 >;
 
@@ -262,8 +329,6 @@ export type OwnedEntityPickerUiOptions =
 export const OwnerPickerFieldExtension: FieldExtensionComponent_2<
   string,
   {
-    allowedKinds?: string[] | undefined;
-    allowArbitraryValues?: boolean | undefined;
     defaultNamespace?: string | false | undefined;
     catalogFilter?:
       | Record<
@@ -283,6 +348,8 @@ export const OwnerPickerFieldExtension: FieldExtensionComponent_2<
             }
         >[]
       | undefined;
+    allowedKinds?: string[] | undefined;
+    allowArbitraryValues?: boolean | undefined;
   }
 >;
 
@@ -290,8 +357,6 @@ export const OwnerPickerFieldExtension: FieldExtensionComponent_2<
 export const OwnerPickerFieldSchema: FieldSchema<
   string,
   {
-    allowedKinds?: string[] | undefined;
-    allowArbitraryValues?: boolean | undefined;
     defaultNamespace?: string | false | undefined;
     catalogFilter?:
       | Record<
@@ -311,6 +376,8 @@ export const OwnerPickerFieldSchema: FieldSchema<
             }
         >[]
       | undefined;
+    allowedKinds?: string[] | undefined;
+    allowArbitraryValues?: boolean | undefined;
   }
 >;
 
@@ -340,11 +407,12 @@ export const RepoUrlPickerFieldExtension: FieldExtensionComponent_2<
           secretsKey: string;
           additionalScopes?:
             | {
-                gerrit?: string[] | undefined;
+                azure?: string[] | undefined;
                 github?: string[] | undefined;
                 gitlab?: string[] | undefined;
                 bitbucket?: string[] | undefined;
-                azure?: string[] | undefined;
+                gerrit?: string[] | undefined;
+                gitea?: string[] | undefined;
               }
             | undefined;
         }
@@ -366,11 +434,12 @@ export const RepoUrlPickerFieldSchema: FieldSchema<
           secretsKey: string;
           additionalScopes?:
             | {
-                gerrit?: string[] | undefined;
+                azure?: string[] | undefined;
                 github?: string[] | undefined;
                 gitlab?: string[] | undefined;
                 bitbucket?: string[] | undefined;
-                azure?: string[] | undefined;
+                gerrit?: string[] | undefined;
+                gitea?: string[] | undefined;
               }
             | undefined;
         }
@@ -382,19 +451,7 @@ export const RepoUrlPickerFieldSchema: FieldSchema<
 export type RepoUrlPickerUiOptions =
   typeof RepoUrlPickerFieldSchema.uiOptionsType;
 
-// @public
-export type ReviewStepProps = {
-  disableButtons: boolean;
-  formData: JsonObject;
-  handleBack: () => void;
-  handleReset: () => void;
-  handleCreate: () => void;
-  steps: {
-    uiSchema: UiSchema;
-    mergedSchema: JsonObject;
-    schema: JsonObject;
-  }[];
-};
+export { ReviewStepProps };
 
 // @public @deprecated (undocumented)
 export const rootRouteRef: RouteRef<undefined>;
@@ -402,28 +459,30 @@ export const rootRouteRef: RouteRef<undefined>;
 // @public
 export type RouterProps = {
   components?: {
-    ReviewStepComponent?: ComponentType<ReviewStepProps>;
-    TemplateCardComponent?:
-      | ComponentType<{
-          template: TemplateEntityV1beta3;
-        }>
-      | undefined;
-    TaskPageComponent?: ComponentType<PropsWithChildren<{}>>;
+    ReviewStepComponent?: React_2.ComponentType<ReviewStepProps>;
+    TemplateCardComponent?: React_2.ComponentType<{
+      template: TemplateEntityV1beta3;
+    }>;
+    TaskPageComponent?: React_2.ComponentType<PropsWithChildren<{}>>;
+    EXPERIMENTAL_TemplateOutputsComponent?: React_2.ComponentType<{
+      output?: ScaffolderTaskOutput_2;
+    }>;
+    EXPERIMENTAL_TemplateListPageComponent?: React_2.ComponentType<TemplateListPageProps>;
+    EXPERIMENTAL_TemplateWizardPageComponent?: React_2.ComponentType<TemplateWizardPageProps>;
   };
-  groups?: Array<{
-    title?: React_2.ReactNode;
-    filter: (entity: Entity) => boolean;
-  }>;
+  groups?: TemplateGroupFilter[];
   templateFilter?: (entity: TemplateEntityV1beta3) => boolean;
-  defaultPreviewTemplate?: string;
   headerOptions?: {
     pageTitleOverride?: string;
     title?: string;
     subtitle?: string;
   };
+  defaultPreviewTemplate?: string;
+  formProps?: FormProps;
   contextMenu?: {
     editor?: boolean;
     actions?: boolean;
+    tasks?: boolean;
   };
 };
 
@@ -442,6 +501,22 @@ export class ScaffolderClient implements ScaffolderApi_2 {
     scmIntegrationsApi: ScmIntegrationRegistry;
     useLongPollingLogs?: boolean;
   });
+  // (undocumented)
+  autocomplete({
+    token,
+    resource,
+    provider,
+    context,
+  }: {
+    token: string;
+    provider: string;
+    resource: string;
+    context?: Record<string, string>;
+  }): Promise<{
+    results: {
+      title: string;
+    }[];
+  }>;
   // (undocumented)
   cancelTask(taskId: string): Promise<void>;
   // (undocumented)
@@ -500,7 +575,9 @@ export const ScaffolderLayouts: ComponentType<{
 export type ScaffolderOutputlink = ScaffolderOutputLink;
 
 // @public
-export const ScaffolderPage: (props: RouterProps) => JSX.Element;
+export const ScaffolderPage: (
+  props: PropsWithChildren<RouterProps>,
+) => JSX_2.Element;
 
 // @public
 export const scaffolderPlugin: BackstagePlugin<
@@ -524,8 +601,7 @@ export const scaffolderPlugin: BackstagePlugin<
       },
       true
     >;
-  },
-  {}
+  }
 >;
 
 // @public @deprecated (undocumented)
@@ -549,10 +625,14 @@ export type ScaffolderTaskStatus = ScaffolderTaskStatus_2;
 // @public @deprecated (undocumented)
 export type ScaffolderUseTemplateSecrets = ScaffolderUseTemplateSecrets_2;
 
-// @public
-export const TaskPage: (props: TaskPageProps) => JSX.Element;
+// @public (undocumented)
+export const TaskPage: (props: {
+  TemplateOutputsComponent?: React_2.ComponentType<{
+    output?: ScaffolderTaskOutput_2;
+  }>;
+}) => React_2.JSX.Element;
 
-// @public
+// @public @deprecated
 export type TaskPageProps = {
   loadingText?: string;
 };
@@ -561,7 +641,7 @@ export type TaskPageProps = {
 export type TemplateParameterSchema = TemplateParameterSchema_2;
 
 // @public
-export const TemplateTypePicker: () => JSX.Element | null;
+export const TemplateTypePicker: () => React_2.JSX.Element | null;
 
 // @public @deprecated (undocumented)
 export const useTemplateSecrets: () => ScaffolderUseTemplateSecrets_2;

@@ -14,13 +14,16 @@
  * limitations under the License.
  */
 
-import { getVoidLogger, TokenManager } from '@backstage/backend-common';
+import { TokenManager } from '@backstage/backend-common';
 import {
   PluginTaskScheduler,
   TaskInvocationDefinition,
   TaskRunner,
 } from '@backstage/backend-tasks';
-import { setupRequestMockHandlers } from '@backstage/backend-test-utils';
+import {
+  mockServices,
+  setupRequestMockHandlers,
+} from '@backstage/backend-test-utils';
 import { CatalogApi } from '@backstage/catalog-client';
 import { Entity, LocationEntity } from '@backstage/catalog-model';
 import { ConfigReader } from '@backstage/config';
@@ -29,6 +32,7 @@ import {
   locationSpecToLocationEntity,
 } from '@backstage/plugin-catalog-node';
 import { Events } from '@backstage/plugin-bitbucket-cloud-common';
+import { DefaultEventsService } from '@backstage/plugin-events-node';
 import { rest } from 'msw';
 import { setupServer } from 'msw/node';
 import {
@@ -53,7 +57,7 @@ class PersistingTaskRunner implements TaskRunner {
   }
 }
 
-const logger = getVoidLogger();
+const logger = mockServices.logger.mock();
 
 const server = setupServer();
 
@@ -151,7 +155,7 @@ describe('BitbucketCloudEntityProvider', () => {
   };
 
   afterEach(() => {
-    jest.resetAllMocks();
+    jest.clearAllMocks();
     schedule.reset();
   });
 
@@ -436,6 +440,7 @@ describe('BitbucketCloudEntityProvider', () => {
       'added-module/catalog-custom.yaml',
     );
 
+    const events = DefaultEventsService.create({ logger });
     const catalogApi = {
       getEntities: async (
         request: { filter: Record<string, string> },
@@ -457,6 +462,7 @@ describe('BitbucketCloudEntityProvider', () => {
     };
     const provider = BitbucketCloudEntityProvider.fromConfig(defaultConfig, {
       catalogApi: catalogApi as any as CatalogApi,
+      events,
       logger,
       schedule,
       tokenManager,
@@ -537,7 +543,7 @@ describe('BitbucketCloudEntityProvider', () => {
     );
 
     await provider.connect(entityProviderConnection);
-    await provider.onEvent(repoPushEventParams);
+    await events.publish(repoPushEventParams);
 
     const addedEntities = [
       {
@@ -566,31 +572,22 @@ describe('BitbucketCloudEntityProvider', () => {
     });
   });
 
-  it('onRepoPush fail on incomplete setup', async () => {
-    const provider = BitbucketCloudEntityProvider.fromConfig(defaultConfig, {
-      logger,
-      schedule,
-    })[0];
-
-    await expect(provider.onEvent(repoPushEventParams)).rejects.toThrow(
-      'bitbucketCloud-provider:myProvider not well configured to handle repo:push. Missing CatalogApi and/or TokenManager.',
-    );
-  });
-
   it('no onRepoPush update on non-matching workspace slug', async () => {
     const catalogApi = {
       getEntities: jest.fn(),
       refreshEntity: jest.fn(),
     };
+    const events = DefaultEventsService.create({ logger });
     const provider = BitbucketCloudEntityProvider.fromConfig(defaultConfig, {
       catalogApi: catalogApi as any as CatalogApi,
+      events,
       logger,
       schedule,
       tokenManager,
     })[0];
 
     await provider.connect(entityProviderConnection);
-    await provider.onEvent({
+    await events.publish({
       ...repoPushEventParams,
       eventPayload: {
         ...repoPushEventParams.eventPayload,
@@ -613,15 +610,17 @@ describe('BitbucketCloudEntityProvider', () => {
       getEntities: jest.fn(),
       refreshEntity: jest.fn(),
     };
+    const events = DefaultEventsService.create({ logger });
     const provider = BitbucketCloudEntityProvider.fromConfig(defaultConfig, {
       catalogApi: catalogApi as any as CatalogApi,
+      events,
       logger,
       schedule,
       tokenManager,
     })[0];
 
     await provider.connect(entityProviderConnection);
-    await provider.onEvent({
+    await events.publish({
       ...repoPushEventParams,
       eventPayload: {
         ...repoPushEventParams.eventPayload,

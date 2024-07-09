@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 The Backstage Authors
+ * Copyright 2023 The Backstage Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,13 +15,14 @@
  */
 
 import {
+  createLegacyAuthAdapters,
   PluginEndpointDiscovery,
   TokenManager,
 } from '@backstage/backend-common';
 import {
+  CATALOG_FILTER_EXISTS,
   CatalogApi,
   CatalogClient,
-  CATALOG_FILTER_EXISTS,
 } from '@backstage/catalog-client';
 import {
   Entity,
@@ -38,7 +39,13 @@ import unescape from 'lodash/unescape';
 import fetch from 'node-fetch';
 import pLimit from 'p-limit';
 import { Readable } from 'stream';
-import { Logger } from 'winston';
+import { TechDocsCollatorEntityTransformer } from './TechDocsCollatorEntityTransformer';
+import { defaultTechDocsCollatorEntityTransformer } from './defaultTechDocsCollatorEntityTransformer';
+import {
+  AuthService,
+  HttpAuthService,
+  LoggerService,
+} from '@backstage/backend-plugin-api';
 
 interface MkSearchIndexDoc {
   title: string;
@@ -53,12 +60,15 @@ interface MkSearchIndexDoc {
  */
 export type TechDocsCollatorFactoryOptions = {
   discovery: PluginEndpointDiscovery;
-  logger: Logger;
-  tokenManager: TokenManager;
+  logger: LoggerService;
+  tokenManager?: TokenManager;
+  auth?: AuthService;
+  httpAuth?: HttpAuthService;
   locationTemplate?: string;
   catalogClient?: CatalogApi;
   parallelismLimit?: number;
   legacyPathCasing?: boolean;
+  entityTransformer?: TechDocsCollatorEntityTransformer;
 };
 
 type EntityInfo = {
@@ -80,11 +90,12 @@ export class DefaultTechDocsCollatorFactory implements DocumentCollatorFactory {
 
   private discovery: PluginEndpointDiscovery;
   private locationTemplate: string;
-  private readonly logger: Logger;
+  private readonly logger: LoggerService;
+  private readonly auth: AuthService;
   private readonly catalogClient: CatalogApi;
-  private readonly tokenManager: TokenManager;
   private readonly parallelismLimit: number;
   private readonly legacyPathCasing: boolean;
+  private entityTransformer: TechDocsCollatorEntityTransformer;
 
   private constructor(options: TechDocsCollatorFactoryOptions) {
     this.discovery = options.discovery;
@@ -96,7 +107,14 @@ export class DefaultTechDocsCollatorFactory implements DocumentCollatorFactory {
       new CatalogClient({ discoveryApi: options.discovery });
     this.parallelismLimit = options.parallelismLimit ?? 10;
     this.legacyPathCasing = options.legacyPathCasing ?? false;
-    this.tokenManager = options.tokenManager;
+    this.entityTransformer =
+      options.entityTransformer ?? defaultTechDocsCollatorEntityTransformer;
+
+    this.auth = createLegacyAuthAdapters({
+      auth: options.auth,
+      discovery: options.discovery,
+      tokenManager: options.tokenManager,
+    }).auth;
   }
 
   static fromConfig(config: Config, options: TechDocsCollatorFactoryOptions) {
@@ -104,7 +122,18 @@ export class DefaultTechDocsCollatorFactory implements DocumentCollatorFactory {
       config.getOptionalBoolean(
         'techdocs.legacyUseCaseSensitiveTripletPaths',
       ) || false;
-    return new DefaultTechDocsCollatorFactory({ ...options, legacyPathCasing });
+    const locationTemplate = config.getOptionalString(
+      'search.collators.techdocs.locationTemplate',
+    );
+    const parallelismLimit = config.getOptionalNumber(
+      'search.collators.techdocs.parallelismLimit',
+    );
+    return new DefaultTechDocsCollatorFactory({
+      ...options,
+      locationTemplate,
+      parallelismLimit,
+      legacyPathCasing,
+    });
   }
 
   async getCollator(): Promise<Readable> {
@@ -114,7 +143,7 @@ export class DefaultTechDocsCollatorFactory implements DocumentCollatorFactory {
   private async *execute(): AsyncGenerator<TechDocsDocument, void, undefined> {
     const limit = pLimit(this.parallelismLimit);
     const techDocsBaseUrl = await this.discovery.getBaseUrl('techdocs');
-    const { token } = await this.tokenManager.getToken();
+
     let entitiesRetrieved = 0;
     let moreEntitiesToGet = true;
 
@@ -124,6 +153,11 @@ export class DefaultTechDocsCollatorFactory implements DocumentCollatorFactory {
     // parallelism limit to simplify configuration.
     const batchSize = this.parallelismLimit * 50;
     while (moreEntitiesToGet) {
+      const { token: catalogToken } = await this.auth.getPluginRequestToken({
+        onBehalfOf: await this.auth.getOwnServiceCredentials(),
+        targetPluginId: 'catalog',
+      });
+
       const entities = (
         await this.catalogClient.getEntities(
           {
@@ -131,21 +165,10 @@ export class DefaultTechDocsCollatorFactory implements DocumentCollatorFactory {
               'metadata.annotations.backstage.io/techdocs-ref':
                 CATALOG_FILTER_EXISTS,
             },
-            fields: [
-              'kind',
-              'namespace',
-              'metadata.annotations',
-              'metadata.name',
-              'metadata.title',
-              'metadata.namespace',
-              'spec.type',
-              'spec.lifecycle',
-              'relations',
-            ],
             limit: batchSize,
             offset: entitiesRetrieved,
           },
-          { token },
+          { token: catalogToken },
         )
       ).items;
 
@@ -168,6 +191,12 @@ export class DefaultTechDocsCollatorFactory implements DocumentCollatorFactory {
               );
 
             try {
+              const { token: techdocsToken } =
+                await this.auth.getPluginRequestToken({
+                  onBehalfOf: await this.auth.getOwnServiceCredentials(),
+                  targetPluginId: 'techdocs',
+                });
+
               const searchIndexResponse = await fetch(
                 DefaultTechDocsCollatorFactory.constructDocsIndexUrl(
                   techDocsBaseUrl,
@@ -175,7 +204,7 @@ export class DefaultTechDocsCollatorFactory implements DocumentCollatorFactory {
                 ),
                 {
                   headers: {
-                    Authorization: `Bearer ${token}`,
+                    Authorization: `Bearer ${techdocsToken}`,
                   },
                 },
               );
@@ -193,6 +222,7 @@ export class DefaultTechDocsCollatorFactory implements DocumentCollatorFactory {
               ]);
 
               return searchIndex.docs.map((doc: MkSearchIndexDoc) => ({
+                ...this.entityTransformer(entity),
                 title: unescape(doc.title),
                 text: unescape(doc.text || ''),
                 location: this.applyArgsToFormat(

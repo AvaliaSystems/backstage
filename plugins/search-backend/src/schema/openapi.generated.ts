@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 The Backstage Authors
+ * Copyright 2024 The Backstage Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import { createValidatedOpenApiRouter } from '@backstage/backend-openapi-utils';
 export const spec = {
   openapi: '3.0.3',
   info: {
-    title: '@backstage/plugin-search-backend',
+    title: 'search',
     version: '1',
     description:
       'The Backstage backend plugin that provides search functionality.',
@@ -42,8 +42,58 @@ export const spec = {
     headers: {},
     parameters: {},
     requestBodies: {},
-    responses: {},
+    responses: {
+      ErrorResponse: {
+        description: 'An error response from the backend.',
+        content: {
+          'application/json; charset=utf-8': {
+            schema: {
+              $ref: '#/components/schemas/Error',
+            },
+          },
+        },
+      },
+    },
     schemas: {
+      Error: {
+        type: 'object',
+        properties: {
+          error: {
+            type: 'object',
+            properties: {
+              name: {
+                type: 'string',
+              },
+              message: {
+                type: 'string',
+              },
+            },
+            required: ['name', 'message'],
+          },
+          request: {
+            type: 'object',
+            properties: {
+              method: {
+                type: 'string',
+              },
+              url: {
+                type: 'string',
+              },
+            },
+            required: ['method', 'url'],
+          },
+          response: {
+            type: 'object',
+            properties: {
+              statusCode: {
+                type: 'number',
+              },
+            },
+            required: ['statusCode'],
+          },
+        },
+        required: ['error', 'request', 'response'],
+      },
       JsonObject: {
         type: 'object',
         properties: {},
@@ -132,25 +182,8 @@ export const spec = {
               },
             },
           },
-          '400': {
-            description: 'Bad request',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    error: {
-                      type: 'object',
-                      properties: {
-                        message: {
-                          type: 'string',
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
+          default: {
+            $ref: '#/components/responses/ErrorResponse',
           },
         },
         security: [
@@ -164,6 +197,7 @@ export const spec = {
             name: 'term',
             in: 'query',
             required: false,
+            allowReserved: true,
             schema: {
               type: 'string',
               default: '',
@@ -175,6 +209,7 @@ export const spec = {
             required: false,
             style: 'deepObject',
             explode: true,
+            allowReserved: true,
             schema: {
               $ref: '#/components/schemas/JsonObject',
             },
@@ -183,6 +218,7 @@ export const spec = {
             name: 'types',
             in: 'query',
             required: false,
+            allowReserved: true,
             schema: {
               type: 'array',
               items: {
@@ -194,6 +230,7 @@ export const spec = {
             name: 'pageCursor',
             in: 'query',
             required: false,
+            allowReserved: true,
             schema: {
               type: 'string',
             },
@@ -202,6 +239,7 @@ export const spec = {
             name: 'pageLimit',
             in: 'query',
             required: false,
+            allowReserved: true,
             schema: {
               type: 'integer',
             },

@@ -17,6 +17,10 @@ export interface BackstagePackageJson {
   // (undocumented)
   backstage?: {
     role?: PackageRole;
+    moved?: string;
+    pluginId?: string | null;
+    pluginPackage?: string;
+    pluginPackages?: string[];
   };
   // (undocumented)
   bundled?: boolean;
@@ -53,9 +57,15 @@ export interface BackstagePackageJson {
     access?: 'public' | 'restricted';
     directory?: string;
     registry?: string;
-    alphaTypes?: string;
-    betaTypes?: string;
   };
+  // (undocumented)
+  repository?:
+    | string
+    | {
+        type: string;
+        url: string;
+        directory: string;
+      };
   // (undocumented)
   scripts?: {
     [key: string]: string;

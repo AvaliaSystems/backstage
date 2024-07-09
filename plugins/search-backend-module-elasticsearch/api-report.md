@@ -15,8 +15,9 @@ import type { ConnectionOptions } from 'tls';
 import { IndexableDocument } from '@backstage/plugin-search-common';
 import { IndexableResultSet } from '@backstage/plugin-search-common';
 import { Logger } from 'winston';
+import { LoggerService } from '@backstage/backend-plugin-api';
 import { Readable } from 'stream';
-import { SearchEngine } from '@backstage/plugin-search-common';
+import { SearchEngine } from '@backstage/plugin-search-backend-node';
 import { SearchQuery } from '@backstage/plugin-search-common';
 import { TransportRequestPromise } from '@opensearch-project/opensearch/lib/Transport';
 import { TransportRequestPromise as TransportRequestPromise_2 } from '@elastic/elasticsearch/lib/Transport';
@@ -152,7 +153,7 @@ export class ElasticSearchClientWrapper {
   static fromClientOptions(
     options: ElasticSearchClientOptions,
   ): ElasticSearchClientWrapper;
-  // (undocumented)
+  // @deprecated (undocumented)
   getAliases(options: {
     aliases: string[];
   }):
@@ -164,6 +165,12 @@ export class ElasticSearchClientWrapper {
   }):
     | TransportRequestPromise<ApiResponse<boolean, unknown>>
     | TransportRequestPromise_2<ApiResponse_2<boolean, unknown>>;
+  // (undocumented)
+  listIndices(options: {
+    index: string;
+  }):
+    | TransportRequestPromise<ApiResponse<Record<string, any>, unknown>>
+    | TransportRequestPromise_2<ApiResponse_2<Record<string, any>, unknown>>;
   // (undocumented)
   putIndexTemplate(
     template: ElasticSearchCustomIndexTemplate,
@@ -299,10 +306,11 @@ export interface ElasticSearchNodeOptions {
 
 // @public
 export type ElasticSearchOptions = {
-  logger: Logger;
+  logger: Logger | LoggerService;
   config: Config;
   aliasPostfix?: string;
   indexPrefix?: string;
+  translator?: ElasticSearchQueryTranslator;
 };
 
 // @public
@@ -322,7 +330,7 @@ export class ElasticSearchSearchEngine implements SearchEngine {
     elasticSearchClientOptions: ElasticSearchClientOptions,
     aliasPostfix: string,
     indexPrefix: string,
-    logger: Logger,
+    logger: Logger | LoggerService,
     batchSize: number,
     highlightOptions?: ElasticSearchHighlightOptions,
   );
@@ -365,9 +373,10 @@ export type ElasticSearchSearchEngineIndexerOptions = {
   indexPrefix: string;
   indexSeparator: string;
   alias: string;
-  logger: Logger;
+  logger: Logger | LoggerService;
   elasticSearchClientWrapper: ElasticSearchClientWrapper;
   batchSize: number;
+  skipRefresh?: boolean;
 };
 
 // @public (undocumented)

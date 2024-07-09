@@ -89,6 +89,7 @@ export type ScaffolderOutputText = {
   title?: string;
   icon?: string;
   content?: string;
+  default?: boolean;
 };
 
 /** @public */
@@ -105,7 +106,7 @@ export type ScaffolderTaskOutput = {
  * @public
  */
 export type LogEvent = {
-  type: 'log' | 'completion' | 'cancelled';
+  type: 'log' | 'completion' | 'cancelled' | 'recovered';
   body: {
     message: string;
     stepId?: string;
@@ -228,4 +229,11 @@ export interface ScaffolderApi {
   streamLogs(options: ScaffolderStreamLogsOptions): Observable<LogEvent>;
 
   dryRun?(options: ScaffolderDryRunOptions): Promise<ScaffolderDryRunResponse>;
+
+  autocomplete?(options: {
+    token: string;
+    provider: string;
+    resource: string;
+    context?: Record<string, string>;
+  }): Promise<{ results: { title: string }[] }>;
 }

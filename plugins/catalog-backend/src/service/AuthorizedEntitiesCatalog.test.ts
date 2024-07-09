@@ -18,10 +18,12 @@ import { NotAllowedError } from '@backstage/errors';
 import { AuthorizeResult } from '@backstage/plugin-permission-common';
 import { createConditionTransformer } from '@backstage/plugin-permission-node';
 import { isEntityKind } from '../permissions/rules/isEntityKind';
-import { CatalogPermissionRule } from '../permissions/rules';
+import { CatalogPermissionRule } from '../permissions';
 import { AuthorizedEntitiesCatalog } from './AuthorizedEntitiesCatalog';
-import { Cursor, EntityFilter, QueryEntitiesResponse } from '../catalog/types';
+import { Cursor, QueryEntitiesResponse } from '../catalog/types';
 import { Entity } from '@backstage/catalog-model';
+import { EntityFilter } from '@backstage/plugin-catalog-node';
+import { mockCredentials } from '@backstage/backend-test-utils';
 
 describe('AuthorizedEntitiesCatalog', () => {
   const fakeCatalog = {
@@ -59,7 +61,7 @@ describe('AuthorizedEntitiesCatalog', () => {
 
       expect(
         await catalog.entities({
-          authorizationToken: 'abcd',
+          credentials: mockCredentials.none(),
         }),
       ).toEqual({
         entities: [],
@@ -76,10 +78,10 @@ describe('AuthorizedEntitiesCatalog', () => {
       ]);
       const catalog = createCatalog(isEntityKind);
 
-      await catalog.entities({ authorizationToken: 'abcd' });
+      await catalog.entities({ credentials: mockCredentials.none() });
 
       expect(fakeCatalog.entities).toHaveBeenCalledWith({
-        authorizationToken: 'abcd',
+        credentials: mockCredentials.none(),
         filter: { key: 'kind', values: ['b'] },
       });
     });
@@ -90,10 +92,10 @@ describe('AuthorizedEntitiesCatalog', () => {
       ]);
       const catalog = createCatalog();
 
-      await catalog.entities({ authorizationToken: 'abcd' });
+      await catalog.entities({ credentials: mockCredentials.none() });
 
       expect(fakeCatalog.entities).toHaveBeenCalledWith({
-        authorizationToken: 'abcd',
+        credentials: mockCredentials.none(),
       });
     });
   });
@@ -108,7 +110,7 @@ describe('AuthorizedEntitiesCatalog', () => {
       await expect(
         catalog.entitiesBatch({
           entityRefs: ['component:default/component-a'],
-          authorizationToken: 'abcd',
+          credentials: mockCredentials.none(),
         }),
       ).resolves.toEqual({
         items: [null],
@@ -131,12 +133,12 @@ describe('AuthorizedEntitiesCatalog', () => {
 
       await catalog.entitiesBatch({
         entityRefs: ['component:default/component-a'],
-        authorizationToken: 'abcd',
+        credentials: mockCredentials.none(),
       });
 
       expect(fakeCatalog.entitiesBatch).toHaveBeenCalledWith({
         entityRefs: ['component:default/component-a'],
-        authorizationToken: 'abcd',
+        credentials: mockCredentials.none(),
         filter: { key: 'kind', values: ['b'] },
       });
     });
@@ -149,12 +151,12 @@ describe('AuthorizedEntitiesCatalog', () => {
 
       await catalog.entitiesBatch({
         entityRefs: ['component:default/component-a'],
-        authorizationToken: 'abcd',
+        credentials: mockCredentials.none(),
       });
 
       expect(fakeCatalog.entitiesBatch).toHaveBeenCalledWith({
         entityRefs: ['component:default/component-a'],
-        authorizationToken: 'abcd',
+        credentials: mockCredentials.none(),
       });
     });
   });
@@ -168,7 +170,7 @@ describe('AuthorizedEntitiesCatalog', () => {
 
       await expect(
         catalog.queryEntities({
-          authorizationToken: 'abcd',
+          credentials: mockCredentials.none(),
           filter: { key: 'kind', values: ['b'] },
         }),
       ).resolves.toEqual({
@@ -187,12 +189,12 @@ describe('AuthorizedEntitiesCatalog', () => {
       const catalog = createCatalog();
 
       await catalog.queryEntities({
-        authorizationToken: 'abcd',
+        credentials: mockCredentials.none(),
         filter: { key: 'kind', values: ['b'] },
       });
 
       expect(fakeCatalog.queryEntities).toHaveBeenCalledWith({
-        authorizationToken: 'abcd',
+        credentials: mockCredentials.none(),
         filter: { key: 'kind', values: ['b'] },
       });
     });
@@ -242,12 +244,12 @@ describe('AuthorizedEntitiesCatalog', () => {
       const catalog = createCatalog(isEntityKind);
 
       let response = await catalog.queryEntities({
-        authorizationToken: 'abcd',
+        credentials: mockCredentials.none(),
         filter: { key: 'name', values: ['name'] },
       });
 
       expect(fakeCatalog.queryEntities).toHaveBeenCalledWith({
-        authorizationToken: 'abcd',
+        credentials: mockCredentials.none(),
         filter: { allOf: [{ key: 'kind', values: ['b'] }, requestFilter] },
       });
 
@@ -275,12 +277,12 @@ describe('AuthorizedEntitiesCatalog', () => {
         orderFieldValues: ['a', null],
       };
       response = await catalog.queryEntities({
-        authorizationToken: 'abcd',
+        credentials: mockCredentials.none(),
         cursor,
       });
 
       expect(fakeCatalog.queryEntities).toHaveBeenNthCalledWith(2, {
-        authorizationToken: 'abcd',
+        credentials: mockCredentials.none(),
         cursor: {
           ...cursor,
           filter: { allOf: [{ key: 'kind', values: ['b'] }, requestFilter] },
@@ -323,7 +325,9 @@ describe('AuthorizedEntitiesCatalog', () => {
       );
 
       await expect(() =>
-        catalog.removeEntityByUid('uid', { authorizationToken: 'abcd' }),
+        catalog.removeEntityByUid('uid', {
+          credentials: mockCredentials.none(),
+        }),
       ).rejects.toThrow(NotAllowedError);
     });
 
@@ -342,7 +346,9 @@ describe('AuthorizedEntitiesCatalog', () => {
       );
 
       await expect(() =>
-        catalog.removeEntityByUid('uid', { authorizationToken: 'abcd' }),
+        catalog.removeEntityByUid('uid', {
+          credentials: mockCredentials.none(),
+        }),
       ).rejects.toThrow(NotAllowedError);
     });
 
@@ -362,9 +368,13 @@ describe('AuthorizedEntitiesCatalog', () => {
         createConditionTransformer([isEntityKind]),
       );
 
-      await catalog.removeEntityByUid('uid', { authorizationToken: 'abcd' });
+      await catalog.removeEntityByUid('uid', {
+        credentials: mockCredentials.none(),
+      });
 
-      expect(fakeCatalog.removeEntityByUid).toHaveBeenCalledWith('uid');
+      expect(fakeCatalog.removeEntityByUid).toHaveBeenCalledWith('uid', {
+        credentials: mockCredentials.none(),
+      });
     });
 
     it('calls underlying catalog method on ALLOW', async () => {
@@ -382,9 +392,13 @@ describe('AuthorizedEntitiesCatalog', () => {
         createConditionTransformer([]),
       );
 
-      await catalog.removeEntityByUid('uid', { authorizationToken: 'abcd' });
+      await catalog.removeEntityByUid('uid', {
+        credentials: mockCredentials.none(),
+      });
 
-      expect(fakeCatalog.removeEntityByUid).toHaveBeenCalledWith('uid');
+      expect(fakeCatalog.removeEntityByUid).toHaveBeenCalledWith('uid', {
+        credentials: mockCredentials.none(),
+      });
     });
   });
 
@@ -397,7 +411,7 @@ describe('AuthorizedEntitiesCatalog', () => {
 
       await expect(() =>
         catalog.entityAncestry('backstage:default/component', {
-          authorizationToken: 'Bearer abcd',
+          credentials: mockCredentials.none(),
         }),
       ).rejects.toThrow(NotAllowedError);
     });
@@ -442,7 +456,7 @@ describe('AuthorizedEntitiesCatalog', () => {
 
       const ancestryResult = await catalog.entityAncestry(
         'backstage:default/a',
-        { authorizationToken: 'Bearer abcd' },
+        { credentials: mockCredentials.none() },
       );
 
       expect(ancestryResult).toEqual({
@@ -475,7 +489,7 @@ describe('AuthorizedEntitiesCatalog', () => {
       expect(
         await catalog.facets({
           facets: ['a'],
-          authorizationToken: 'abcd',
+          credentials: mockCredentials.none(),
         }),
       ).toEqual({
         facets: { a: [] },
@@ -491,11 +505,14 @@ describe('AuthorizedEntitiesCatalog', () => {
       ]);
       const catalog = createCatalog(isEntityKind);
 
-      await catalog.facets({ facets: ['a'], authorizationToken: 'abcd' });
+      await catalog.facets({
+        facets: ['a'],
+        credentials: mockCredentials.none(),
+      });
 
       expect(fakeCatalog.facets).toHaveBeenCalledWith({
         facets: ['a'],
-        authorizationToken: 'abcd',
+        credentials: mockCredentials.none(),
         filter: { key: 'kind', values: ['b'] },
       });
     });
@@ -506,11 +523,14 @@ describe('AuthorizedEntitiesCatalog', () => {
       ]);
       const catalog = createCatalog();
 
-      await catalog.facets({ facets: ['a'], authorizationToken: 'abcd' });
+      await catalog.facets({
+        facets: ['a'],
+        credentials: mockCredentials.none(),
+      });
 
       expect(fakeCatalog.facets).toHaveBeenCalledWith({
         facets: ['a'],
-        authorizationToken: 'abcd',
+        credentials: mockCredentials.none(),
       });
     });
   });

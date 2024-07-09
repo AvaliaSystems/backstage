@@ -74,6 +74,7 @@ export default ({ theme, sidebar }: RuleOptions) => `
 }
 .md-sidebar .md-sidebar__scrollwrap {
   width: calc(12.1rem);
+  overflow-y: hidden;
 }
 .md-sidebar--secondary {
   right: ${theme.spacing(3)}px;
@@ -120,7 +121,7 @@ export default ({ theme, sidebar }: RuleOptions) => `
 .md-footer__title {
   background-color: unset;
 }
-.md-footer-nav__link {
+.md-footer-nav__link, .md-footer__link {
   width: 16rem;
 }
 
@@ -234,7 +235,7 @@ export default ({ theme, sidebar }: RuleOptions) => `
   #toggle-sidebar {
     display: none;
   }
-  
+
   .md-content {
     margin: 0;
     width: 100%;

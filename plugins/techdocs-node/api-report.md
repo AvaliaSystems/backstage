@@ -10,17 +10,26 @@ import { Config } from '@backstage/config';
 import { ContainerRunner } from '@backstage/backend-common';
 import { Entity } from '@backstage/catalog-model';
 import express from 'express';
+import { ExtensionPoint } from '@backstage/backend-plugin-api';
 import { IndexableDocument } from '@backstage/plugin-search-common';
 import { Logger } from 'winston';
 import { PluginEndpointDiscovery } from '@backstage/backend-common';
 import { ScmIntegrationRegistry } from '@backstage/integration';
 import { UrlReader } from '@backstage/backend-common';
+import * as winston from 'winston';
 import { Writable } from 'stream';
 
 // @public
 export class DirectoryPreparer implements PreparerBase {
   static fromConfig(config: Config, options: PreparerConfig): DirectoryPreparer;
   prepare(entity: Entity, options?: PreparerOptions): Promise<PreparerResponse>;
+  shouldCleanPreparedDirectory(): boolean;
+}
+
+// @public
+export interface DocsBuildStrategy {
+  // (undocumented)
+  shouldBuild(params: { entity: Entity }): Promise<boolean>;
 }
 
 // @public
@@ -39,8 +48,8 @@ export type GeneratorBuilder = {
 
 // @public
 export type GeneratorOptions = {
-  containerRunner?: ContainerRunner;
   logger: Logger;
+  containerRunner?: ContainerRunner;
 };
 
 // @public
@@ -54,6 +63,7 @@ export type GeneratorRunOptions = {
   siteOptions?: {
     name?: string;
   };
+  runAsDefaultUser?: boolean;
 };
 
 // @public
@@ -62,7 +72,8 @@ export class Generators implements GeneratorBuilder {
     config: Config,
     options: {
       logger: Logger;
-      containerRunner: ContainerRunner;
+      containerRunner?: ContainerRunner;
+      customGenerator?: TechdocsGenerator;
     },
   ): Promise<GeneratorBuilder>;
   get(entity: Entity): GeneratorBase;
@@ -88,9 +99,10 @@ export const getLocationForEntity: (
 // @public @deprecated (undocumented)
 export const getMkDocsYml: (
   inputDir: string,
-  siteOptions?:
+  options?:
     | {
         name?: string | undefined;
+        mkdocsConfigFileName?: string | undefined;
       }
     | undefined,
 ) => Promise<{
@@ -102,8 +114,9 @@ export const getMkDocsYml: (
 // @public
 export const getMkdocsYml: (
   inputDir: string,
-  siteOptions?: {
+  options?: {
     name?: string;
+    mkdocsConfigFileName?: string;
   },
 ) => Promise<{
   path: string;
@@ -132,6 +145,7 @@ export const parseReferenceAnnotation: (
 // @public
 export type PreparerBase = {
   prepare(entity: Entity, options?: PreparerOptions): Promise<PreparerResponse>;
+  shouldCleanPreparedDirectory(): boolean;
 };
 
 // @public
@@ -169,11 +183,15 @@ export class Preparers implements PreparerBuilder {
 }
 
 // @public
-export class Publisher {
+export class Publisher implements PublisherBuilder {
   static fromConfig(
     config: Config,
     options: PublisherFactory,
   ): Promise<PublisherBase>;
+  // (undocumented)
+  get(config: Config): PublisherBase;
+  // (undocumented)
+  register(type: PublisherType | 'techdocs', publisher: PublisherBase): void;
 }
 
 // @public
@@ -189,9 +207,16 @@ export interface PublisherBase {
 }
 
 // @public
+export type PublisherBuilder = {
+  register(type: PublisherType, publisher: PublisherBase): void;
+  get(config: Config): PublisherBase;
+};
+
+// @public
 export type PublisherFactory = {
   logger: Logger;
   discovery: PluginEndpointDiscovery;
+  customPublisher?: PublisherBase | undefined;
 };
 
 // @public
@@ -226,6 +251,17 @@ export type RemoteProtocol = 'url' | 'dir';
 export type SupportedGeneratorKey = 'techdocs' | string;
 
 // @public
+export interface TechdocsBuildsExtensionPoint {
+  // (undocumented)
+  setBuildLogTransport(transport: winston.transport): void;
+  // (undocumented)
+  setBuildStrategy(buildStrategy: DocsBuildStrategy): void;
+}
+
+// @public
+export const techdocsBuildsExtensionPoint: ExtensionPoint<TechdocsBuildsExtensionPoint>;
+
+// @public
 export interface TechDocsDocument extends IndexableDocument {
   kind: string;
   lifecycle: string;
@@ -243,13 +279,22 @@ export class TechdocsGenerator implements GeneratorBase {
     config: Config;
     scmIntegrations: ScmIntegrationRegistry;
   });
-  static readonly defaultDockerImage = 'spotify/techdocs:v1.2.1';
+  static readonly defaultDockerImage = 'spotify/techdocs:v1.2.4';
   static fromConfig(
     config: Config,
     options: GeneratorOptions,
   ): TechdocsGenerator;
   run(options: GeneratorRunOptions): Promise<void>;
 }
+
+// @public
+export interface TechdocsGeneratorExtensionPoint {
+  // (undocumented)
+  setTechdocsGenerator(generator: TechdocsGenerator): void;
+}
+
+// @public
+export const techdocsGeneratorExtensionPoint: ExtensionPoint<TechdocsGeneratorExtensionPoint>;
 
 // @public
 export type TechDocsMetadata = {
@@ -259,6 +304,24 @@ export type TechDocsMetadata = {
   build_timestamp: number;
   files?: string[];
 };
+
+// @public
+export interface TechdocsPreparerExtensionPoint {
+  // (undocumented)
+  registerPreparer(protocol: RemoteProtocol, preparer: PreparerBase): void;
+}
+
+// @public
+export const techdocsPreparerExtensionPoint: ExtensionPoint<TechdocsPreparerExtensionPoint>;
+
+// @public
+export interface TechdocsPublisherExtensionPoint {
+  // (undocumented)
+  registerPublisher(type: PublisherType, publisher: PublisherBase): void;
+}
+
+// @public
+export const techdocsPublisherExtensionPoint: ExtensionPoint<TechdocsPublisherExtensionPoint>;
 
 // @public
 export const transformDirLocation: (
@@ -274,5 +337,6 @@ export const transformDirLocation: (
 export class UrlPreparer implements PreparerBase {
   static fromConfig(options: PreparerConfig): UrlPreparer;
   prepare(entity: Entity, options?: PreparerOptions): Promise<PreparerResponse>;
+  shouldCleanPreparedDirectory(): boolean;
 }
 ```

@@ -67,6 +67,22 @@ export interface Config {
           };
         };
 
+    /**
+     * An absolute path to a directory that can be used as a working dir, for
+     * example as scratch space for large operations.
+     *
+     * @remarks
+     *
+     * Note that this must be an absolute path.
+     *
+     * If not set, the operating system's designated temporary directory is
+     * commonly used, but that is implementation defined per plugin.
+     *
+     * Plugins are encouraged to heed this config setting if present, to allow
+     * deployment in severely locked-down or limited environments.
+     */
+    workingDirectory?: string;
+
     /** Database connection configuration, select base database type using the `client` field */
     database: {
       /** Default database client to use */
@@ -95,6 +111,13 @@ export interface Config {
        * Defaults to true if unspecified.
        */
       ensureExists?: boolean;
+      /**
+       * Whether to ensure the given database schema exists by creating it if it does not.
+       * Defaults to false if unspecified.
+       *
+       * NOTE: Currently only supported by the `pg` client when pluginDivisionMode: schema
+       */
+      ensureSchemaExists?: boolean;
       /**
        * How plugins databases are managed/divided in the provided database instance.
        *
@@ -132,6 +155,13 @@ export interface Config {
            */
           ensureExists?: boolean;
           /**
+           * Whether to ensure the given database schema exists by creating it if it does not.
+           * Defaults to false if unspecified.
+           *
+           * NOTE: Currently only supported by the `pg` client when pluginDivisionMode: schema
+           */
+          ensureSchemaExists?: boolean;
+          /**
            * Arbitrary config object to pass to knex when initializing
            * (https://knexjs.org/#Installation-client). Most notable is the
            * debug and asyncStackTraces booleans.
@@ -149,6 +179,8 @@ export interface Config {
     cache?:
       | {
           store: 'memory';
+          /** An optional default TTL (in milliseconds). */
+          defaultTtl?: number;
         }
       | {
           store: 'redis';
@@ -157,6 +189,13 @@ export interface Config {
            * @visibility secret
            */
           connection: string;
+          /** An optional default TTL (in milliseconds). */
+          defaultTtl?: number;
+          /**
+           * Whether or not [useRedisSets](https://github.com/jaredwray/keyv/tree/main/packages/redis#useredissets) should be configured to this redis cache.
+           * Defaults to true if unspecified.
+           */
+          useRedisSets?: boolean;
         }
       | {
           store: 'memcache';
@@ -165,6 +204,8 @@ export interface Config {
            * @visibility secret
            */
           connection: string;
+          /** An optional default TTL (in milliseconds). */
+          defaultTtl?: number;
         };
 
     cors?: {
@@ -215,25 +256,5 @@ export interface Config {
      * remove the default value that Backstage puts in place for that policy.
      */
     csp?: { [policyId: string]: string[] | false };
-  };
-
-  /** Discovery options. */
-  discovery?: {
-    /**
-     * Endpoints
-     *
-     * A list of target baseUrls and the associated plugins.
-     */
-    endpoints: {
-      /**
-       * The target baseUrl to use for the plugin
-       *
-       * Can be either a string or an object with internal and external keys.
-       * Targets with `{{pluginId}}` or `{{ pluginId }} in the url will be replaced with the pluginId.
-       */
-      target: string | { internal: string; external: string };
-      /** Array of plugins which use the target baseUrl. */
-      plugins: string[];
-    }[];
   };
 }

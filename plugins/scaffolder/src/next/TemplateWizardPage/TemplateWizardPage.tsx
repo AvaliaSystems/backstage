@@ -15,7 +15,11 @@
  */
 import React from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { stringifyEntityRef } from '@backstage/catalog-model';
+import useAsync from 'react-use/esm/useAsync';
+import {
+  stringifyEntityRef,
+  ANNOTATION_EDIT_URL,
+} from '@backstage/catalog-model';
 import {
   AnalyticsContext,
   useApi,
@@ -26,12 +30,13 @@ import {
   scaffolderApiRef,
   useTemplateSecrets,
   type LayoutOptions,
-} from '@backstage/plugin-scaffolder-react';
-import {
   FormProps,
-  Workflow,
-  NextFieldExtensionOptions,
-} from '@backstage/plugin-scaffolder-react/alpha';
+  FieldExtensionOptions,
+  ReviewStepProps,
+} from '@backstage/plugin-scaffolder-react';
+import { catalogApiRef } from '@backstage/plugin-catalog-react';
+
+import { Workflow } from '@backstage/plugin-scaffolder-react/alpha';
 import { JsonValue } from '@backstage/types';
 import { Header, Page } from '@backstage/core-components';
 
@@ -41,13 +46,23 @@ import {
   selectedTemplateRouteRef,
 } from '../../routes';
 
+import { TemplateWizardPageContextMenu } from './TemplateWizardPageContextMenu';
+
 /**
  * @alpha
  */
 export type TemplateWizardPageProps = {
-  customFieldExtensions: NextFieldExtensionOptions<any, any>[];
+  customFieldExtensions: FieldExtensionOptions<any, any>[];
+  components?: {
+    ReviewStepComponent?: React.ComponentType<ReviewStepProps>;
+  };
   layouts?: LayoutOptions[];
-  FormProps?: FormProps;
+  formProps?: FormProps;
+  headerOptions?: {
+    pageTitleOverride?: string;
+    title?: string;
+    subtitle?: string;
+  };
 };
 
 export const TemplateWizardPage = (props: TemplateWizardPageProps) => {
@@ -55,6 +70,7 @@ export const TemplateWizardPage = (props: TemplateWizardPageProps) => {
   const taskRoute = useRouteRef(scaffolderTaskRouteRef);
   const { secrets } = useTemplateSecrets();
   const scaffolderApi = useApi(scaffolderApiRef);
+  const catalogApi = useApi(catalogApiRef);
   const navigate = useNavigate();
   const { templateName, namespace } = useRouteRefParams(
     selectedTemplateRouteRef,
@@ -65,6 +81,11 @@ export const TemplateWizardPage = (props: TemplateWizardPageProps) => {
     namespace,
     name: templateName,
   });
+
+  const { value: editUrl } = useAsync(async () => {
+    const data = await catalogApi.getEntityByRef(templateRef);
+    return data?.metadata.annotations?.[ANNOTATION_EDIT_URL];
+  }, [templateRef, catalogApi]);
 
   const onCreate = async (values: Record<string, JsonValue>) => {
     const { taskId } = await scaffolderApi.scaffold({
@@ -85,14 +106,18 @@ export const TemplateWizardPage = (props: TemplateWizardPageProps) => {
           pageTitleOverride="Create a new component"
           title="Create a new component"
           subtitle="Create new software components using standard templates in your organization"
-        />
+          {...props.headerOptions}
+        >
+          <TemplateWizardPageContextMenu editUrl={editUrl} />
+        </Header>
         <Workflow
           namespace={namespace}
           templateName={templateName}
           onCreate={onCreate}
+          components={props.components}
           onError={onError}
           extensions={props.customFieldExtensions}
-          FormProps={props.FormProps}
+          formProps={props.formProps}
           layouts={props.layouts}
         />
       </Page>

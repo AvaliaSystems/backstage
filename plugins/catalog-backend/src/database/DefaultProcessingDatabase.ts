@@ -19,8 +19,7 @@ import { ConflictError } from '@backstage/errors';
 import { DeferredEntity } from '@backstage/plugin-catalog-node';
 import { Knex } from 'knex';
 import lodash from 'lodash';
-import type { Logger } from 'winston';
-import { ProcessingIntervalFunction } from '../processing/refresh';
+import { ProcessingIntervalFunction } from '../processing';
 import { rethrowError, timestampToDateTime } from './conversion';
 import { initDatabaseMetrics } from './metrics';
 import {
@@ -42,12 +41,16 @@ import {
 import { checkLocationKeyConflict } from './operations/refreshState/checkLocationKeyConflict';
 import { insertUnprocessedEntity } from './operations/refreshState/insertUnprocessedEntity';
 import { updateUnprocessedEntity } from './operations/refreshState/updateUnprocessedEntity';
-import { deleteOrphanedEntities } from './operations/util/deleteOrphanedEntities';
 import { generateStableHash } from './util';
-import { EventBroker, EventParams } from '@backstage/plugin-events-node';
+import {
+  EventBroker,
+  EventParams,
+  EventsService,
+} from '@backstage/plugin-events-node';
 import { DateTime } from 'luxon';
 import { CATALOG_CONFLICTS_TOPIC } from '../constants';
 import { CatalogConflictEventPayload } from '../catalog/types';
+import { LoggerService } from '@backstage/backend-plugin-api';
 
 // The number of items that are sent per batch to the database layer, when
 // doing .batchInsert calls to knex. This needs to be low enough to not cause
@@ -59,9 +62,9 @@ export class DefaultProcessingDatabase implements ProcessingDatabase {
   constructor(
     private readonly options: {
       database: Knex;
-      logger: Logger;
+      logger: LoggerService;
       refreshInterval: ProcessingIntervalFunction;
-      eventBroker?: EventBroker;
+      eventBroker?: EventBroker | EventsService;
     },
   ) {
     initDatabaseMetrics(options.database);
@@ -138,6 +141,7 @@ export class DefaultProcessingDatabase implements ProcessingDatabase {
         type,
       }),
     );
+
     await tx.batchInsert(
       'relations',
       this.deduplicateRelations(relationRows),
@@ -274,11 +278,6 @@ export class DefaultProcessingDatabase implements ProcessingDatabase {
     return { entityRefs };
   }
 
-  async deleteOrphanedEntities(txOpaque: Transaction): Promise<number> {
-    const tx = txOpaque as Knex.Transaction;
-    return await deleteOrphanedEntities({ tx });
-  }
-
   async transaction<T>(fn: (tx: Transaction) => Promise<T>): Promise<T> {
     try {
       let result: T | undefined = undefined;
@@ -374,7 +373,7 @@ export class DefaultProcessingDatabase implements ProcessingDatabase {
               entityRef,
               newLocationKey: locationKey,
               existingLocationKey: conflictingKey,
-              lastConflictAt: DateTime.now().toISO(),
+              lastConflictAt: DateTime.now().toISO()!,
             },
           };
           await this.options.eventBroker?.publish(eventParams);

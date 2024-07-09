@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { BackstageTheme } from '@backstage/theme';
+
 import Box from '@material-ui/core/Box';
-import { makeStyles } from '@material-ui/core/styles';
+import { makeStyles, Theme } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
 import classnames from 'classnames';
 import React, { ReactNode, useContext, useEffect, useState } from 'react';
@@ -28,7 +28,7 @@ import {
 import { useSidebarOpenState } from './SidebarOpenStateContext';
 
 const useStyles = makeStyles<
-  BackstageTheme,
+  Theme,
   { submenuConfig: SubmenuConfig; left: number }
 >(
   theme => ({
@@ -80,7 +80,7 @@ const useStyles = makeStyles<
     title: {
       fontSize: theme.typography.h5.fontSize,
       fontWeight: theme.typography.fontWeightMedium,
-      color: theme.palette.common.white,
+      color: theme.palette.navigation.color,
       padding: theme.spacing(2.5),
       [theme.breakpoints.down('xs')]: {
         display: 'none',

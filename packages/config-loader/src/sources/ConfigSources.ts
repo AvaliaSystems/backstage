@@ -71,8 +71,17 @@ export interface ClosableConfig extends Config {
  * @public
  */
 export interface BaseConfigSourcesOptions {
+  watch?: boolean;
   rootDir?: string;
   remote?: Pick<RemoteConfigSourceOptions, 'reloadInterval'>;
+
+  /**
+   * A custom substitution function that overrides the default one.
+   *
+   * @remarks
+   * The substitution function handles syntax like `${MY_ENV_VAR}` in configuration values.
+   * The default substitution will read the value from the environment and trim whitespace.
+   */
   substitutionFunc?: SubstitutionFunc;
 }
 
@@ -159,7 +168,8 @@ export class ConfigSources {
         });
       }
       return FileConfigSource.create({
-        path: arg.target,
+        watch: options.watch,
+        path: resolvePath(arg.target),
         substitutionFunc: options.substitutionFunc,
       });
     });
@@ -170,6 +180,7 @@ export class ConfigSources {
 
       argSources.push(
         FileConfigSource.create({
+          watch: options.watch,
           path: defaultPath,
           substitutionFunc: options.substitutionFunc,
         }),
@@ -177,6 +188,7 @@ export class ConfigSources {
       if (fs.pathExistsSync(localPath)) {
         argSources.push(
           FileConfigSource.create({
+            watch: options.watch,
             path: localPath,
             substitutionFunc: options.substitutionFunc,
           }),

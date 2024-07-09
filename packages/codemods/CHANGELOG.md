@@ -1,5 +1,51 @@
 # @backstage/codemods
 
+## 0.1.49
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/cli-common@0.1.14
+
+## 0.1.49-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/cli-common@0.1.14-next.0
+
+## 0.1.48
+
+### Patch Changes
+
+- 1bd4596: Removed the `ts-node` dev dependency.
+- Updated dependencies
+  - @backstage/cli-common@0.1.13
+
+## 0.1.47
+
+### Patch Changes
+
+- 6ba64c4: Updated dependency `commander` to `^12.0.0`.
+- Updated dependencies
+  - @backstage/cli-common@0.1.13
+
+## 0.1.46
+
+### Patch Changes
+
+- de42eebaaf: Bumped dev dependencies `@types/node` and `mock-fs`.
+- Updated dependencies
+  - @backstage/cli-common@0.1.13
+
+## 0.1.46-next.0
+
+### Patch Changes
+
+- de42eebaaf: Bumped dev dependencies `@types/node` and `mock-fs`.
+- Updated dependencies
+  - @backstage/cli-common@0.1.13-next.0
+
 ## 0.1.45
 
 ### Patch Changes

@@ -14,42 +14,27 @@
  * limitations under the License.
  */
 
-import { errorHandler, getVoidLogger } from '@backstage/backend-common';
-import { ConfigReader } from '@backstage/config';
 import {
-  coreServices,
   createBackendModule,
+  createServiceFactory,
 } from '@backstage/backend-plugin-api';
-import { startTestBackend } from '@backstage/backend-test-utils';
+import { mockServices, startTestBackend } from '@backstage/backend-test-utils';
+import { eventsServiceRef } from '@backstage/plugin-events-node';
 import { eventsExtensionPoint } from '@backstage/plugin-events-node/alpha';
-import {
-  TestEventBroker,
-  TestEventPublisher,
-  TestEventSubscriber,
-} from '@backstage/plugin-events-backend-test-utils';
-import express from 'express';
-import Router from 'express-promise-router';
+import { TestEventsService } from '@backstage/plugin-events-backend-test-utils';
 import request from 'supertest';
 import { eventsPlugin } from './EventsPlugin';
 
-describe('eventPlugin', () => {
+describe('eventsPlugin', () => {
   it('should be initialized properly', async () => {
-    const eventBroker = new TestEventBroker();
-    const publisher = new TestEventPublisher();
-    const subscriber = new TestEventSubscriber('sub', ['fake']);
-
-    const config = new ConfigReader({
-      events: {
-        http: {
-          topics: ['fake'],
-        },
+    const eventsService = new TestEventsService();
+    const eventsServiceFactory = createServiceFactory({
+      service: eventsServiceRef,
+      deps: {},
+      async factory({}) {
+        return eventsService;
       },
     });
-
-    const httpRouter = Router();
-    httpRouter.use(express.json());
-    httpRouter.use(errorHandler());
-    const app = express().use(httpRouter);
 
     const testModule = createBackendModule({
       pluginId: 'events',
@@ -60,36 +45,51 @@ describe('eventPlugin', () => {
             events: eventsExtensionPoint,
           },
           async init({ events }) {
-            events.setEventBroker(eventBroker);
-            events.addPublishers(publisher);
-            events.addSubscribers(subscriber);
+            events.addHttpPostIngress({
+              topic: 'fake-ext',
+            });
           },
         });
       },
     });
 
-    await startTestBackend({
+    const { server } = await startTestBackend({
       extensionPoints: [],
-      services: [
-        [coreServices.config, config],
-        [coreServices.httpRouter, httpRouter],
-        [coreServices.logger, getVoidLogger()],
+      features: [
+        eventsServiceFactory(),
+        eventsPlugin,
+        testModule,
+        mockServices.logger.factory(),
+        mockServices.rootConfig.factory({
+          data: {
+            events: {
+              http: {
+                topics: ['fake'],
+              },
+            },
+          },
+        }),
       ],
-      features: [eventsPlugin(), testModule()],
     });
 
-    expect(publisher.eventBroker).toBe(eventBroker);
-    expect(eventBroker.subscribed.length).toEqual(1);
-    expect(eventBroker.subscribed[0]).toBe(subscriber);
-
-    const response = await request(app)
-      .post('/http/fake')
+    const response1 = await request(server)
+      .post('/api/events/http/fake')
       .timeout(1000)
       .send({ test: 'fake' });
-    expect(response.status).toBe(202);
+    expect(response1.status).toBe(202);
 
-    expect(eventBroker.published.length).toEqual(1);
-    expect(eventBroker.published[0].topic).toEqual('fake');
-    expect(eventBroker.published[0].eventPayload).toEqual({ test: 'fake' });
+    const response2 = await request(server)
+      .post('/api/events/http/fake-ext')
+      .timeout(1000)
+      .send({ test: 'fake-ext' });
+    expect(response2.status).toBe(202);
+
+    expect(eventsService.published).toHaveLength(2);
+    expect(eventsService.published[0].topic).toEqual('fake');
+    expect(eventsService.published[0].eventPayload).toEqual({ test: 'fake' });
+    expect(eventsService.published[1].topic).toEqual('fake-ext');
+    expect(eventsService.published[1].eventPayload).toEqual({
+      test: 'fake-ext',
+    });
   });
 });

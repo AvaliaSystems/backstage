@@ -16,7 +16,6 @@
 
 import { ConfigReader } from '@backstage/config';
 import { HumanDuration } from '@backstage/types';
-import { Duration } from 'luxon';
 import { readTaskScheduleDefinitionFromConfig } from './readTaskScheduleDefinitionFromConfig';
 
 describe('readTaskScheduleDefinitionFromConfig', () => {
@@ -35,7 +34,7 @@ describe('readTaskScheduleDefinitionFromConfig', () => {
     const result = readTaskScheduleDefinitionFromConfig(config);
 
     expect((result.frequency as { cron: string }).cron).toBe('0 30 * * * *');
-    expect(result.timeout).toEqual(Duration.fromISO('PT3M'));
+    expect(result.timeout).toEqual({ minutes: 3 });
     expect((result.initialDelay as HumanDuration).minutes).toEqual(20);
     expect(result.scope).toBe('global');
   });
@@ -51,7 +50,7 @@ describe('readTaskScheduleDefinitionFromConfig', () => {
     const result = readTaskScheduleDefinitionFromConfig(config);
 
     expect((result.frequency as { cron: string }).cron).toBe('0 30 * * * *');
-    expect(result.timeout).toEqual(Duration.fromISO('PT3M'));
+    expect(result.timeout).toEqual({ minutes: 3 });
     expect(result.initialDelay).toBeUndefined();
     expect(result.scope).toBeUndefined();
   });
@@ -76,7 +75,7 @@ describe('readTaskScheduleDefinitionFromConfig', () => {
     );
   });
 
-  it('invalid frequency value', () => {
+  it('invalid frequency key', () => {
     const config = new ConfigReader({
       frequency: {
         invalid: 'value',
@@ -85,7 +84,20 @@ describe('readTaskScheduleDefinitionFromConfig', () => {
     });
 
     expect(() => readTaskScheduleDefinitionFromConfig(config)).toThrow(
-      'HumanDuration needs at least one of',
+      "Failed to read duration from config at 'frequency', Error: Needs one or more of 'years', 'months', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'milliseconds'",
+    );
+  });
+
+  it('invalid frequency value', () => {
+    const config = new ConfigReader({
+      frequency: {
+        minutes: 'value',
+      },
+      timeout: 'PT3M',
+    });
+
+    expect(() => readTaskScheduleDefinitionFromConfig(config)).toThrow(
+      "Failed to read duration from config, Error: Unable to convert config value for key 'frequency.minutes' in 'mock-config' to a number",
     );
   });
 
@@ -99,7 +111,7 @@ describe('readTaskScheduleDefinitionFromConfig', () => {
     });
 
     expect(() => readTaskScheduleDefinitionFromConfig(config)).toThrow(
-      'HumanDuration does not contain properties: invalid',
+      "Failed to read duration from config at 'frequency', Error: Unknown property 'invalid'; expected one or more of 'years', 'months', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'milliseconds'",
     );
   });
 

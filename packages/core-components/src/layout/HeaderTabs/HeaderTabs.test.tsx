@@ -19,6 +19,7 @@ import Badge from '@material-ui/core/Badge';
 import { makeStyles } from '@material-ui/core/styles';
 import React from 'react';
 import { HeaderTabs } from './HeaderTabs';
+import userEvent from '@testing-library/user-event';
 
 const mockTabs = [
   { id: 'overview', label: 'Overview' },
@@ -41,7 +42,7 @@ describe('<HeaderTabs />', () => {
       'false',
     );
 
-    rendered.getByText('Docs').click();
+    await userEvent.click(rendered.getByText('Docs'));
 
     expect(rendered.getByText('Docs').parentElement).toHaveAttribute(
       'aria-selected',
@@ -55,18 +56,20 @@ describe('<HeaderTabs />', () => {
       },
     }));
 
-    const TextualBadge = React.forwardRef<HTMLSpanElement>((props, ref) => (
-      <Badge
-        classes={useStyles()}
-        overlap="rectangular"
-        color="secondary"
-        badgeContent="three new alarms"
-      >
-        <span ref={ref} {...props}>
-          {props.children}
-        </span>
-      </Badge>
-    ));
+    const TextualBadge = React.forwardRef<HTMLSpanElement>(
+      (props: React.PropsWithChildren<{}>, ref) => (
+        <Badge
+          classes={useStyles()}
+          overlap="rectangular"
+          color="secondary"
+          badgeContent="three new alarms"
+        >
+          <span ref={ref} {...props}>
+            {props.children}
+          </span>
+        </Badge>
+      ),
+    );
     const iconTab = [
       {
         id: 'icon-tab',
@@ -79,5 +82,26 @@ describe('<HeaderTabs />', () => {
 
     expect(rendered.getByText('Alarms')).toBeInTheDocument();
     expect(rendered.getByText('three new alarms')).toBeInTheDocument();
+  });
+
+  it('should trigger onChange only once', async () => {
+    const mockOnChange = jest.fn();
+    const user = userEvent.setup();
+
+    const rendered = await renderInTestApp(
+      <HeaderTabs tabs={mockTabs} onChange={mockOnChange} />,
+    );
+
+    await user.click(rendered.getByText('Docs'));
+    expect(mockOnChange).toHaveBeenCalledTimes(1);
+  });
+
+  it('should render 2 nav tabs', async () => {
+    const rendered = await renderInTestApp(<HeaderTabs tabs={mockTabs} />);
+    const tabs = rendered.queryAllByTestId(id => id.startsWith('header-tab'));
+    expect(tabs).toHaveLength(2);
+    tabs.forEach(tab => {
+      expect(tab.tagName.toLocaleLowerCase('en-US')).toBe('a');
+    });
   });
 });

@@ -17,42 +17,9 @@
 import { readdir, stat } from 'fs-extra';
 import { relative, join } from 'path';
 import { createTemplateAction } from '@backstage/plugin-scaffolder-node';
-import yaml from 'yaml';
+import { examples } from './log.examples';
 
 const id = 'debug:log';
-
-const examples = [
-  {
-    description: 'Write a debug message',
-    example: yaml.stringify({
-      steps: [
-        {
-          action: id,
-          id: 'write-debug-line',
-          name: 'Write "Hello Backstage!" log line',
-          input: {
-            message: 'Hello Backstage!',
-          },
-        },
-      ],
-    }),
-  },
-  {
-    description: 'List the workspace directory',
-    example: yaml.stringify({
-      steps: [
-        {
-          action: id,
-          id: 'write-workspace-directory',
-          name: 'List the workspace directory',
-          input: {
-            listWorkspace: true,
-          },
-        },
-      ],
-    }),
-  },
-];
 
 /**
  * Writes a message into the log or lists all files in the workspace
@@ -93,12 +60,12 @@ export function createDebugLogAction() {
       ctx.logger.info(JSON.stringify(ctx.input, null, 2));
 
       if (ctx.input?.message) {
-        ctx.logStream.write(ctx.input.message);
+        ctx.logger.info(ctx.input.message);
       }
 
       if (ctx.input?.listWorkspace) {
         const files = await recursiveReadDir(ctx.workspacePath);
-        ctx.logStream.write(
+        ctx.logger.info(
           `Workspace:\n${files
             .map(f => `  - ${relative(ctx.workspacePath, f)}`)
             .join('\n')}`,

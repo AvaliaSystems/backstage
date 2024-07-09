@@ -33,9 +33,11 @@ import {
   attachComponentData,
   IconComponent,
   useElementFilter,
+  useRouteRef,
   useRouteRefParams,
 } from '@backstage/core-plugin-api';
 import {
+  EntityDisplayName,
   EntityRefLinks,
   entityRouteRef,
   FavoriteEntity,
@@ -44,11 +46,15 @@ import {
   UnregisterEntityDialog,
   useAsyncEntity,
 } from '@backstage/plugin-catalog-react';
-import { Box, TabProps } from '@material-ui/core';
-import { Alert } from '@material-ui/lab';
+import Box from '@material-ui/core/Box';
+import { TabProps } from '@material-ui/core/Tab';
+import Alert from '@material-ui/lab/Alert';
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { EntityContextMenu } from '../EntityContextMenu/EntityContextMenu';
+import { rootRouteRef, unregisterRedirectRouteRef } from '../../routes';
+import { catalogTranslationRef } from '../../translation';
+import { useTranslationRef } from '@backstage/core-plugin-api/alpha';
 
 /** @public */
 export type EntityLayoutRouteProps = {
@@ -78,7 +84,7 @@ function EntityLayoutTitle(props: {
         whiteSpace="nowrap"
         overflow="hidden"
       >
-        {title}
+        {entity ? <EntityDisplayName entityRef={entity} hideIcon /> : title}
       </Box>
       {entity && <FavoriteEntity entity={entity} />}
     </Box>
@@ -113,11 +119,13 @@ function headerProps(
 function EntityLabels(props: { entity: Entity }) {
   const { entity } = props;
   const ownedByRelations = getEntityRelations(entity, RELATION_OWNED_BY);
+  const { t } = useTranslationRef(catalogTranslationRef);
   return (
     <>
       {ownedByRelations.length > 0 && (
         <HeaderLabel
-          label="Owner"
+          label={t('entityLabels.ownerLabel')}
+          contentTypograpyRootComponent="p"
           value={
             <EntityRefLinks
               entityRefs={ownedByRelations}
@@ -128,7 +136,10 @@ function EntityLabels(props: { entity: Entity }) {
         />
       )}
       {entity.spec?.lifecycle && (
-        <HeaderLabel label="Lifecycle" value={entity.spec.lifecycle} />
+        <HeaderLabel
+          label={t('entityLabels.lifecycleLabel')}
+          value={entity.spec.lifecycle?.toString()}
+        />
       )}
     </>
   );
@@ -224,10 +235,16 @@ export const EntityLayout = (props: EntityLayoutProps) => {
   const [confirmationDialogOpen, setConfirmationDialogOpen] = useState(false);
   const [inspectionDialogOpen, setInspectionDialogOpen] = useState(false);
   const navigate = useNavigate();
+  const catalogRoute = useRouteRef(rootRouteRef);
+  const unregisterRedirectRoute = useRouteRef(unregisterRedirectRouteRef);
+  const { t } = useTranslationRef(catalogTranslationRef);
+
   const cleanUpAfterRemoval = async () => {
     setConfirmationDialogOpen(false);
     setInspectionDialogOpen(false);
-    navigate('/');
+    navigate(
+      unregisterRedirectRoute ? unregisterRedirectRoute() : catalogRoute(),
+    );
   };
 
   // Make sure to close the dialog if the user clicks links in it that navigate
@@ -273,7 +290,7 @@ export const EntityLayout = (props: EntityLayoutProps) => {
           {NotFoundComponent ? (
             NotFoundComponent
           ) : (
-            <WarningPanel title="Entity not found">
+            <WarningPanel title={t('entityLabels.warningPanelTitle')}>
               There is no {kind} with the requested{' '}
               <Link to="https://backstage.io/docs/features/software-catalog/references">
                 kind, namespace, and name

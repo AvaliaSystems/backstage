@@ -1,13 +1,17 @@
 ---
 id: org
-title: Microsoft Azure Active Directory Organizational Data
+title: Microsoft Entra Tenant Data
 sidebar_label: Org Data
 # prettier-ignore
-description: Importing users and groups from Microsoft Azure Active Directory into Backstage
+description: Importing users and groups from Microsoft Entra ID into Backstage
 ---
 
+:::info
+This documentation is written for [the new backend system](../../backend-system/index.md) which is the default since Backstage [version 1.24](../../releases/v1.24.0.md). If you are still on the old backend system, you may want to read [its own article](./org--old.md) instead, and [consider migrating](../../backend-system/building-backends/08-migrating.md)!
+:::
+
 The Backstage catalog can be set up to ingest organizational data - users and
-teams - directly from a tenant in Microsoft Azure Active Directory via the
+teams - directly from a tenant in Microsoft Entra ID via the
 Microsoft Graph API.
 
 ## Installation
@@ -16,7 +20,7 @@ The package is not installed by default, therefore you have to add `@backstage/p
 
 ```bash
 # From your Backstage root directory
-yarn add --cwd packages/backend @backstage/plugin-catalog-backend-module-msgraph
+yarn --cwd packages/backend add @backstage/plugin-catalog-backend-module-msgraph
 ```
 
 Next add the basic configuration to `app-config.yaml`
@@ -34,35 +38,22 @@ catalog:
             securityEnabled eq false
             and mailEnabled eq true
             and groupTypes/any(c:c+eq+'Unified')
+        schedule:
+          frequency: PT1H
+          timeout: PT50M
 ```
 
-Finally, register the plugin in `catalog.ts`.
+:::note
 For large organizations, this plugin can take a long time, so be careful setting low frequency / timeouts and importing a large amount of users / groups for the first try.
+:::
 
-```ts title="packages/backend/src/plugins/catalog.ts"
-/* highlight-add-next-line */
-import { MicrosoftGraphOrgEntityProvider } from '@backstage/plugin-catalog-backend-module-msgraph';
+Finally, updated your backend by adding the following line:
 
-export default async function createPlugin(
-  env: PluginEnvironment,
-): Promise<Router> {
-  const builder = await CatalogBuilder.create(env);
-
-  /* highlight-add-start */
-  builder.addEntityProvider(
-    MicrosoftGraphOrgEntityProvider.fromConfig(env.config, {
-      logger: env.logger,
-      schedule: env.scheduler.createScheduledTaskRunner({
-        frequency: { hours: 1 },
-        timeout: { minutes: 50 },
-        initialDelay: { seconds: 15 },
-      }),
-    }),
-  );
-  /* highlight-add-end */
-
-  // ..
-}
+```ts title="packages/backend/src/index.ts"
+backend.add(import('@backstage/plugin-catalog-backend/alpha'));
+/* highlight-add-start */
+backend.add(import('@backstage/plugin-catalog-backend-module-msgraph/alpha'));
+/* highlight-add-end */
 ```
 
 ## Authenticating with Microsoft Graph
@@ -147,26 +138,35 @@ microsoftGraphOrg:
       search: '"description:One" AND ("displayName:Video" OR "displayName:Drive")'
 ```
 
+### User photos
+
+By default, the photos of users will be fetched and added to each user entity. For huge organizations this may be unfeasible, as it will take a _very_ long time, and can be disabled by setting `loadPhotos` to `false`:
+
+```yaml
+microsoftGraphOrg:
+  providerId:
+    user:
+      filter: ...
+      loadPhotos: false
+```
+
+If you are using `userGroupMember`, the configuration for `loadPhotos` should still be managed under `users:` while omitting `search` and `filters`.
+
+```yaml
+microsoftGraphOrg:
+  providerId:
+    user:
+      loadPhotos: false
+    userGroupMember:
+      filter: "displayName eq 'Backstage Users'"
+      search: '"description:One" AND ("displayName:Video" OR "displayName:Drive")'
+```
+
 ## Customizing Transformation
 
 Ingested entities can be customized by providing custom transformers.
 These can be used to completely replace the built in logic, or used to tweak it by using the default transformers (`defaultGroupTransformer`, `defaultUserTransformer` and `defaultOrganizationTransformer`
 Entities can also be excluded from backstage by returning `undefined`.
-
-These Transformers are be registered when configuring `MicrosoftGraphOrgEntityProvider`
-
-```ts
-builder.addEntityProvider(
-  MicrosoftGraphOrgEntityProvider.fromConfig(env.config, {
-    // ...
-    /* highlight-add-start */
-    groupTransformer: myGroupTransformer,
-    userTransformer: myUserTransformer,
-    organizationTransformer: myOrganizationTransformer,
-    /* highlight-add-end */
-  }),
-);
-```
 
 When using custom transformers, you may want to customize the data returned.
 Several configuration options can be provided to tweak the Microsoft Graph query to get the data you need
@@ -181,9 +181,53 @@ microsoftGraphOrg:
       select: ['id', 'displayName', 'description']
 ```
 
-The following provides an example of each kind of transformer
+### Using Custom Transformers
 
-```ts
+Transformers can be configured by extending `microsoftGraphOrgEntityProviderTransformExtensionPoint`. Here is an example:
+
+```ts title="packages/backend/src/index.ts"
+import { createBackendModule } from '@backstage/backend-plugin-api';
+import { microsoftGraphOrgEntityProviderTransformExtensionPoint } from '@backstage/plugin-catalog-backend-module-msgraph/alpha';
+import {
+  myUserTransformer,
+  myGroupTransformer,
+  myOrganizationTransformer,
+} from './transformers';
+
+backend.add(
+  createBackendModule({
+    pluginId: 'catalog',
+    moduleId: 'microsoft-graph-extensions',
+    register(env) {
+      env.registerInit({
+        deps: {
+          /* highlight-add-start */
+          microsoftGraphTransformers:
+            microsoftGraphOrgEntityProviderTransformExtensionPoint,
+          /* highlight-add-end */
+        },
+        async init({ microsoftGraphTransformers }) {
+          /* highlight-add-start */
+          microsoftGraphTransformers.setUserTransformer(myUserTransformer);
+          microsoftGraphTransformers.setGroupTransformer(myGroupTransformer);
+          microsoftGraphTransformers.setOrganizationTransformer(
+            myOrganizationTransformer,
+          );
+          /* highlight-add-end */
+        },
+      });
+    },
+  }),
+);
+```
+
+The `myUserTransformer`, `myGroupTransformer`, and `myOrganizationTransformer` transformer functions are from the examples in the section below.
+
+### Transformer Examples
+
+The following provides an example of each kind of transformer. We recommend creating a `transformers.ts` file in your `packages/backend/src` folder for these.
+
+```ts title="packages/backend/src/transformers.ts"
 import * as MicrosoftGraph from '@microsoft/microsoft-graph-types';
 import {
   defaultGroupTransformer,
@@ -205,7 +249,7 @@ export async function myGroupTransformer(
       annotations: {},
     },
     spec: {
-      type: 'aad',
+      type: 'Microsoft Entra ID',
       children: [],
     },
   };
@@ -219,7 +263,7 @@ export async function myUserTransformer(
   const backstageUser = await defaultUserTransformer(graphUser, userPhoto);
 
   if (backstageUser) {
-    backstageUser.metadata.description = 'Loaded from Azure Active Directory';
+    backstageUser.metadata.description = 'Loaded from Microsoft Entra ID';
   }
 
   return backstageUser;

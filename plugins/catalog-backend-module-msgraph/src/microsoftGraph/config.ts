@@ -127,6 +127,12 @@ export type MicrosoftGraphProviderConfig = {
   queryMode?: 'basic' | 'advanced';
 
   /**
+   * Set to false to not load user photos.
+   * This can be useful for huge organizations.
+   */
+  loadUserPhotos?: boolean;
+
+  /**
    * Schedule configuration for refresh tasks.
    */
   schedule?: TaskScheduleDefinition;
@@ -226,6 +232,13 @@ export function readMicrosoftGraphConfig(
   return providers;
 }
 
+/**
+ * Parses all configured providers.
+ *
+ * @param config - The root of the msgraph config hierarchy
+ *
+ * @public
+ */
 export function readProviderConfigs(
   config: Config,
 ): MicrosoftGraphProviderConfig[] {
@@ -248,6 +261,14 @@ export function readProviderConfigs(
   });
 }
 
+/**
+ * Parses a single configured provider by id.
+ *
+ * @param id - the id of the provider to parse
+ * @param config - The root of the msgraph config hierarchy
+ *
+ * @public
+ */
 export function readProviderConfig(
   id: string,
   config: Config,
@@ -265,6 +286,7 @@ export function readProviderConfig(
   const userExpand = config.getOptionalString('user.expand');
   const userFilter = config.getOptionalString('user.filter');
   const userSelect = config.getOptionalStringArray('user.select');
+  const loadUserPhotos = config.getOptionalBoolean('user.loadPhotos');
 
   const groupExpand = config.getOptionalString('group.expand');
   const groupFilter = config.getOptionalString('group.filter');
@@ -320,6 +342,7 @@ export function readProviderConfig(
     userExpand,
     userFilter,
     userSelect,
+    loadUserPhotos,
     groupExpand,
     groupFilter,
     groupSearch,

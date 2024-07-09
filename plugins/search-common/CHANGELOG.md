@@ -1,5 +1,123 @@
 # @backstage/plugin-search-common
 
+## 1.2.12
+
+### Patch Changes
+
+- d44a20a: Added additional plugin metadata to `package.json`.
+- Updated dependencies
+  - @backstage/plugin-permission-common@0.7.14
+  - @backstage/types@1.1.1
+
+## 1.2.12-next.0
+
+### Patch Changes
+
+- d44a20a: Added additional plugin metadata to `package.json`.
+- Updated dependencies
+  - @backstage/plugin-permission-common@0.7.14-next.0
+  - @backstage/types@1.1.1
+
+## 1.2.11
+
+### Patch Changes
+
+- 744c0cb: Deprecate `QueryTranslator`, `QueryRequestOptions` and `SearchEngine` in favor of the types exported from `@backstage/plugin-search-backend-node`.
+- Updated dependencies
+  - @backstage/plugin-permission-common@0.7.13
+  - @backstage/types@1.1.1
+
+## 1.2.11-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-permission-common@0.7.13-next.1
+  - @backstage/types@1.1.1
+
+## 1.2.11-next.0
+
+### Patch Changes
+
+- 744c0cb: Deprecate `QueryTranslator`, `QueryRequestOptions` and `SearchEngine` in favor of the types exported from `@backstage/plugin-search-backend-node`.
+- Updated dependencies
+  - @backstage/plugin-permission-common@0.7.13-next.0
+  - @backstage/types@1.1.1
+
+## 1.2.10
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-permission-common@0.7.12
+  - @backstage/types@1.1.1
+
+## 1.2.9
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-permission-common@0.7.11
+  - @backstage/types@1.1.1
+
+## 1.2.8
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-permission-common@0.7.10
+  - @backstage/types@1.1.1
+
+## 1.2.7
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/types@1.1.1
+  - @backstage/plugin-permission-common@0.7.9
+
+## 1.2.7-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/types@1.1.1
+  - @backstage/plugin-permission-common@0.7.9-next.0
+
+## 1.2.6
+
+### Patch Changes
+
+- 406b786a2a2c: Mark package as being free of side effects, allowing more optimized Webpack builds.
+- Updated dependencies
+  - @backstage/plugin-permission-common@0.7.8
+  - @backstage/types@1.1.1
+
+## 1.2.6-next.2
+
+### Patch Changes
+
+- 406b786a2a2c: Mark package as being free of side effects, allowing more optimized Webpack builds.
+- Updated dependencies
+  - @backstage/plugin-permission-common@0.7.8-next.2
+  - @backstage/types@1.1.1-next.0
+
+## 1.2.6-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-permission-common@0.7.8-next.1
+  - @backstage/types@1.1.0
+
+## 1.2.6-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-permission-common@0.7.8-next.0
+  - @backstage/types@1.1.0
+
 ## 1.2.5
 
 ### Patch Changes

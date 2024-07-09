@@ -25,6 +25,7 @@ import React from 'react';
 import { Workflow } from './Workflow';
 import { analyticsApiRef } from '@backstage/core-plugin-api';
 import { ScaffolderApi, scaffolderApiRef } from '../../../api';
+import { CatalogApi, catalogApiRef } from '@backstage/plugin-catalog-react';
 
 const scaffolderApiMock: jest.Mocked<ScaffolderApi> = {
   cancelTask: jest.fn(),
@@ -35,11 +36,16 @@ const scaffolderApiMock: jest.Mocked<ScaffolderApi> = {
   streamLogs: jest.fn(),
   listActions: jest.fn(),
   listTasks: jest.fn(),
+  autocomplete: jest.fn(),
 };
+const catalogApiMock: jest.Mocked<CatalogApi> = {
+  getEntityByRef: jest.fn(),
+} as any;
 
 const analyticsMock = new MockAnalyticsApi();
 const apis = TestApiRegistry.from(
   [scaffolderApiRef, scaffolderApiMock],
+  [catalogApiRef, catalogApiMock],
   [analyticsApiRef, analyticsMock],
 );
 

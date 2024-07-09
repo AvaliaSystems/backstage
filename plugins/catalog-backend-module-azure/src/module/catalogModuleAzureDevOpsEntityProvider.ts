@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-import { loggerToWinstonLogger } from '@backstage/backend-common';
 import {
-  createBackendModule,
   coreServices,
+  createBackendModule,
 } from '@backstage/backend-plugin-api';
 import { catalogProcessingExtensionPoint } from '@backstage/plugin-catalog-node/alpha';
 import { AzureDevOpsEntityProvider } from '../providers';
@@ -29,11 +28,11 @@ import { AzureDevOpsEntityProvider } from '../providers';
  */
 export const catalogModuleAzureDevOpsEntityProvider = createBackendModule({
   pluginId: 'catalog',
-  moduleId: 'azureDevOpsEntityProvider',
+  moduleId: 'azure-dev-ops-entity-provider',
   register(env) {
     env.registerInit({
       deps: {
-        config: coreServices.config,
+        config: coreServices.rootConfig,
         catalog: catalogProcessingExtensionPoint,
         logger: coreServices.logger,
         scheduler: coreServices.scheduler,
@@ -41,7 +40,7 @@ export const catalogModuleAzureDevOpsEntityProvider = createBackendModule({
       async init({ config, catalog, logger, scheduler }) {
         catalog.addEntityProvider(
           AzureDevOpsEntityProvider.fromConfig(config, {
-            logger: loggerToWinstonLogger(logger),
+            logger,
             scheduler,
           }),
         );

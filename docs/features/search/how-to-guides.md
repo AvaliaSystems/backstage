@@ -114,18 +114,18 @@ of the `SearchType` component.
 
 > Check out the documentation around [integrating search into plugins](../../plugins/integrating-search-into-plugins.md#create-a-collator) for how to create your own collator.
 
-## How to customize fields in the Software Catalog index
+## How to customize fields in the Software Catalog or TechDocs index
 
-Sometimes you will might want to have ability to control
-which data passes to search index in catalog collator, or to customize data for specific kind.
-You can easily do that by passing `entityTransformer` callback to `DefaultCatalogCollatorFactory`.
-You can either just simply amend default behaviour, or even to write completely new document
-(which should follow some required basic structure though).
+Sometimes, you might want to have the ability to control which data passes into the search index
+in the catalog collator or customize data for a specific kind. You can easily achieve this
+by passing an `entityTransformer` callback to the `DefaultCatalogCollatorFactory`. This behavior
+is also possible for the `DefaultTechDocsCollatorFactory`. You can either simply amend the default behavior
+or even write an entirely new document (which should still follow some required basic structure).
 
 > `authorization` and `location` cannot be modified via a `entityTransformer`, `location` can be modified only through `locationTemplate`.
 
 ```ts title="packages/backend/src/plugins/search.ts"
-const entityTransformer: CatalogCollatorEntityTransformer = (
+const catalogEntityTransformer: CatalogCollatorEntityTransformer = (
   entity: Entity,
 ) => {
   if (entity.kind === 'SomeKind') {
@@ -146,7 +146,26 @@ indexBuilder.addCollator({
     discovery: env.discovery,
     tokenManager: env.tokenManager,
     /* highlight-add-next-line */
-    entityTransformer,
+    entityTransformer: catalogEntityTransformer,
+  }),
+});
+
+const techDocsEntityTransformer: TechDocsCollatorEntityTransformer = (
+  entity: Entity,
+) => {
+  return {
+    // add more fields to the index
+    ...defaultTechDocsCollatorEntityTransformer(entity),
+    tags: entity.metadata.tags,
+  };
+};
+
+indexBuilder.addCollator({
+  collator: DefaultTechDocsCollatorFactory.fromConfig(env.config, {
+    discovery: env.discovery,
+    tokenManager: env.tokenManager,
+    /* highlight-add-next-line */
+    entityTransformer: techDocsEntityTransformer,
   }),
 });
 ```
@@ -372,28 +391,22 @@ There are other more specific search results layout components that also accept 
 
 ## How to migrate your backend installation to use Search together with the new backend system
 
-> DISCLAIMER: The new backend system is in alpha, and so are the search backend support for the new backend system. We don't recommend you to migrate your backend installations to the new system yet. But if you want to experiment, this is the guide for you!
-
 Recently, the Backstage maintainers [announced the new Backend System](https://backstage.io/blog/2023/02/15/backend-system-alpha). The search plugins are now migrated to support the new backend system. In this guide you will learn how to update your backend set up.
 
-In "packages/backend-next/index.ts", install the search plugin [1], the search engine [2], and the search collators/decorators modules [3]:
+In "packages/backend/index.ts", install the search plugin [1], the search engine [2], and the search collators/decorators modules [3]:
 
 ```ts
-import { searchPlugin } from '@backstage/plugin-search-backend/alpha';
-import { searchModuleElasticsearchEngine } from '@backstage/plugin-search-backend-module-elasticsearch/alpha';
-import { searchModuleCatalogCollator } from '@backstage/plugin-search-backend-module-catalog/alpha';
-import { searchModuleTechDocsCollator } from '@backstage/plugin-search-backend-module-techdocs/alpha';
-import { searchModuleExploreCollator } from '@backstage/plugin-search-backend-module-explore/alpha';
-
 const backend = createBackend();
 // [1] adding the search plugin to the backend
-backend.add(searchPlugin());
+backend.add(import('@backstage/plugin-search-backend/alpha'));
 // [2] (optional) the default search engine is Lunr, if you want to extend the search backend with another search engine.
-backend.add(searchModuleElasticsearchEngine());
+backend.add(
+  import('@backstage/plugin-search-backend-module-elasticsearch/alpha'),
+);
 // [3] extending search with collator modules to start index documents, take in optional schedule parameters.
-backend.add(searchModuleCatalogCollator());
-backend.add(searchModuleTechDocsCollator());
-backend.add(searchModuleExploreCollator());
+backend.add(import('@backstage/plugin-search-backend-module-catalog/alpha'));
+backend.add(import('@backstage/plugin-search-backend-module-techdocs/alpha'));
+backend.add(import('@backstage/plugin-search-backend-module-explore/alpha'));
 
 backend.start();
 ```

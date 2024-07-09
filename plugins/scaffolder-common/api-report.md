@@ -5,6 +5,7 @@
 ```ts
 import { Entity } from '@backstage/catalog-model';
 import type { EntityMeta } from '@backstage/catalog-model';
+import type { JsonArray } from '@backstage/types';
 import { JsonObject } from '@backstage/types';
 import type { JsonValue } from '@backstage/types';
 import { KindValidator } from '@backstage/catalog-model';
@@ -16,11 +17,20 @@ export const isTemplateEntityV1beta3: (
 ) => entity is TemplateEntityV1beta3;
 
 // @public
+export type TaskRecoverStrategy = 'none' | 'startOver';
+
+// @public
+export interface TaskRecovery {
+  EXPERIMENTAL_strategy?: TaskRecoverStrategy;
+}
+
+// @public
 export type TaskSpec = TaskSpecV1beta3;
 
 // @public
 export interface TaskSpecV1beta3 {
   apiVersion: 'scaffolder.backstage.io/v1beta3';
+  EXPERIMENTAL_recovery?: TaskRecovery;
   output: {
     [name: string]: JsonValue;
   };
@@ -36,6 +46,7 @@ export interface TaskSpecV1beta3 {
 // @public
 export interface TaskStep {
   action: string;
+  each?: string | JsonArray;
   id: string;
   if?: string | boolean;
   input?: JsonObject;
@@ -64,6 +75,8 @@ export interface TemplateEntityV1beta3 extends Entity {
   kind: 'Template';
   spec: {
     type: string;
+    presentation?: TemplatePresentationV1beta3;
+    EXPERIMENTAL_recovery?: TemplateRecoveryV1beta3;
     parameters?: TemplateParametersV1beta3 | TemplateParametersV1beta3[];
     steps: Array<TemplateEntityStepV1beta3>;
     output?: {
@@ -95,5 +108,19 @@ export interface TemplateParametersV1beta3 extends JsonObject {
 export interface TemplatePermissionsV1beta3 extends JsonObject {
   // (undocumented)
   tags?: string[];
+}
+
+// @public
+export interface TemplatePresentationV1beta3 extends JsonObject {
+  buttonLabels?: {
+    backButtonText?: string;
+    createButtonText?: string;
+    reviewButtonText?: string;
+  };
+}
+
+// @public
+export interface TemplateRecoveryV1beta3 extends JsonObject {
+  EXPERIMENTAL_strategy?: 'none' | 'startOver';
 }
 ```

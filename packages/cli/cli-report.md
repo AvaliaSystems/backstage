@@ -23,6 +23,7 @@ Commands:
   migrate [command]
   versions:bump [options]
   versions:check [options]
+  versions:migrate [options]
   clean
   build-workspace [options] <workspace-dir> [packages...]
   create-github-app <github-org>
@@ -224,7 +225,6 @@ Usage: backstage-cli package build [options]
 Options:
   --role <name>
   --minify
-  --experimental-type-build
   --skip-build-dependencies
   --stats
   --config <path>
@@ -278,8 +278,9 @@ Options:
   --config <path>
   --role <name>
   --check
-  --inspect
-  --inspect-brk
+  --inspect [host]
+  --inspect-brk [host]
+  --require <path>
   -h, --help
 ```
 
@@ -344,11 +345,13 @@ Options:
   --notifyMode
   -o, --onlyChanged
   -f, --onlyFailures
+  --openHandlesTimeout
   --outputFile
   --passWithNoTests
   --preset
   --prettierPath
   --projects
+  --randomize
   --reporters
   --resetMocks
   --resetModules
@@ -392,6 +395,7 @@ Options:
   --watchAll
   --watchPathIgnorePatterns
   --watchman
+  --workerThreads
 ```
 
 ### `backstage-cli repo`
@@ -405,6 +409,7 @@ Options:
 Commands:
   build [options]
   lint [options]
+  fix [options]
   clean
   list-deprecations [options]
   test [options]
@@ -428,6 +433,17 @@ Options:
 Usage: backstage-cli repo clean [options]
 
 Options:
+  -h, --help
+```
+
+### `backstage-cli repo fix`
+
+```
+Usage: backstage-cli repo fix [options]
+
+Options:
+  --publish
+  --check
   -h, --help
 ```
 
@@ -525,11 +541,13 @@ Options:
   --notifyMode
   -o, --onlyChanged
   -f, --onlyFailures
+  --openHandlesTimeout
   --outputFile
   --passWithNoTests
   --preset
   --prettierPath
   --projects
+  --randomize
   --reporters
   --resetMocks
   --resetModules
@@ -573,6 +591,7 @@ Options:
   --watchAll
   --watchPathIgnorePatterns
   --watchman
+  --workerThreads
 ```
 
 ### `backstage-cli versions:bump`
@@ -584,6 +603,7 @@ Options:
   --pattern <glob>
   --release <version|next|main>
   --skip-install
+  --skip-migrate
   -h, --help
 ```
 
@@ -594,5 +614,16 @@ Usage: backstage-cli versions:check [options]
 
 Options:
   --fix
+  -h, --help
+```
+
+### `backstage-cli versions:migrate`
+
+```
+Usage: backstage-cli versions:migrate [options]
+
+Options:
+  --pattern <glob>
+  --skip-code-changes
   -h, --help
 ```

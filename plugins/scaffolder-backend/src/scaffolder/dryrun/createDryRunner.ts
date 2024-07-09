@@ -21,26 +21,34 @@ import { v4 as uuid } from 'uuid';
 import { pathToFileURL } from 'url';
 import { Logger } from 'winston';
 import {
+  createTemplateAction,
+  TaskSecrets,
+  TemplateFilter,
+  TemplateGlobal,
   deserializeDirectoryContents,
   SerializedFile,
   serializeDirectoryContents,
-} from '../../lib/files';
-import { TemplateFilter, TemplateGlobal } from '../../lib';
+} from '@backstage/plugin-scaffolder-node';
 import { TemplateActionRegistry } from '../actions';
 import { NunjucksWorkflowRunner } from '../tasks/NunjucksWorkflowRunner';
 import { DecoratedActionsRegistry } from './DecoratedActionsRegistry';
 import fs from 'fs-extra';
-import { resolveSafeChildPath } from '@backstage/backend-common';
-import {
-  createTemplateAction,
-  TaskSecrets,
-} from '@backstage/plugin-scaffolder-node';
 import { PermissionEvaluator } from '@backstage/plugin-permission-common';
+import {
+  BackstageCredentials,
+  resolveSafeChildPath,
+} from '@backstage/backend-plugin-api';
+import type { UserEntity } from '@backstage/catalog-model';
 
 interface DryRunInput {
   spec: TaskSpec;
   secrets?: TaskSecrets;
   directoryContents: SerializedFile[];
+  credentials: BackstageCredentials;
+  user?: {
+    entity?: UserEntity;
+    ref?: string;
+  };
 }
 
 interface DryRunResult {
@@ -117,6 +125,7 @@ export function createDryRunner(options: TemplateTesterCreateOptions) {
           },
         },
         secrets: input.secrets,
+        getInitiatorCredentials: () => Promise.resolve(input.credentials),
         // No need to update this at the end of the run, so just hard-code it
         done: false,
         isDryRun: true,

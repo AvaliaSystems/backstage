@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import { BackstageTheme } from '@backstage/theme';
 import IconButton from '@material-ui/core/IconButton';
 import ListItemIcon from '@material-ui/core/ListItemIcon';
 import ListItemText from '@material-ui/core/ListItemText';
 import MenuItem from '@material-ui/core/MenuItem';
 import MenuList from '@material-ui/core/MenuList';
 import Popover from '@material-ui/core/Popover';
+import CreateComponentIcon from '@material-ui/icons/AddCircleOutline';
 import { makeStyles } from '@material-ui/core/styles';
 import Description from '@material-ui/icons/Description';
 import Edit from '@material-ui/icons/Edit';
@@ -28,7 +28,7 @@ import List from '@material-ui/icons/List';
 import MoreVert from '@material-ui/icons/MoreVert';
 import React, { useState } from 'react';
 
-const useStyles = makeStyles((theme: BackstageTheme) => ({
+const useStyles = makeStyles(theme => ({
   button: {
     color: theme.page.fontColor,
   },
@@ -41,6 +41,7 @@ export type ScaffolderPageContextMenuProps = {
   onEditorClicked?: () => void;
   onActionsClicked?: () => void;
   onTasksClicked?: () => void;
+  onCreateClicked?: () => void;
 };
 
 /**
@@ -49,7 +50,8 @@ export type ScaffolderPageContextMenuProps = {
 export function ScaffolderPageContextMenu(
   props: ScaffolderPageContextMenuProps,
 ) {
-  const { onEditorClicked, onActionsClicked, onTasksClicked } = props;
+  const { onEditorClicked, onActionsClicked, onTasksClicked, onCreateClicked } =
+    props;
   const classes = useStyles();
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement>();
 
@@ -90,6 +92,14 @@ export function ScaffolderPageContextMenu(
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
         <MenuList>
+          {onCreateClicked && (
+            <MenuItem onClick={onCreateClicked}>
+              <ListItemIcon>
+                <CreateComponentIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary="Create" />
+            </MenuItem>
+          )}
           {onEditorClicked && (
             <MenuItem onClick={onEditorClicked}>
               <ListItemIcon>

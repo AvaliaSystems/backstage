@@ -14,8 +14,11 @@
  * limitations under the License.
  */
 
-import { getVoidLogger } from '@backstage/backend-common';
-import { TestDatabaseId, TestDatabases } from '@backstage/backend-test-utils';
+import {
+  mockServices,
+  TestDatabaseId,
+  TestDatabases,
+} from '@backstage/backend-test-utils';
 import { Entity, stringifyEntityRef } from '@backstage/catalog-model';
 import { Knex } from 'knex';
 import * as uuid from 'uuid';
@@ -29,21 +32,20 @@ import {
   DbRefreshStateRow,
   DbRelationsRow,
 } from './tables';
-import { createRandomProcessingInterval } from '../processing/refresh';
+import { createRandomProcessingInterval } from '../processing';
 import { timestampToDateTime } from './conversion';
 import { generateStableHash } from './util';
+import { LoggerService } from '@backstage/backend-plugin-api';
 
 jest.setTimeout(60_000);
 
 describe('DefaultProcessingDatabase', () => {
-  const defaultLogger = getVoidLogger();
-  const databases = TestDatabases.create({
-    ids: ['MYSQL_8', 'POSTGRES_13', 'POSTGRES_9', 'SQLITE_3'],
-  });
+  const defaultLogger = mockServices.logger.mock();
+  const databases = TestDatabases.create();
 
   async function createDatabase(
     databaseId: TestDatabaseId,
-    logger: Logger = defaultLogger,
+    logger: LoggerService = defaultLogger,
   ) {
     const knex = await databases.init(databaseId);
     await applyDatabaseMigrations(knex);

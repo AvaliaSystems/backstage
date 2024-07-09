@@ -16,7 +16,7 @@ are stateless, so for a production deployment you will want to set up and
 connect to an external PostgreSQL instance where the backend plugins can store
 their state, rather than using SQLite.
 
-This section assumes that an [app](https://backstage.io/docs/getting-started/create-an-app)
+This section assumes that an [app](https://backstage.io/docs/getting-started/)
 has already been created with `@backstage/create-app`, in which the frontend is
 bundled and served from the backend. This is done using the
 `@backstage/plugin-app-backend` plugin, which also injects the frontend
@@ -53,8 +53,8 @@ yarn build:backend --config ../../app-config.yaml
 Once the host build is complete, we are ready to build our image. The following
 `Dockerfile` is included when creating a new app with `@backstage/create-app`:
 
-```Dockerfile
-FROM node:16-bullseye-slim
+```dockerfile
+FROM node:18-bookworm-slim
 
 # Install isolate-vm dependencies, these are needed by the @backstage/plugin-scaffolder-backend.
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
@@ -67,14 +67,17 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 # in which case you should also move better-sqlite3 to "devDependencies" in package.json.
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
     apt-get install -y --no-install-recommends libsqlite3-dev
 
 # From here on we use the least-privileged `node` user to run the backend.
 USER node
 
 # This should create the app dir as `node`.
-# If it is instead created as `root` then the `tar` command below will fail: `can't create directory 'packages/': Permission denied`.
-# If this occurs, then ensure BuildKit is enabled (`DOCKER_BUILDKIT=1`) so the app dir is correctly created as `node`.
+# If it is instead created as `root` then the `tar` command below will
+# fail: `can't create directory 'packages/': Permission denied`.
+# If this occurs, then ensure BuildKit is enabled (`DOCKER_BUILDKIT=1`)
+# so the app dir is correctly created as `node`.
 WORKDIR /app
 
 # This switches many Node.js dependencies to production mode.
@@ -98,7 +101,7 @@ CMD ["node", "packages/backend", "--config", "app-config.yaml"]
 
 For more details on how the `backend:bundle` command and the `skeleton.tar.gz`
 file works, see the
-[`backend:bundle` command docs](../local-dev/cli-commands.md#backendbundle).
+[`backend:bundle` command docs](../tooling/cli/03-commands.md#backendbundle).
 
 The `Dockerfile` is located at `packages/backend/Dockerfile`, but needs to be
 executed with the root of the repo as the build context, in order to get access
@@ -138,8 +141,12 @@ browser at `http://localhost:7007`
 
 ## Multi-stage Build
 
-> NOTE: The `.dockerignore` is different in this setup, read on for more
-> details.
+:::note Note
+
+The `.dockerignore` is different in this setup, read on for more
+details.
+
+:::
 
 This section describes how to set up a multi-stage Docker build that builds the
 entire project within Docker. This is typically slower than a host build, but is
@@ -157,9 +164,9 @@ host build.
 The following `Dockerfile` executes the multi-stage build and should be added to
 the repo root:
 
-```Dockerfile
+```dockerfile
 # Stage 1 - Create yarn install skeleton layer
-FROM node:16-bullseye-slim AS packages
+FROM node:18-bookworm-slim AS packages
 
 WORKDIR /app
 COPY package.json yarn.lock ./
@@ -172,7 +179,7 @@ COPY plugins plugins
 RUN find packages \! -name "package.json" -mindepth 2 -maxdepth 2 -exec rm -rf {} \+
 
 # Stage 2 - Install dependencies and build packages
-FROM node:16-bullseye-slim AS build
+FROM node:18-bookworm-slim AS build
 
 # Install isolate-vm dependencies, these are needed by the @backstage/plugin-scaffolder-backend.
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
@@ -185,6 +192,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 # in which case you should also move better-sqlite3 to "devDependencies" in package.json.
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
     apt-get install -y --no-install-recommends libsqlite3-dev
 
 USER node
@@ -192,8 +200,6 @@ WORKDIR /app
 
 COPY --from=packages --chown=node:node /app .
 
-# Stop cypress from downloading it's massive binary.
-ENV CYPRESS_INSTALL_BINARY=0
 RUN --mount=type=cache,target=/home/node/.cache/yarn,sharing=locked,uid=1000,gid=1000 \
     yarn install --frozen-lockfile --network-timeout 600000
 
@@ -209,7 +215,7 @@ RUN mkdir packages/backend/dist/skeleton packages/backend/dist/bundle \
     && tar xzf packages/backend/dist/bundle.tar.gz -C packages/backend/dist/bundle
 
 # Stage 3 - Build the actual backend image and install production dependencies
-FROM node:16-bullseye-slim
+FROM node:18-bookworm-slim
 
 # Install isolate-vm dependencies, these are needed by the @backstage/plugin-scaffolder-backend.
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
@@ -222,14 +228,17 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 # in which case you should also move better-sqlite3 to "devDependencies" in package.json.
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
     apt-get install -y --no-install-recommends libsqlite3-dev
 
 # From here on we use the least-privileged `node` user to run the backend.
 USER node
 
 # This should create the app dir as `node`.
-# If it is instead created as `root` then the `tar` command below will fail: `can't create directory 'packages/': Permission denied`.
-# If this occurs, then ensure BuildKit is enabled (`DOCKER_BUILDKIT=1`) so the app dir is correctly created as `node`.
+# If it is instead created as `root` then the `tar` command below will
+# fail: `can't create directory 'packages/': Permission denied`.
+# If this occurs, then ensure BuildKit is enabled (`DOCKER_BUILDKIT=1`)
+# so the app dir is correctly created as `node`.
 WORKDIR /app
 
 # Copy the install dependencies from the build stage and context
@@ -288,10 +297,14 @@ browser at `http://localhost:7007`
 
 ## Separate Frontend
 
-> NOTE: This is an optional step, and you will lose out on the features of the
-> `@backstage/plugin-app-backend` plugin. Most notably the frontend configuration
-> will no longer be injected by the backend, you will instead need to use the
-> correct configuration when building the frontend bundle.
+:::note Note
+
+This is an optional step, and you will lose out on the features of the
+`@backstage/plugin-app-backend` plugin. Most notably the frontend configuration
+will no longer be injected by the backend, you will instead need to use the
+correct configuration when building the frontend bundle.
+
+:::
 
 It is sometimes desirable to serve the frontend separately from the backend,
 either from a separate image or for example a static file serving provider. The
@@ -308,7 +321,7 @@ package, which is done as follows:
        .addRouter('', await app(appEnv));
    ```
 3. Remove the `@backstage/plugin-app-backend` and the app package dependency
-   (e.g. `app`) from `packages/backend/packages.json`. If you don't remove the
+   (e.g. `app`) from `packages/backend/package.json`. If you don't remove the
    app package dependency the app will still be built and bundled with the
    backend.
 
@@ -320,3 +333,28 @@ an NGINX image is available in the
 Note that if you're building a separate docker build of the frontend you
 probably need to adjust `.dockerignore` appropriately. Most likely by making
 sure `packages/app/dist` is not ignored.
+
+## Troubleshooting Tips
+
+When building Docker images you may run into problems from time to time, there are two handy flags you can use to help:
+
+- `--progress=plain`: this will give you a more verbose output and not fold the logs into sections. This is very useful when have an error but it just shows you the last command and possibly an exit code. Using this flag you are more likely to see where the error actually is.
+- `--no-cache`: this will rebuild all the layers every time. This is helpful when you want to be sure that it's building from scratch.
+
+Here's an example of these flags in use:
+
+```sh
+docker image build . -f packages/backend/Dockerfile --tag backstage --progress=plain --no-cache
+```
+
+## Community Contributed Dockerfile Alternatives
+
+The `Dockerfile` mentioned above located in `packages/backend` is maintained by the maintainers of Backstage, however there are also community contributed Dockerfile alternatives located in `contrib/docker`. The `Dockerfile`s in `contrib/docker` are not maintained by the maintainers of Backstage and are not necessarily updated when the `Dockerfile` located in `packages/backend` is updated.
+
+### Minimal Hardened Image
+
+A contributed `Dockerfile` exists within the directory of `contrib/docker/minimal-hardened-image` which uses the [`wolfi-base`](https://github.com/wolfi-dev) image to reduce vulnerabilities. When this was contributed, this alternative `Dockerfile` reduced 98.2% of vulnerabilities in the built Backstage docker image when compared with the image built from `packages/backend/Dockerfile`.
+
+To reduce maintenance, the digest of the image has been removed from the `contrib/docker/minimal-hardened-image/Dockerfile` file. A complete example with the digest would be `cgr.dev/chainguard/wolfi-base:latest@sha256:3d6dece13cdb5546cd03b20e14f9af354bc1a56ab5a7b47dca3e6c1557211fcf` and it is suggested to update the `FROM` line in the `Dockerfile` to use a digest. Please do a docker pull on the image to get the latest digest. Using the digest allows tools such as Dependabot or Renovate to know exactly which image digest is being utilized and allows for Pull Requests to be triggered when a new digest is available.
+
+It is suggested to setup Dependabot/Renovate or a similar tool to ensure the image is kept up to date so that vulnerability fixes that have been addressed are pulled in frequently.

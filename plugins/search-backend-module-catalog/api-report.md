@@ -5,6 +5,7 @@
 ```ts
 /// <reference types="node" />
 
+import { AuthService } from '@backstage/backend-plugin-api';
 import { CatalogApi } from '@backstage/catalog-client';
 import { CatalogEntityDocument } from '@backstage/plugin-catalog-common';
 import { Config } from '@backstage/config';
@@ -24,11 +25,11 @@ export type CatalogCollatorEntityTransformer = (
 // @public (undocumented)
 export const defaultCatalogCollatorEntityTransformer: CatalogCollatorEntityTransformer;
 
-// @public (undocumented)
+// @public
 export class DefaultCatalogCollatorFactory implements DocumentCollatorFactory {
   // (undocumented)
   static fromConfig(
-    _config: Config,
+    configRoot: Config,
     options: DefaultCatalogCollatorFactoryOptions,
   ): DefaultCatalogCollatorFactory;
   // (undocumented)
@@ -41,8 +42,9 @@ export class DefaultCatalogCollatorFactory implements DocumentCollatorFactory {
 
 // @public (undocumented)
 export type DefaultCatalogCollatorFactoryOptions = {
+  auth?: AuthService;
   discovery: PluginEndpointDiscovery;
-  tokenManager: TokenManager;
+  tokenManager?: TokenManager;
   locationTemplate?: string;
   filter?: GetEntitiesRequest['filter'];
   batchSize?: number;

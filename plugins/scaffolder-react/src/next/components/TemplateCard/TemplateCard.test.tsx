@@ -19,6 +19,7 @@ import {
   starredEntitiesApiRef,
 } from '@backstage/plugin-catalog-react';
 import {
+  MockPermissionApi,
   MockStorageApi,
   renderInTestApp,
   TestApiProvider,
@@ -28,6 +29,9 @@ import React from 'react';
 import { TemplateEntityV1beta3 } from '@backstage/plugin-scaffolder-common';
 import { RELATION_OWNED_BY } from '@backstage/catalog-model';
 import { fireEvent } from '@testing-library/react';
+import { permissionApiRef } from '@backstage/plugin-permission-react';
+import { AuthorizeResult } from '@backstage/plugin-permission-common';
+import { SWRConfig } from 'swr';
 
 describe('TemplateCard', () => {
   it('should render the card title', async () => {
@@ -50,6 +54,7 @@ describe('TemplateCard', () => {
               storageApi: MockStorageApi.create(),
             }),
           ],
+          [permissionApiRef, new MockPermissionApi()],
         ]}
       >
         <TemplateCard template={mockTemplate} />
@@ -70,7 +75,7 @@ describe('TemplateCard', () => {
       },
     };
 
-    const { getByText } = await renderInTestApp(
+    const { getByText, getByTestId } = await renderInTestApp(
       <TestApiProvider
         apis={[
           [
@@ -79,6 +84,7 @@ describe('TemplateCard', () => {
               storageApi: MockStorageApi.create(),
             }),
           ],
+          [permissionApiRef, new MockPermissionApi()],
         ]}
       >
         <TemplateCard template={mockTemplate} />
@@ -87,9 +93,10 @@ describe('TemplateCard', () => {
 
     const description = getByText('hello');
     expect(description.querySelector('strong')).toBeInTheDocument();
+    expect(getByTestId('template-card-separator')).toBeInTheDocument();
   });
 
-  it('should render no descroption if none is provided through the template', async () => {
+  it('should render no description if none is provided through the template', async () => {
     const mockTemplate: TemplateEntityV1beta3 = {
       apiVersion: 'scaffolder.backstage.io/v1beta3',
       kind: 'Template',
@@ -109,6 +116,7 @@ describe('TemplateCard', () => {
               storageApi: MockStorageApi.create(),
             }),
           ],
+          [permissionApiRef, new MockPermissionApi()],
         ]}
       >
         <TemplateCard template={mockTemplate} />
@@ -116,6 +124,42 @@ describe('TemplateCard', () => {
     );
 
     expect(getByText('No description')).toBeInTheDocument();
+  });
+
+  it('should not render extra separators when tags or links are not present', async () => {
+    const mockTemplate: TemplateEntityV1beta3 = {
+      apiVersion: 'scaffolder.backstage.io/v1beta3',
+      kind: 'Template',
+      metadata: { name: 'bob' },
+      spec: {
+        steps: [],
+        type: 'service',
+      },
+    };
+
+    const { queryByTestId } = await renderInTestApp(
+      <TestApiProvider
+        apis={[
+          [
+            starredEntitiesApiRef,
+            new DefaultStarredEntitiesApi({
+              storageApi: MockStorageApi.create(),
+            }),
+          ],
+          [permissionApiRef, new MockPermissionApi()],
+        ]}
+      >
+        <TemplateCard template={mockTemplate} />
+      </TestApiProvider>,
+    );
+
+    expect(queryByTestId('template-card-separator')).toBeInTheDocument();
+    expect(
+      queryByTestId('template-card-separator--tags'),
+    ).not.toBeInTheDocument();
+    expect(
+      queryByTestId('template-card-separator--links'),
+    ).not.toBeInTheDocument();
   });
 
   it('should render the tags', async () => {
@@ -129,7 +173,7 @@ describe('TemplateCard', () => {
       },
     };
 
-    const { getByText } = await renderInTestApp(
+    const { getByText, queryByTestId } = await renderInTestApp(
       <TestApiProvider
         apis={[
           [
@@ -138,6 +182,7 @@ describe('TemplateCard', () => {
               storageApi: MockStorageApi.create(),
             }),
           ],
+          [permissionApiRef, new MockPermissionApi()],
         ]}
       >
         <TemplateCard template={mockTemplate} />
@@ -147,6 +192,145 @@ describe('TemplateCard', () => {
     for (const tag of mockTemplate.metadata.tags!) {
       expect(getByText(tag)).toBeInTheDocument();
     }
+    expect(queryByTestId('template-card-separator')).not.toBeInTheDocument();
+    expect(queryByTestId('template-card-separator--tags')).toBeInTheDocument();
+  });
+
+  it('should not render links section when empty links are defined', async () => {
+    const mockTemplate: TemplateEntityV1beta3 = {
+      apiVersion: 'scaffolder.backstage.io/v1beta3',
+      kind: 'Template',
+      metadata: { name: 'bob', tags: [], links: [] },
+      spec: {
+        steps: [],
+        type: 'service',
+      },
+      relations: [
+        {
+          targetRef: 'group:default/my-test-user',
+          type: RELATION_OWNED_BY,
+        },
+      ],
+    };
+
+    const { queryByTestId, queryByText } = await renderInTestApp(
+      <TestApiProvider
+        apis={[
+          [
+            starredEntitiesApiRef,
+            new DefaultStarredEntitiesApi({
+              storageApi: MockStorageApi.create(),
+            }),
+          ],
+          [permissionApiRef, new MockPermissionApi()],
+        ]}
+      >
+        <TemplateCard template={mockTemplate} />
+      </TestApiProvider>,
+      {
+        mountedRoutes: {
+          '/catalog/:kind/:namespace/:name': entityRouteRef,
+        },
+      },
+    );
+
+    expect(queryByTestId('template-card-separator')).toBeInTheDocument();
+    expect(
+      queryByTestId('template-card-separator--links'),
+    ).not.toBeInTheDocument();
+    expect(queryByText('0')).not.toBeInTheDocument();
+  });
+
+  it('should not render links section when empty additional links are defined', async () => {
+    const mockTemplate: TemplateEntityV1beta3 = {
+      apiVersion: 'scaffolder.backstage.io/v1beta3',
+      kind: 'Template',
+      metadata: { name: 'bob', tags: [], links: [] },
+      spec: {
+        steps: [],
+        type: 'service',
+      },
+      relations: [
+        {
+          targetRef: 'group:default/my-test-user',
+          type: RELATION_OWNED_BY,
+        },
+      ],
+    };
+
+    const { queryByTestId, queryByText } = await renderInTestApp(
+      <TestApiProvider
+        apis={[
+          [
+            starredEntitiesApiRef,
+            new DefaultStarredEntitiesApi({
+              storageApi: MockStorageApi.create(),
+            }),
+          ],
+          [permissionApiRef, new MockPermissionApi()],
+        ]}
+      >
+        <TemplateCard template={mockTemplate} additionalLinks={[]} />
+      </TestApiProvider>,
+      {
+        mountedRoutes: {
+          '/catalog/:kind/:namespace/:name': entityRouteRef,
+        },
+      },
+    );
+
+    expect(queryByTestId('template-card-separator')).toBeInTheDocument();
+    expect(
+      queryByTestId('template-card-separator--links'),
+    ).not.toBeInTheDocument();
+    expect(queryByText('0')).not.toBeInTheDocument();
+  });
+
+  it('should render links section when links are defined', async () => {
+    const mockTemplate: TemplateEntityV1beta3 = {
+      apiVersion: 'scaffolder.backstage.io/v1beta3',
+      kind: 'Template',
+      metadata: {
+        name: 'bob',
+        tags: [],
+        links: [{ url: '/some/url', title: 'Learn More' }],
+      },
+      spec: {
+        steps: [],
+        type: 'service',
+      },
+      relations: [
+        {
+          targetRef: 'group:default/my-test-user',
+          type: RELATION_OWNED_BY,
+        },
+      ],
+    };
+
+    const { queryByTestId, getByRole } = await renderInTestApp(
+      <TestApiProvider
+        apis={[
+          [
+            starredEntitiesApiRef,
+            new DefaultStarredEntitiesApi({
+              storageApi: MockStorageApi.create(),
+            }),
+          ],
+          [permissionApiRef, new MockPermissionApi()],
+        ]}
+      >
+        <TemplateCard template={mockTemplate} additionalLinks={[]} />
+      </TestApiProvider>,
+      {
+        mountedRoutes: {
+          '/catalog/:kind/:namespace/:name': entityRouteRef,
+        },
+      },
+    );
+
+    expect(queryByTestId('template-card-separator')).not.toBeInTheDocument();
+    expect(queryByTestId('template-card-separator--links')).toBeInTheDocument();
+    expect(getByRole('link', { name: 'Learn More' })).toBeInTheDocument();
   });
 
   it('should render a link to the owner', async () => {
@@ -175,6 +359,7 @@ describe('TemplateCard', () => {
               storageApi: MockStorageApi.create(),
             }),
           ],
+          [permissionApiRef, new MockPermissionApi()],
         ]}
       >
         <TemplateCard template={mockTemplate} />
@@ -186,8 +371,8 @@ describe('TemplateCard', () => {
       },
     );
 
-    expect(getByRole('link', { name: 'my-test-user' })).toBeInTheDocument();
-    expect(getByRole('link', { name: 'my-test-user' })).toHaveAttribute(
+    expect(getByRole('link', { name: /.*my-test-user$/ })).toBeInTheDocument();
+    expect(getByRole('link', { name: /.*my-test-user$/ })).toHaveAttribute(
       'href',
       '/catalog/group/default/my-test-user',
     );
@@ -214,6 +399,7 @@ describe('TemplateCard', () => {
               storageApi: MockStorageApi.create(),
             }),
           ],
+          [permissionApiRef, new MockPermissionApi()],
         ]}
       >
         <TemplateCard template={mockTemplate} onSelected={mockOnSelected} />
@@ -230,5 +416,45 @@ describe('TemplateCard', () => {
     fireEvent.click(getByRole('button', { name: 'Choose' }));
 
     expect(mockOnSelected).toHaveBeenCalledWith(mockTemplate);
+  });
+  it('should not render the choose button when user has insufficient permissions', async () => {
+    const mockTemplate: TemplateEntityV1beta3 = {
+      apiVersion: 'scaffolder.backstage.io/v1beta3',
+      kind: 'Template',
+      metadata: { name: 'bob', tags: ['cpp', 'react'] },
+      spec: {
+        steps: [],
+        type: 'service',
+      },
+    };
+    const mockOnSelected = jest.fn();
+    const mockAuthorize = jest
+      .fn()
+      .mockImplementation(async () => ({ result: AuthorizeResult.DENY }));
+    // SWR used by the usePermission hook needs cache to be reset for each test
+    const { queryByText } = await renderInTestApp(
+      <SWRConfig value={{ provider: () => new Map() }}>
+        <TestApiProvider
+          apis={[
+            [
+              starredEntitiesApiRef,
+              new DefaultStarredEntitiesApi({
+                storageApi: MockStorageApi.create(),
+              }),
+            ],
+            [permissionApiRef, new MockPermissionApi(mockAuthorize)],
+          ]}
+        >
+          <TemplateCard template={mockTemplate} onSelected={mockOnSelected} />
+        </TestApiProvider>
+      </SWRConfig>,
+      {
+        mountedRoutes: {
+          '/catalog/:kind/:namespace/:name': entityRouteRef,
+        },
+      },
+    );
+
+    expect(queryByText('Choose')).toBeNull();
   });
 });

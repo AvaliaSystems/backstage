@@ -18,28 +18,104 @@ import { assertError } from '@backstage/errors';
 import { Command } from 'commander';
 import { exitWithError } from '../lib/errors';
 
-function registerSchemaCommand(program: Command) {
+function registerPackageCommand(program: Command) {
   const command = program
+    .command('package [command]')
+    .description('Various tools for working with specific packages.');
+
+  const schemaCommand = command
+    .command('schema [command]')
+    .description(
+      "Various tools for working with specific packages' API schema",
+    );
+
+  const openApiCommand = schemaCommand
+    .command('openapi [command]')
+    .description('Tooling for OpenAPI schema');
+
+  openApiCommand
+    .command('init')
+    .description(
+      'Initialize any required files to use the OpenAPI tooling for this package.',
+    )
+    .action(
+      lazy(() =>
+        import('./package/schema/openapi/init').then(m => m.singleCommand),
+      ),
+    );
+
+  openApiCommand
+    .command('generate')
+    .option(
+      '--client-package [package]',
+      'Top-level path to where the client should be generated, ie packages/catalog-client.',
+    )
+    .option('--server')
+    .description(
+      'Command to generate a client and/or a server stub from an OpenAPI spec.',
+    )
+    .option('--client-additional-properties [properties]')
+    .description(
+      'Additional properties that can be passed to @openapitools/openapi-generator-cli',
+    )
+    .action(
+      lazy(() =>
+        import('./package/schema/openapi/generate').then(m => m.command),
+      ),
+    );
+
+  openApiCommand
+    .command('fuzz')
+    .description(
+      'Fuzz an OpenAPI schema by generating random data and sending it to the server.',
+    )
+    .option('--limit <limit>', 'Maximum number of requests to send.')
+    .option('--workers <workers>', 'Number of workers to use', '2')
+    .option(
+      '--debug',
+      `Enable debug mode, which will save cassettes to '.cassettes/{pluginId}.yml'`,
+    )
+    .option(
+      '--exclude-checks <excludeChecks>',
+      'Exclude checks from schemathesis run',
+    )
+    .action(
+      lazy(() => import('./package/schema/openapi/fuzz').then(m => m.command)),
+    );
+
+  openApiCommand
+    .command('diff')
+    .option('--ignore', 'Ignore linting failures and only log the results.')
+    .option('--json', 'Output the results as JSON')
+    .option('--since <ref>', 'Diff the API against a specific ref')
+    .action(
+      lazy(() => import('./package/schema/openapi/diff').then(m => m.command)),
+    );
+}
+
+function registerRepoCommand(program: Command) {
+  const command = program
+    .command('repo [command]')
+    .description('Tools for working across your entire repository.');
+
+  const schemaCommand = command
     .command('schema [command]')
     .description('Various tools for working with API schema');
 
-  const openApiCommand = command
+  const openApiCommand = schemaCommand
     .command('openapi [command]')
     .description('Tooling for OpenApi schema');
 
   openApiCommand
     .command('verify [paths...]')
     .description(
-      'Verify that all OpenAPI schemas are valid and have a matching `schemas/openapi.generated.ts` file.',
+      'Verify that all OpenAPI schemas are valid and set up correctly.',
     )
-    .action(lazy(() => import('./openapi/verify').then(m => m.bulkCommand)));
-
-  openApiCommand
-    .command('generate [paths...]')
-    .description(
-      'Generates a Typescript file from an OpenAPI yaml spec. For use with the `@backstage/backend-openapi-utils` ApiRouter type.',
-    )
-    .action(lazy(() => import('./openapi/generate').then(m => m.bulkCommand)));
+    .action(
+      lazy(() =>
+        import('./repo/schema/openapi/verify').then(m => m.bulkCommand),
+      ),
+    );
 
   openApiCommand
     .command('lint [paths...]')
@@ -48,7 +124,42 @@ function registerSchemaCommand(program: Command) {
       '--strict',
       'Fail on any linting severity messages, not just errors.',
     )
-    .action(lazy(() => import('./openapi/lint').then(m => m.bulkCommand)));
+    .action(
+      lazy(() => import('./repo/schema/openapi/lint').then(m => m.bulkCommand)),
+    );
+
+  openApiCommand
+    .command('test [paths...]')
+    .description('Test OpenAPI schemas against written tests')
+    .option('--update', 'Update the spec on failure.')
+    .action(
+      lazy(() => import('./repo/schema/openapi/test').then(m => m.bulkCommand)),
+    );
+
+  openApiCommand
+    .command('fuzz')
+    .description('Fuzz all packages')
+    .option(
+      '--since <ref>',
+      'Only fuzz packages that have changed since the given ref',
+    )
+    .action(
+      lazy(() => import('./repo/schema/openapi/fuzz').then(m => m.command)),
+    );
+
+  openApiCommand
+    .command('diff')
+    .description(
+      'Diff the repository against a specific ref, will run all package `diff` scripts.',
+    )
+    .option(
+      '--since <ref>',
+      'Diff the API against a specific ref',
+      'origin/master',
+    )
+    .action(
+      lazy(() => import('./repo/schema/openapi/diff').then(m => m.command)),
+    );
 }
 
 export function registerCommands(program: Command) {
@@ -96,7 +207,37 @@ export function registerCommands(program: Command) {
     .description('Find inconsistencies in types of all packages and plugins')
     .action(lazy(() => import('./type-deps/type-deps').then(m => m.default)));
 
-  registerSchemaCommand(program);
+  program
+    .command('generate-catalog-info')
+    .option(
+      '--dry-run',
+      'Shows what would happen without actually writing any yaml.',
+    )
+    .option(
+      '--ci',
+      'CI run checks that there are no changes to catalog-info.yaml files',
+    )
+    .description('Create or fix info yaml files for all backstage packages')
+    .action(
+      lazy(() =>
+        import('./generate-catalog-info/generate-catalog-info').then(
+          m => m.default,
+        ),
+      ),
+    );
+
+  program
+    .command('knip-reports [paths...]')
+    .option('--ci', 'CI run checks that there is no changes on knip reports')
+    .description('Generate a knip report for selected packages')
+    .action(
+      lazy(() =>
+        import('./knip-reports/knip-reports').then(m => m.buildKnipReports),
+      ),
+    );
+
+  registerPackageCommand(program);
+  registerRepoCommand(program);
 }
 
 // Wraps an action function so that it always exits and handles errors

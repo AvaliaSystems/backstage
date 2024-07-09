@@ -7,24 +7,25 @@ import { AllOfCriteria } from '@backstage/plugin-permission-common';
 import { AnyOfCriteria } from '@backstage/plugin-permission-common';
 import { AuthorizePermissionRequest } from '@backstage/plugin-permission-common';
 import { AuthorizePermissionResponse } from '@backstage/plugin-permission-common';
+import { AuthService } from '@backstage/backend-plugin-api';
 import { BackstageIdentityResponse } from '@backstage/plugin-auth-node';
 import { ConditionalPolicyDecision } from '@backstage/plugin-permission-common';
 import { Config } from '@backstage/config';
 import { DefinitivePolicyDecision } from '@backstage/plugin-permission-common';
-import { EvaluatorRequestOptions } from '@backstage/plugin-permission-common';
+import { DiscoveryService } from '@backstage/backend-plugin-api';
 import express from 'express';
 import { IdentifiedPermissionMessage } from '@backstage/plugin-permission-common';
 import { NotCriteria } from '@backstage/plugin-permission-common';
 import { Permission } from '@backstage/plugin-permission-common';
 import { PermissionCondition } from '@backstage/plugin-permission-common';
 import { PermissionCriteria } from '@backstage/plugin-permission-common';
-import { PermissionEvaluator } from '@backstage/plugin-permission-common';
 import { PermissionRuleParams } from '@backstage/plugin-permission-common';
-import { PluginEndpointDiscovery } from '@backstage/backend-common';
+import { PermissionsService } from '@backstage/backend-plugin-api';
+import { PermissionsServiceRequestOptions } from '@backstage/backend-plugin-api';
 import { PolicyDecision } from '@backstage/plugin-permission-common';
 import { QueryPermissionRequest } from '@backstage/plugin-permission-common';
 import { ResourcePermission } from '@backstage/plugin-permission-common';
-import { TokenManager } from '@backstage/backend-common';
+import { TokenManagerService } from '@backstage/backend-plugin-api';
 import { z } from 'zod';
 import zodToJsonSchema from 'zod-to-json-schema';
 
@@ -75,17 +76,14 @@ export type ConditionTransformer<TQuery> = (
 
 // @public
 export const createConditionAuthorizer: <TResource, TQuery>(
-  rules: PermissionRule<TResource, TQuery, string, PermissionRuleParams>[],
+  rules: PermissionRule<TResource, TQuery, string>[],
 ) => (decision: PolicyDecision, resource: TResource | undefined) => boolean;
 
 // @public
 export const createConditionExports: <
   TResourceType extends string,
   TResource,
-  TRules extends Record<
-    string,
-    PermissionRule<TResource, any, TResourceType, PermissionRuleParams>
-  >,
+  TRules extends Record<string, PermissionRule<TResource, any, TResourceType>>,
 >(options: {
   pluginId: string;
   resourceType: TResourceType;
@@ -94,9 +92,7 @@ export const createConditionExports: <
   conditions: Conditions<TRules>;
   createConditionalDecision: (
     permission: ResourcePermission<TResourceType>,
-    conditions: PermissionCriteria<
-      PermissionCondition<TResourceType, PermissionRuleParams>
-    >,
+    conditions: PermissionCriteria<PermissionCondition<TResourceType>>,
   ) => ConditionalPolicyDecision;
 };
 
@@ -111,7 +107,7 @@ export const createConditionFactory: <
 // @public
 export const createConditionTransformer: <
   TQuery,
-  TRules extends PermissionRule<any, TQuery, string, PermissionRuleParams>[],
+  TRules extends PermissionRule<any, TQuery, string>[],
 >(
   permissionRules: [...TRules],
 ) => ConditionTransformer<TQuery>;
@@ -277,23 +273,24 @@ export type PolicyQuery = {
 };
 
 // @public
-export class ServerPermissionClient implements PermissionEvaluator {
+export class ServerPermissionClient implements PermissionsService {
   // (undocumented)
   authorize(
     requests: AuthorizePermissionRequest[],
-    options?: EvaluatorRequestOptions,
+    options?: PermissionsServiceRequestOptions,
   ): Promise<AuthorizePermissionResponse[]>;
   // (undocumented)
   authorizeConditional(
     queries: QueryPermissionRequest[],
-    options?: EvaluatorRequestOptions,
+    options?: PermissionsServiceRequestOptions,
   ): Promise<PolicyDecision[]>;
   // (undocumented)
   static fromConfig(
     config: Config,
     options: {
-      discovery: PluginEndpointDiscovery;
-      tokenManager: TokenManager;
+      discovery: DiscoveryService;
+      tokenManager: TokenManagerService;
+      auth?: AuthService;
     },
   ): ServerPermissionClient;
 }

@@ -56,6 +56,7 @@ import { ProfileInfo } from '@backstage/core-plugin-api';
 import { ProfileInfoApi } from '@backstage/core-plugin-api';
 import { PropsWithChildren } from 'react';
 import PropTypes from 'prop-types';
+import { default as React_2 } from 'react';
 import { ReactNode } from 'react';
 import { RouteRef } from '@backstage/core-plugin-api';
 import { SessionApi } from '@backstage/core-plugin-api';
@@ -63,6 +64,7 @@ import { SessionState } from '@backstage/core-plugin-api';
 import { StorageApi } from '@backstage/core-plugin-api';
 import { StorageValueSnapshot } from '@backstage/core-plugin-api';
 import { SubRouteRef } from '@backstage/core-plugin-api';
+import { vmwareCloudAuthApiRef } from '@backstage/core-plugin-api';
 
 // @public
 export class AlertApiForwarder implements AlertApi {
@@ -113,7 +115,7 @@ export type ApiFactoryScope = 'default' | 'app' | 'static';
 
 // @public
 export const ApiProvider: {
-  (props: PropsWithChildren<ApiProviderProps>): JSX.Element;
+  (props: PropsWithChildren<ApiProviderProps>): React_2.JSX.Element;
   propTypes: {
     apis: PropTypes.Validator<
       NonNullable<
@@ -178,6 +180,8 @@ export type AppIcons = {
   'kind:location': IconComponent;
   'kind:system': IconComponent;
   'kind:user': IconComponent;
+  'kind:resource': IconComponent;
+  'kind:template': IconComponent;
   brokenImage: IconComponent;
   catalog: IconComponent;
   chat: IconComponent;
@@ -219,6 +223,22 @@ export type AppOptions = {
   themes: (Partial<AppTheme> & Omit<AppTheme, 'theme'>)[];
   configLoader?: AppConfigLoader;
   bindRoutes?(context: { bind: AppRouteBinder }): void;
+  __experimentalTranslations?: {
+    defaultLanguage?: string;
+    availableLanguages?: string[];
+    resources?: Array<
+      | {
+          $$type: '@backstage/TranslationResource';
+          id: string;
+        }
+      | {
+          $$type: '@backstage/TranslationMessages';
+          id: string;
+          full: boolean;
+          messages: Record<string, string>;
+        }
+    >;
+  };
 };
 
 // @public
@@ -235,7 +255,7 @@ export type AppRouteBinder = <
 ) => void;
 
 // @public
-export function AppRouter(props: AppRouterProps): JSX.Element;
+export function AppRouter(props: AppRouterProps): React_2.JSX.Element;
 
 // @public
 export interface AppRouterProps {
@@ -368,7 +388,9 @@ export type ErrorBoundaryFallbackProps = PropsWithChildren<{
 }>;
 
 // @public
-export const FeatureFlagged: (props: FeatureFlaggedProps) => JSX.Element;
+export const FeatureFlagged: (
+  props: FeatureFlaggedProps,
+) => React_2.JSX.Element;
 
 // @public
 export type FeatureFlaggedProps = {
@@ -535,10 +557,10 @@ export type OAuth2Session = {
     idToken: string;
     accessToken: string;
     scopes: Set<string>;
-    expiresAt: Date;
+    expiresAt?: Date;
   };
   profile: ProfileInfo;
-  backstageIdentity: BackstageIdentityResponse;
+  backstageIdentity?: BackstageIdentityResponse;
 };
 
 // @public
@@ -628,6 +650,12 @@ export class UrlPatternDiscovery implements DiscoveryApi {
   static compile(pattern: string): UrlPatternDiscovery;
   // (undocumented)
   getBaseUrl(pluginId: string): Promise<string>;
+}
+
+// @public
+export class VMwareCloudAuth {
+  // (undocumented)
+  static create(options: OAuthApiCreateOptions): typeof vmwareCloudAuthApiRef.T;
 }
 
 // @public

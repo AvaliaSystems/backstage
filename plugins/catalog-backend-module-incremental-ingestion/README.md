@@ -20,7 +20,7 @@ We created the Incremental Entity Provider to address all of the above issues. T
 
 Incremental Entity Providers will wait a configurable interval before proceeding to the next burst.
 
-Once the source has no more results, Incremental Entity Provider compares all entities annotated with `@backstage/incremental-entity-provider: <entity-provider-id>` against all marked entities to determine which entities committed by same entity provider were not marked during the last ingestion cycle. All unmarked entities are deleted at the end of the cycle. The Incremental Entity Provider rests for a fixed internal before restarting the ingestion process.
+Once the source has no more results, Incremental Entity Provider compares all entities annotated with `@backstage/incremental-entity-provider: <entity-provider-id>` against all marked entities to determine which entities committed by same entity provider were not marked during the last ingestion cycle. All unmarked entities are deleted at the end of the cycle. The Incremental Entity Provider rests for a fixed interval before restarting the ingestion process.
 
 ![Diagram of execution of an Incremental Entity Provider](https://user-images.githubusercontent.com/74687/185822734-ee6279c7-64fa-46b9-9aa8-d4092ab73858.png)
 
@@ -41,7 +41,7 @@ The Incremental Entity Provider backend is designed for data sources that provid
 
 ## Installation
 
-1. Install `@backstage/plugin-catalog-backend-module-incremental-ingestion` with `yarn add --cwd packages/backend @backstage/plugin-catalog-backend-module-incremental-ingestion` from the Backstage root directory.
+1. Install `@backstage/plugin-catalog-backend-module-incremental-ingestion` with `yarn --cwd packages/backend add @backstage/plugin-catalog-backend-module-incremental-ingestion` from the Backstage root directory.
 2. In your catalog.ts, import `IncrementalCatalogBuilder` from `@backstage/plugin-catalog-backend-module-incremental-ingestion` and instantiate it with `await IncrementalCatalogBuilder.create(env, builder)`. You have to pass `builder` into `IncrementalCatalogBuilder.create` function because `IncrementalCatalogBuilder` will convert an `IncrementalEntityProvider` into an `EntityProvider` and call `builder.addEntityProvider`.
 
 ```ts

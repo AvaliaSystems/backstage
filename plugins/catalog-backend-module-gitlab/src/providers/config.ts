@@ -43,12 +43,16 @@ function readGitlabConfig(id: string, config: Config): GitlabProviderConfig {
     config.getOptionalString('groupPattern') ?? /[\s\S]*/,
   );
   const orgEnabled: boolean = config.getOptionalBoolean('orgEnabled') ?? false;
+  const allowInherited: boolean =
+    config.getOptionalBoolean('allowInherited') ?? false;
   const skipForkedRepos: boolean =
     config.getOptionalBoolean('skipForkedRepos') ?? false;
 
   const schedule = config.has('schedule')
     ? readTaskScheduleDefinitionFromConfig(config.getConfig('schedule'))
     : undefined;
+  const restrictUsersToGroup =
+    config.getOptionalBoolean('restrictUsersToGroup') ?? false;
 
   return {
     id,
@@ -62,7 +66,9 @@ function readGitlabConfig(id: string, config: Config): GitlabProviderConfig {
     groupPattern,
     schedule,
     orgEnabled,
+    allowInherited,
     skipForkedRepos,
+    restrictUsersToGroup,
   };
 }
 

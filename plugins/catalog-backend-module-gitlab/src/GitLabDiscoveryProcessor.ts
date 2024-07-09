@@ -30,8 +30,8 @@ import {
   LocationSpec,
   processingResult,
 } from '@backstage/plugin-catalog-node';
-import { Logger } from 'winston';
 import { GitLabClient, GitLabProject, paginated } from './lib';
+import { LoggerService } from '@backstage/backend-plugin-api';
 
 /**
  * Extracts repositories out of an GitLab instance.
@@ -39,7 +39,7 @@ import { GitLabClient, GitLabProject, paginated } from './lib';
  */
 export class GitLabDiscoveryProcessor implements CatalogProcessor {
   private readonly integrations: ScmIntegrationRegistry;
-  private readonly logger: Logger;
+  private readonly logger: LoggerService;
   private readonly cache: CacheClient;
   private readonly skipReposWithoutExactFileMatch: boolean;
   private readonly skipForkedRepos: boolean;
@@ -47,7 +47,7 @@ export class GitLabDiscoveryProcessor implements CatalogProcessor {
   static fromConfig(
     config: Config,
     options: {
-      logger: Logger;
+      logger: LoggerService;
       skipReposWithoutExactFileMatch?: boolean;
       skipForkedRepos?: boolean;
     },
@@ -66,7 +66,7 @@ export class GitLabDiscoveryProcessor implements CatalogProcessor {
   private constructor(options: {
     integrations: ScmIntegrationRegistry;
     pluginCache: PluginCacheManager;
-    logger: Logger;
+    logger: LoggerService;
     skipReposWithoutExactFileMatch?: boolean;
     skipForkedRepos?: boolean;
   }) {
@@ -109,6 +109,7 @@ export class GitLabDiscoveryProcessor implements CatalogProcessor {
 
     const lastActivity = (await this.cache.get(this.getCacheKey())) as string;
     const opts = {
+      archived: false,
       group,
       page: 1,
       // We check for the existence of lastActivity and only set it if it's present to ensure
@@ -124,10 +125,6 @@ export class GitLabDiscoveryProcessor implements CatalogProcessor {
     };
     for await (const project of projects) {
       res.scanned++;
-
-      if (project.archived) {
-        continue;
-      }
 
       if (branch === '*' && project.default_branch === undefined) {
         continue;

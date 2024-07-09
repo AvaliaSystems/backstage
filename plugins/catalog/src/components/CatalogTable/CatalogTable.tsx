@@ -19,6 +19,7 @@ import {
   Entity,
   RELATION_OWNED_BY,
   RELATION_PART_OF,
+  stringifyEntityRef,
 } from '@backstage/catalog-model';
 import {
   CodeSnippet,
@@ -33,17 +34,22 @@ import {
   useEntityList,
   useStarredEntities,
 } from '@backstage/plugin-catalog-react';
-import { Typography } from '@material-ui/core';
+import Typography from '@material-ui/core/Typography';
 import { withStyles } from '@material-ui/core/styles';
+import { visuallyHidden } from '@mui/utils';
 import Edit from '@material-ui/icons/Edit';
 import OpenInNew from '@material-ui/icons/OpenInNew';
 import Star from '@material-ui/icons/Star';
 import StarBorder from '@material-ui/icons/StarBorder';
 import { capitalize } from 'lodash';
+import pluralize from 'pluralize';
 import React, { ReactNode, useMemo } from 'react';
 import { columnFactories } from './columns';
-import { CatalogTableRow } from './types';
-import pluralize from 'pluralize';
+import { CatalogTableColumnsFunc, CatalogTableRow } from './types';
+import { PaginatedCatalogTable } from './PaginatedCatalogTable';
+import { defaultCatalogTableColumnsFunc } from './defaultCatalogTableColumnsFunc';
+import { useTranslationRef } from '@backstage/core-plugin-api/alpha';
+import { catalogTranslationRef } from '../../translation';
 
 /**
  * Props for {@link CatalogTable}.
@@ -51,7 +57,7 @@ import pluralize from 'pluralize';
  * @public
  */
 export interface CatalogTableProps {
-  columns?: TableColumn<CatalogTableRow>[];
+  columns?: TableColumn<CatalogTableRow>[] | CatalogTableColumnsFunc;
   actions?: TableProps<CatalogTableRow>['actions'];
   tableOptions?: TableProps<CatalogTableRow>['options'];
   emptyContent?: ReactNode;
@@ -76,60 +82,30 @@ const refCompare = (a: Entity, b: Entity) => {
 
 /** @public */
 export const CatalogTable = (props: CatalogTableProps) => {
-  const { columns, actions, tableOptions, subtitle, emptyContent } = props;
+  const {
+    columns = defaultCatalogTableColumnsFunc,
+    tableOptions,
+    subtitle,
+    emptyContent,
+  } = props;
   const { isStarredEntity, toggleStarredEntity } = useStarredEntities();
-  const { loading, error, entities, filters } = useEntityList();
-
-  const defaultColumns: TableColumn<CatalogTableRow>[] = useMemo(() => {
-    return [
-      columnFactories.createTitleColumn({ hidden: true }),
-      columnFactories.createNameColumn({ defaultKind: filters.kind?.value }),
-      ...createEntitySpecificColumns(),
-      columnFactories.createMetadataDescriptionColumn(),
-      columnFactories.createTagsColumn(),
-    ];
-
-    function createEntitySpecificColumns(): TableColumn<CatalogTableRow>[] {
-      const baseColumns = [
-        columnFactories.createSystemColumn(),
-        columnFactories.createOwnerColumn(),
-        columnFactories.createSpecTypeColumn(),
-        columnFactories.createSpecLifecycleColumn(),
-      ];
-      switch (filters.kind?.value) {
-        case 'user':
-          return [];
-        case 'domain':
-        case 'system':
-          return [columnFactories.createOwnerColumn()];
-        case 'group':
-        case 'template':
-          return [columnFactories.createSpecTypeColumn()];
-        case 'location':
-          return [
-            columnFactories.createSpecTypeColumn(),
-            columnFactories.createSpecTargetsColumn(),
-          ];
-        default:
-          return entities.every(
-            entity => entity.metadata.namespace === 'default',
-          )
-            ? baseColumns
-            : [...baseColumns, columnFactories.createNamespaceColumn()];
-      }
-    }
-  }, [filters.kind?.value, entities]);
-
-  const showTypeColumn = filters.type === undefined;
-  // TODO(timbonicus): remove the title from the CatalogTable once using EntitySearchBar
-  const titlePreamble = capitalize(filters.user?.value ?? 'all');
+  const entityListContext = useEntityList();
+  const { loading, error, entities, filters, pageInfo, totalItems } =
+    entityListContext;
+  const enablePagination = !!pageInfo;
+  const tableColumns = useMemo(
+    () =>
+      typeof columns === 'function' ? columns(entityListContext) : columns,
+    [columns, entityListContext],
+  );
+  const { t } = useTranslationRef(catalogTranslationRef);
 
   if (error) {
     return (
       <div>
         <WarningPanel
           severity="error"
-          title="Could not fetch catalog entities."
+          title={t('catalogTable.warningPanelTitle')}
         >
           <CodeSnippet language="text" text={error.toString()} />
         </WarningPanel>
@@ -140,12 +116,12 @@ export const CatalogTable = (props: CatalogTableProps) => {
   const defaultActions: TableProps<CatalogTableRow>['actions'] = [
     ({ entity }) => {
       const url = entity.metadata.annotations?.[ANNOTATION_VIEW_URL];
-      const title = 'View';
+      const title = t('catalogTable.viewActionTitle');
 
       return {
         icon: () => (
           <>
-            <Typography variant="srOnly">{title}</Typography>
+            <Typography style={visuallyHidden}>{title}</Typography>
             <OpenInNew fontSize="small" />
           </>
         ),
@@ -159,12 +135,12 @@ export const CatalogTable = (props: CatalogTableProps) => {
     },
     ({ entity }) => {
       const url = entity.metadata.annotations?.[ANNOTATION_EDIT_URL];
-      const title = 'Edit';
+      const title = t('catalogTable.editActionTitle');
 
       return {
         icon: () => (
           <>
-            <Typography variant="srOnly">{title}</Typography>
+            <Typography style={visuallyHidden}>{title}</Typography>
             <Edit fontSize="small" />
           </>
         ),
@@ -178,13 +154,15 @@ export const CatalogTable = (props: CatalogTableProps) => {
     },
     ({ entity }) => {
       const isStarred = isStarredEntity(entity);
-      const title = isStarred ? 'Remove from favorites' : 'Add to favorites';
+      const title = isStarred
+        ? t('catalogTable.unStarActionTitle')
+        : t('catalogTable.starActionTitle');
 
       return {
         cellStyle: { paddingLeft: '1em' },
         icon: () => (
           <>
-            <Typography variant="srOnly">{title}</Typography>
+            <Typography style={visuallyHidden}>{title}</Typography>
             {isStarred ? <YellowStar /> : <StarBorder />}
           </>
         ),
@@ -194,62 +172,63 @@ export const CatalogTable = (props: CatalogTableProps) => {
     },
   ];
 
-  const rows = entities.sort(refCompare).map(entity => {
-    const partOfSystemRelations = getEntityRelations(entity, RELATION_PART_OF, {
-      kind: 'system',
-    });
-    const ownedByRelations = getEntityRelations(entity, RELATION_OWNED_BY);
-
-    return {
-      entity,
-      resolved: {
-        name: humanizeEntityRef(entity, {
-          defaultKind: 'Component',
-        }),
-        ownedByRelationsTitle: ownedByRelations
-          .map(r => humanizeEntityRef(r, { defaultKind: 'group' }))
-          .join(', '),
-        ownedByRelations,
-        partOfSystemRelationTitle: partOfSystemRelations
-          .map(r =>
-            humanizeEntityRef(r, {
-              defaultKind: 'system',
-            }),
-          )
-          .join(', '),
-        partOfSystemRelations,
-      },
-    };
-  });
-
-  const typeColumn = (columns || defaultColumns).find(c => c.title === 'Type');
-  if (typeColumn) {
-    typeColumn.hidden = !showTypeColumn;
-  }
-  const showPagination = rows.length > 20;
   const currentKind = filters.kind?.value || '';
   const currentType = filters.type?.value || '';
-  const titleDisplay = [titlePreamble, currentType, pluralize(currentKind)]
+  const currentCount = typeof totalItems === 'number' ? `(${totalItems})` : '';
+  // TODO(timbonicus): remove the title from the CatalogTable once using EntitySearchBar
+  const titlePreamble = capitalize(filters.user?.value ?? 'all');
+  const title = [
+    titlePreamble,
+    currentType,
+    pluralize(currentKind),
+    currentCount,
+  ]
     .filter(s => s)
     .join(' ');
+
+  const actions = props.actions || defaultActions;
+  const options = {
+    actionsColumnIndex: -1,
+    loadingType: 'linear' as const,
+    showEmptyDataSourceMessage: !loading,
+    padding: 'dense' as const,
+    ...tableOptions,
+  };
+
+  if (enablePagination) {
+    return (
+      <PaginatedCatalogTable
+        columns={tableColumns}
+        emptyContent={emptyContent}
+        isLoading={loading}
+        title={title}
+        actions={actions}
+        subtitle={subtitle}
+        options={options}
+        data={entities.map(toEntityRow)}
+        next={pageInfo.next}
+        prev={pageInfo.prev}
+      />
+    );
+  }
+
+  const rows = entities.sort(refCompare).map(toEntityRow);
+  const pageSize = 20;
+  const showPagination = rows.length > pageSize;
 
   return (
     <Table<CatalogTableRow>
       isLoading={loading}
-      columns={columns || defaultColumns}
+      columns={tableColumns}
       options={{
         paging: showPagination,
-        pageSize: 20,
-        actionsColumnIndex: -1,
-        loadingType: 'linear',
-        showEmptyDataSourceMessage: !loading,
-        padding: 'dense',
+        pageSize: pageSize,
         pageSizeOptions: [20, 50, 100],
-        ...tableOptions,
+        ...options,
       }}
-      title={`${titleDisplay} (${entities.length})`}
+      title={title}
       data={rows}
-      actions={actions || defaultActions}
+      actions={actions}
       subtitle={subtitle}
       emptyContent={emptyContent}
     />
@@ -257,3 +236,36 @@ export const CatalogTable = (props: CatalogTableProps) => {
 };
 
 CatalogTable.columns = columnFactories;
+CatalogTable.defaultColumnsFunc = defaultCatalogTableColumnsFunc;
+
+function toEntityRow(entity: Entity) {
+  const partOfSystemRelations = getEntityRelations(entity, RELATION_PART_OF, {
+    kind: 'system',
+  });
+  const ownedByRelations = getEntityRelations(entity, RELATION_OWNED_BY);
+
+  return {
+    entity,
+    resolved: {
+      // This name is here for backwards compatibility mostly; the
+      // presentation of refs in the table should in general be handled with
+      // EntityRefLink / EntityName components
+      name: humanizeEntityRef(entity, {
+        defaultKind: 'Component',
+      }),
+      entityRef: stringifyEntityRef(entity),
+      ownedByRelationsTitle: ownedByRelations
+        .map(r => humanizeEntityRef(r, { defaultKind: 'group' }))
+        .join(', '),
+      ownedByRelations,
+      partOfSystemRelationTitle: partOfSystemRelations
+        .map(r =>
+          humanizeEntityRef(r, {
+            defaultKind: 'system',
+          }),
+        )
+        .join(', '),
+      partOfSystemRelations,
+    },
+  };
+}

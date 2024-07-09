@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
+import { BackendFeatureCompat } from '../types';
 import {
   BackendModuleRegistrationPoints,
   BackendPluginRegistrationPoints,
-  BackendFeature,
   ExtensionPoint,
-  InternalBackendFeature,
   InternalBackendModuleRegistration,
   InternalBackendPluginRegistration,
 } from './types';
@@ -31,7 +30,7 @@ import {
  * @see {@link https://backstage.io/docs/backend-system/architecture/extension-points | The architecture of extension points}
  * @see {@link https://backstage.io/docs/backend-system/architecture/naming-patterns | Recommended naming patterns}
  */
-export interface ExtensionPointConfig {
+export interface CreateExtensionPointOptions {
   /**
    * The ID of this extension point.
    *
@@ -47,15 +46,19 @@ export interface ExtensionPointConfig {
  * @see {@link https://backstage.io/docs/backend-system/architecture/extension-points | The architecture of extension points}
  */
 export function createExtensionPoint<T>(
-  config: ExtensionPointConfig,
+  options: CreateExtensionPointOptions,
 ): ExtensionPoint<T> {
   return {
-    id: config.id,
+    id: options.id,
     get T(): T {
+      if (process.env.NODE_ENV === 'test') {
+        // Avoid throwing errors so tests asserting extensions' properties cannot be easily broken
+        return null as T;
+      }
       throw new Error(`tried to read ExtensionPoint.T of ${this}`);
     },
     toString() {
-      return `extensionPoint{${config.id}}`;
+      return `extensionPoint{${options.id}}`;
     },
     $$type: '@backstage/ExtensionPoint',
   };
@@ -68,7 +71,7 @@ export function createExtensionPoint<T>(
  * @see {@link https://backstage.io/docs/backend-system/architecture/plugins | The architecture of plugins}
  * @see {@link https://backstage.io/docs/backend-system/architecture/naming-patterns | Recommended naming patterns}
  */
-export interface BackendPluginConfig {
+export interface CreateBackendPluginOptions {
   /**
    * The ID of this plugin.
    *
@@ -85,65 +88,59 @@ export interface BackendPluginConfig {
  * @see {@link https://backstage.io/docs/backend-system/architecture/plugins | The architecture of plugins}
  * @see {@link https://backstage.io/docs/backend-system/architecture/naming-patterns | Recommended naming patterns}
  */
-export function createBackendPlugin<TOptions extends [options?: object] = []>(
-  config: BackendPluginConfig | ((...params: TOptions) => BackendPluginConfig),
-): (...params: TOptions) => BackendFeature {
-  const configCallback = typeof config === 'function' ? config : () => config;
-  return (...options: TOptions): InternalBackendFeature => {
-    const c = configCallback(...options);
+export function createBackendPlugin(
+  options: CreateBackendPluginOptions,
+): BackendFeatureCompat {
+  function getRegistrations() {
+    const extensionPoints: InternalBackendPluginRegistration['extensionPoints'] =
+      [];
+    let init: InternalBackendPluginRegistration['init'] | undefined = undefined;
 
-    let registrations: InternalBackendPluginRegistration[];
-
-    return {
-      $$type: '@backstage/BackendFeature',
-      version: 'v1',
-      getRegistrations() {
-        if (registrations) {
-          return registrations;
+    options.register({
+      registerExtensionPoint(ext, impl) {
+        if (init) {
+          throw new Error('registerExtensionPoint called after registerInit');
         }
-        const extensionPoints: InternalBackendPluginRegistration['extensionPoints'] =
-          [];
-        let init: InternalBackendPluginRegistration['init'] | undefined =
-          undefined;
-
-        c.register({
-          registerExtensionPoint(ext, impl) {
-            if (init) {
-              throw new Error(
-                'registerExtensionPoint called after registerInit',
-              );
-            }
-            extensionPoints.push([ext, impl]);
-          },
-          registerInit(regInit) {
-            if (init) {
-              throw new Error('registerInit must only be called once');
-            }
-            init = {
-              deps: regInit.deps,
-              func: regInit.init,
-            };
-          },
-        });
-
-        if (!init) {
-          throw new Error(
-            `registerInit was not called by register in ${c.pluginId}`,
-          );
-        }
-
-        registrations = [
-          {
-            type: 'plugin',
-            pluginId: c.pluginId,
-            extensionPoints,
-            init,
-          },
-        ];
-        return registrations;
+        extensionPoints.push([ext, impl]);
       },
-    };
-  };
+      registerInit(regInit) {
+        if (init) {
+          throw new Error('registerInit must only be called once');
+        }
+        init = {
+          deps: regInit.deps,
+          func: regInit.init,
+        };
+      },
+    });
+
+    if (!init) {
+      throw new Error(
+        `registerInit was not called by register in ${options.pluginId}`,
+      );
+    }
+
+    return [
+      {
+        type: 'plugin',
+        pluginId: options.pluginId,
+        extensionPoints,
+        init,
+      },
+    ];
+  }
+
+  function backendFeatureCompatWrapper() {
+    return backendFeatureCompatWrapper;
+  }
+
+  Object.assign(backendFeatureCompatWrapper, {
+    $$type: '@backstage/BackendFeature' as const,
+    version: 'v1',
+    getRegistrations,
+  });
+
+  return backendFeatureCompatWrapper as BackendFeatureCompat;
 }
 
 /**
@@ -153,15 +150,16 @@ export function createBackendPlugin<TOptions extends [options?: object] = []>(
  * @see {@link https://backstage.io/docs/backend-system/architecture/modules | The architecture of modules}
  * @see {@link https://backstage.io/docs/backend-system/architecture/naming-patterns | Recommended naming patterns}
  */
-export interface BackendModuleConfig {
+export interface CreateBackendModuleOptions {
   /**
-   * The ID of this plugin.
+   * Should exactly match the `id` of the plugin that the module extends.
    *
    * @see {@link https://backstage.io/docs/backend-system/architecture/naming-patterns | Recommended naming patterns}
    */
   pluginId: string;
+
   /**
-   * Should exactly match the `id` of the plugin that the module extends.
+   * The ID of this module, used to identify the module and ensure that it is not installed twice.
    */
   moduleId: string;
   register(reg: BackendModuleRegistrationPoints): void;
@@ -174,53 +172,58 @@ export interface BackendModuleConfig {
  * @see {@link https://backstage.io/docs/backend-system/architecture/modules | The architecture of modules}
  * @see {@link https://backstage.io/docs/backend-system/architecture/naming-patterns | Recommended naming patterns}
  */
-export function createBackendModule<TOptions extends [options?: object] = []>(
-  config: BackendModuleConfig | ((...params: TOptions) => BackendModuleConfig),
-): (...params: TOptions) => BackendFeature {
-  const configCallback = typeof config === 'function' ? config : () => config;
-  return (...options: TOptions): InternalBackendFeature => {
-    const c = configCallback(...options);
+export function createBackendModule(
+  options: CreateBackendModuleOptions,
+): BackendFeatureCompat {
+  function getRegistrations() {
+    const extensionPoints: InternalBackendPluginRegistration['extensionPoints'] =
+      [];
+    let init: InternalBackendModuleRegistration['init'] | undefined = undefined;
 
-    let registrations: InternalBackendModuleRegistration[];
-
-    return {
-      $$type: '@backstage/BackendFeature',
-      version: 'v1',
-      getRegistrations() {
-        if (registrations) {
-          return registrations;
+    options.register({
+      registerExtensionPoint(ext, impl) {
+        if (init) {
+          throw new Error('registerExtensionPoint called after registerInit');
         }
-        let init: InternalBackendModuleRegistration['init'] | undefined =
-          undefined;
-
-        c.register({
-          registerInit(regInit) {
-            if (init) {
-              throw new Error('registerInit must only be called once');
-            }
-            init = {
-              deps: regInit.deps,
-              func: regInit.init,
-            };
-          },
-        });
-
-        if (!init) {
-          throw new Error(
-            `registerInit was not called by register in ${c.moduleId} module for ${c.pluginId}`,
-          );
-        }
-
-        registrations = [
-          {
-            type: 'module',
-            pluginId: c.pluginId,
-            moduleId: c.moduleId,
-            init,
-          },
-        ];
-        return registrations;
+        extensionPoints.push([ext, impl]);
       },
-    };
-  };
+      registerInit(regInit) {
+        if (init) {
+          throw new Error('registerInit must only be called once');
+        }
+        init = {
+          deps: regInit.deps,
+          func: regInit.init,
+        };
+      },
+    });
+
+    if (!init) {
+      throw new Error(
+        `registerInit was not called by register in ${options.moduleId} module for ${options.pluginId}`,
+      );
+    }
+
+    return [
+      {
+        type: 'module',
+        pluginId: options.pluginId,
+        moduleId: options.moduleId,
+        extensionPoints,
+        init,
+      },
+    ];
+  }
+
+  function backendFeatureCompatWrapper() {
+    return backendFeatureCompatWrapper;
+  }
+
+  Object.assign(backendFeatureCompatWrapper, {
+    $$type: '@backstage/BackendFeature' as const,
+    version: 'v1',
+    getRegistrations,
+  });
+
+  return backendFeatureCompatWrapper as BackendFeatureCompat;
 }

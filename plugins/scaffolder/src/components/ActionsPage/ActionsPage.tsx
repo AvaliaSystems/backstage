@@ -14,44 +14,50 @@
  * limitations under the License.
  */
 import React, { Fragment, useState } from 'react';
-import useAsync from 'react-use/lib/useAsync';
+import useAsync from 'react-use/esm/useAsync';
 import {
   ActionExample,
   scaffolderApiRef,
 } from '@backstage/plugin-scaffolder-react';
-import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
-  Box,
-  Collapse,
-  Grid,
-  makeStyles,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Typography,
-} from '@material-ui/core';
+import Accordion from '@material-ui/core/Accordion';
+import AccordionDetails from '@material-ui/core/AccordionDetails';
+import AccordionSummary from '@material-ui/core/AccordionSummary';
+import Box from '@material-ui/core/Box';
+import Collapse from '@material-ui/core/Collapse';
+import Grid from '@material-ui/core/Grid';
+import Paper from '@material-ui/core/Paper';
+import Table from '@material-ui/core/Table';
+import TableBody from '@material-ui/core/TableBody';
+import TableCell from '@material-ui/core/TableCell';
+import TableContainer from '@material-ui/core/TableContainer';
+import TableHead from '@material-ui/core/TableHead';
+import TableRow from '@material-ui/core/TableRow';
+import Typography from '@material-ui/core/Typography';
+import { makeStyles } from '@material-ui/core/styles';
 import { JSONSchema7, JSONSchema7Definition } from 'json-schema';
 import classNames from 'classnames';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import ExpandLessIcon from '@material-ui/icons/ExpandLess';
 
-import { useApi } from '@backstage/core-plugin-api';
+import { useApi, useRouteRef } from '@backstage/core-plugin-api';
 import {
   CodeSnippet,
   Content,
-  ErrorPage,
+  EmptyState,
+  ErrorPanel,
   Header,
   MarkdownContent,
   Page,
   Progress,
 } from '@backstage/core-components';
 import Chip from '@material-ui/core/Chip';
+import { ScaffolderPageContextMenu } from '@backstage/plugin-scaffolder-react/alpha';
+import { useNavigate } from 'react-router-dom';
+import {
+  editRouteRef,
+  rootRouteRef,
+  scaffolderListTaskRouteRef,
+} from '../../routes';
 
 const useStyles = makeStyles(theme => ({
   code: {
@@ -107,8 +113,9 @@ const ExamplesTable = (props: { examples: ActionExample[] }) => {
   );
 };
 
-export const ActionsPage = () => {
+const ActionPageContent = () => {
   const api = useApi(scaffolderApiRef);
+
   const classes = useStyles();
   const { loading, value, error } = useAsync(async () => {
     return api.listActions();
@@ -121,10 +128,14 @@ export const ActionsPage = () => {
 
   if (error) {
     return (
-      <ErrorPage
-        statusMessage="Failed to load installed actions"
-        status="500"
-      />
+      <>
+        <ErrorPanel error={error} />
+        <EmptyState
+          missing="info"
+          title="No information to display"
+          description="There are no actions installed or there was an issue communicating with backend."
+        />
+      </>
     );
   }
 
@@ -265,7 +276,7 @@ export const ActionsPage = () => {
     );
   };
 
-  const items = value?.map(action => {
+  return value?.map(action => {
     if (action.id.startsWith('legacy:')) {
       return undefined;
     }
@@ -319,6 +330,19 @@ export const ActionsPage = () => {
       </Box>
     );
   });
+};
+export const ActionsPage = () => {
+  const navigate = useNavigate();
+  const editorLink = useRouteRef(editRouteRef);
+  const tasksLink = useRouteRef(scaffolderListTaskRouteRef);
+  const createLink = useRouteRef(rootRouteRef);
+
+  const scaffolderPageContextMenuProps = {
+    onEditorClicked: () => navigate(editorLink()),
+    onActionsClicked: undefined,
+    onTasksClicked: () => navigate(tasksLink()),
+    onCreateClicked: () => navigate(createLink()),
+  };
 
   return (
     <Page themeId="home">
@@ -326,8 +350,12 @@ export const ActionsPage = () => {
         pageTitleOverride="Create a New Component"
         title="Installed actions"
         subtitle="This is the collection of all installed actions"
-      />
-      <Content>{items}</Content>
+      >
+        <ScaffolderPageContextMenu {...scaffolderPageContextMenuProps} />
+      </Header>
+      <Content>
+        <ActionPageContent />
+      </Content>
     </Page>
   );
 };

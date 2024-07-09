@@ -1,5 +1,245 @@
 # @backstage/plugin-scaffolder-common
 
+## 1.5.3
+
+### Patch Changes
+
+- d44a20a: Added additional plugin metadata to `package.json`.
+- bcec60f: added the following new permissions to the scaffolder backend endpoints:
+
+  - `scaffolder.task.create`
+  - `scaffolder.task.cancel`
+  - `scaffolder.task.read`
+
+- Updated dependencies
+  - @backstage/plugin-permission-common@0.7.14
+  - @backstage/catalog-model@1.5.0
+  - @backstage/types@1.1.1
+
+## 1.5.3-next.1
+
+### Patch Changes
+
+- d44a20a: Added additional plugin metadata to `package.json`.
+- Updated dependencies
+  - @backstage/plugin-permission-common@0.7.14-next.0
+  - @backstage/catalog-model@1.5.0
+  - @backstage/types@1.1.1
+
+## 1.5.3-next.0
+
+### Patch Changes
+
+- bcec60f: added the following new permissions to the scaffolder backend endpoints:
+
+  - `scaffolder.task.create`
+  - `scaffolder.task.cancel`
+  - `scaffolder.task.read`
+
+## 1.5.2
+
+### Patch Changes
+
+- 9156654: Capturing more event clicks for scaffolder
+- Updated dependencies
+  - @backstage/catalog-model@1.5.0
+
+## 1.5.2-next.1
+
+### Patch Changes
+
+- 9156654: Capturing more event clicks for scaffolder
+
+## 1.5.2-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.5.0-next.0
+  - @backstage/types@1.1.1
+  - @backstage/plugin-permission-common@0.7.13
+
+## 1.5.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-permission-common@0.7.13
+  - @backstage/catalog-model@1.4.5
+  - @backstage/types@1.1.1
+
+## 1.5.1-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-permission-common@0.7.13-next.1
+  - @backstage/catalog-model@1.4.5-next.0
+  - @backstage/types@1.1.1
+
+## 1.5.1-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-permission-common@0.7.13-next.0
+  - @backstage/catalog-model@1.4.5-next.0
+  - @backstage/types@1.1.1
+
+## 1.5.0
+
+### Minor Changes
+
+- 11b9a08: Introduced the first version of recoverable tasks.
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.4.4
+  - @backstage/types@1.1.1
+  - @backstage/plugin-permission-common@0.7.12
+
+## 1.5.0-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.4.4-next.0
+  - @backstage/types@1.1.1
+  - @backstage/plugin-permission-common@0.7.12
+
+## 1.5.0-next.0
+
+### Minor Changes
+
+- 11b9a08: Introduced the first version of recoverable tasks.
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.4.3
+  - @backstage/types@1.1.1
+  - @backstage/plugin-permission-common@0.7.12
+
+## 1.4.5
+
+### Patch Changes
+
+- 178b8d8: Updated Template.v1beta3.schema.json, added a missing "presentation" field
+- Updated dependencies
+  - @backstage/plugin-permission-common@0.7.12
+  - @backstage/catalog-model@1.4.3
+  - @backstage/types@1.1.1
+
+## 1.4.4
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/plugin-permission-common@0.7.11
+  - @backstage/catalog-model@1.4.3
+  - @backstage/types@1.1.1
+
+## 1.4.3
+
+### Patch Changes
+
+- 2e0cef42ab: Add missing required property `type` in `Template.v1beta3.schema.json` schema
+- 76d07da66a: Make it possible to define control buttons text (Back, Create, Review) per template
+- Updated dependencies
+  - @backstage/plugin-permission-common@0.7.10
+  - @backstage/catalog-model@1.4.3
+  - @backstage/types@1.1.1
+
+## 1.4.3-next.1
+
+### Patch Changes
+
+- 76d07da66a: Make it possible to define control buttons text (Back, Create, Review) per template
+- Updated dependencies
+  - @backstage/catalog-model@1.4.3
+  - @backstage/types@1.1.1
+  - @backstage/plugin-permission-common@0.7.9
+
+## 1.4.3-next.0
+
+### Patch Changes
+
+- 2e0cef42ab: Add missing required property `type` in `Template.v1beta3.schema.json` schema
+- Updated dependencies
+  - @backstage/catalog-model@1.4.3
+  - @backstage/types@1.1.1
+  - @backstage/plugin-permission-common@0.7.9
+
+## 1.4.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.4.3
+  - @backstage/types@1.1.1
+  - @backstage/plugin-permission-common@0.7.9
+
+## 1.4.2-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.4.3-next.0
+  - @backstage/types@1.1.1
+  - @backstage/plugin-permission-common@0.7.9-next.0
+
+## 1.4.1
+
+### Patch Changes
+
+- 406b786a2a2c: Mark package as being free of side effects, allowing more optimized Webpack builds.
+- Updated dependencies
+  - @backstage/catalog-model@1.4.2
+  - @backstage/plugin-permission-common@0.7.8
+  - @backstage/types@1.1.1
+
+## 1.4.1-next.2
+
+### Patch Changes
+
+- 406b786a2a2c: Mark package as being free of side effects, allowing more optimized Webpack builds.
+- Updated dependencies
+  - @backstage/catalog-model@1.4.2-next.2
+  - @backstage/plugin-permission-common@0.7.8-next.2
+  - @backstage/types@1.1.1-next.0
+
+## 1.4.1-next.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.4.2-next.1
+  - @backstage/plugin-permission-common@0.7.8-next.1
+  - @backstage/types@1.1.0
+
+## 1.4.1-next.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.4.2-next.0
+  - @backstage/plugin-permission-common@0.7.8-next.0
+  - @backstage/types@1.1.0
+
+## 1.4.0
+
+### Minor Changes
+
+- e514aac3eac0: Introduce `each` property on action steps, allowing them to be ran repeatedly.
+
+### Patch Changes
+
+- Updated dependencies
+  - @backstage/catalog-model@1.4.1
+  - @backstage/types@1.1.0
+  - @backstage/plugin-permission-common@0.7.7
+
 ## 1.3.2
 
 ### Patch Changes
@@ -445,8 +685,7 @@
 
 - e72d371296: Added `TemplateEntityV1beta2` which was moved here from
   `@backstage/plugin-scaffolder-common`. It has also been marked as deprecated in
-  the process - please consider [migrating to `v1beta3`
-  templates](https://backstage.io/docs/features/software-templates/migrating-from-v1beta2-to-v1beta3).
+  the process - please consider [migrating to `v1beta3` templates](https://backstage.io/docs/features/software-templates/migrating-from-v1beta2-to-v1beta3).
 - c77c5c7eb6: Added `backstage.role` to `package.json`
 - Updated dependencies
   - @backstage/catalog-model@0.10.0

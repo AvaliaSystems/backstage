@@ -45,6 +45,22 @@ export interface BackstagePackageJson {
 
   backstage?: {
     role?: PackageRole;
+    moved?: string;
+
+    /**
+     * The ID of the plugin if this is a plugin package. Must always be set for plugin and module packages, and may be set for library packages. A `null` value means that the package is explicitly not a plugin package.
+     */
+    pluginId?: string | null;
+
+    /**
+     * The parent plugin package of a module. Must always and only be set for module packages.
+     */
+    pluginPackage?: string;
+
+    /**
+     * All packages that are part of the plugin. Must always and only be set for plugin packages and plugin library packages.
+     */
+    pluginPackages?: string[];
   };
 
   exports?: JsonValue;
@@ -56,9 +72,15 @@ export interface BackstagePackageJson {
     access?: 'public' | 'restricted';
     directory?: string;
     registry?: string;
-    alphaTypes?: string;
-    betaTypes?: string;
   };
+
+  repository?:
+    | string
+    | {
+        type: string;
+        url: string;
+        directory: string;
+      };
 
   dependencies?: {
     [key: string]: string;
@@ -131,6 +153,7 @@ export class PackageGraph extends Map<string, PackageGraphNode> {
    */
   static async listTargetPackages(): Promise<BackstagePackage[]> {
     const { packages } = await getPackages(paths.targetDir);
+
     return packages as BackstagePackage[];
   }
 

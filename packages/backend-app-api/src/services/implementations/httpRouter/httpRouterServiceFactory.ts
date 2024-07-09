@@ -14,47 +14,26 @@
  * limitations under the License.
  */
 
+// eslint-disable-next-line @backstage/no-relative-monorepo-imports
 import {
-  coreServices,
-  createServiceFactory,
-} from '@backstage/backend-plugin-api';
-import { Handler } from 'express';
-import PromiseRouter from 'express-promise-router';
-import { createLifecycleMiddleware } from './createLifecycleMiddleware';
+  httpRouterServiceFactory as _httpRouterServiceFactory,
+  type HttpRouterFactoryOptions as _HttpRouterFactoryOptions,
+} from '../../../../../backend-defaults/src/entrypoints/httpRouter/httpRouterServiceFactory';
 
 /**
  * @public
+ * @deprecated Please import from `@backstage/backend-defaults/httpRouter` instead.
  */
-export interface HttpRouterFactoryOptions {
-  /**
-   * A callback used to generate the path for each plugin, defaults to `/api/{pluginId}`.
-   */
-  getPath?(pluginId: string): string;
-}
+export type HttpRouterFactoryOptions = _HttpRouterFactoryOptions;
 
-/** @public */
-export const httpRouterServiceFactory = createServiceFactory(
-  (options?: HttpRouterFactoryOptions) => ({
-    service: coreServices.httpRouter,
-    deps: {
-      plugin: coreServices.pluginMetadata,
-      lifecycle: coreServices.lifecycle,
-      rootHttpRouter: coreServices.rootHttpRouter,
-    },
-    async factory({ plugin, rootHttpRouter, lifecycle }) {
-      const getPath = options?.getPath ?? (id => `/api/${id}`);
-      const path = getPath(plugin.getId());
-
-      const router = PromiseRouter();
-      rootHttpRouter.use(path, router);
-
-      router.use(createLifecycleMiddleware({ lifecycle }));
-
-      return {
-        use(handler: Handler) {
-          router.use(handler);
-        },
-      };
-    },
-  }),
-);
+/**
+ * HTTP route registration for plugins.
+ *
+ * See {@link @backstage/code-plugin-api#HttpRouterService}
+ * and {@link https://backstage.io/docs/backend-system/core-services/http-router | the service docs}
+ * for more information.
+ *
+ * @public
+ * @deprecated Please import from `@backstage/backend-defaults/httpRouter` instead.
+ */
+export const httpRouterServiceFactory = _httpRouterServiceFactory;

@@ -14,11 +14,17 @@
  * limitations under the License.
  */
 
+import { bootstrap } from 'global-agent';
+
+if (shouldUseGlobalAgent()) {
+  bootstrap();
+}
+
 import fs from 'fs-extra';
 import chalk from 'chalk';
 import ora from 'ora';
 import semver from 'semver';
-import minimatch from 'minimatch';
+import { minimatch } from 'minimatch';
 import { OptionValues } from 'commander';
 import { isError, NotFoundError } from '@backstage/errors';
 import { resolve as resolvePath } from 'path';
@@ -38,8 +44,21 @@ import {
   getManifestByVersion,
   ReleaseManifest,
 } from '@backstage/release-manifests';
-import 'global-agent/bootstrap';
 import { PackageGraph } from '@backstage/cli-node';
+import { migrateMovedPackages } from './migrate';
+
+function shouldUseGlobalAgent(): boolean {
+  // see https://www.npmjs.com/package/global-agent
+  const namespace =
+    process.env.GLOBAL_AGENT_ENVIRONMENT_VARIABLE_NAMESPACE ?? 'GLOBAL_AGENT_';
+  if (
+    process.env[`${namespace}HTTP_PROXY`] ||
+    process.env[`${namespace}HTTPS_PROXY`]
+  ) {
+    return true;
+  }
+  return false;
+}
 
 const DEP_TYPES = [
   'dependencies',
@@ -264,6 +283,18 @@ export default async (opts: OptionValues) => {
       console.log(chalk.yellow(`Skipping yarn install`));
     }
 
+    if (!opts.skipMigrate) {
+      console.log();
+
+      const changed = await migrateMovedPackages({
+        pattern: opts.pattern,
+      });
+
+      if (changed && !opts.skipInstall) {
+        await runYarnInstall();
+      }
+    }
+
     if (breakingUpdates.size > 0) {
       console.log();
       console.log(
@@ -314,19 +345,26 @@ export default async (opts: OptionValues) => {
     ),
   });
 
-  if (result.newVersions.length > 0) {
-    throw new Error('Duplicate versions present after package bump');
-  }
-
   const forbiddenNewRanges = result.newRanges.filter(({ name }) =>
     forbiddenDuplicatesFilter(name),
   );
   if (forbiddenNewRanges.length > 0) {
-    throw new Error(
-      `Version bump failed for ${forbiddenNewRanges
-        .map(i => i.name)
-        .join(', ')}`,
+    console.log(chalk.yellow('  ⚠️ Warning! ⚠️'));
+    console.log();
+    console.log(
+      chalk.yellow(
+        '  The below package(s) have incompatible duplicate installations, likely due to a bad dependency in a plugin.',
+      ),
     );
+    console.log(
+      chalk.yellow(
+        '  You can investigate this by running `yarn why <package-name>`, and report the issue to the plugin maintainers.',
+      ),
+    );
+    console.log();
+    for (const { name } of forbiddenNewRanges) {
+      console.log(chalk.yellow(`    ${name}`));
+    }
   }
 };
 
@@ -461,7 +499,7 @@ export async function bumpBackstageJsonVersion(version: string) {
   );
 }
 
-async function runYarnInstall() {
+export async function runYarnInstall() {
   const spinner = ora({
     prefixText: `Running ${chalk.blue('yarn install')} to install new versions`,
     spinner: 'arc',

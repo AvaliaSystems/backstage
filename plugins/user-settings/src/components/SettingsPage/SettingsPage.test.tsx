@@ -15,13 +15,14 @@
  */
 
 import React from 'react';
-import { renderWithEffects, wrapInTestApp } from '@backstage/test-utils';
+import { renderInTestApp } from '@backstage/test-utils';
 import { SettingsPage } from './SettingsPage';
 import { UserSettingsTab } from '../UserSettingsTab';
 import { useOutlet } from 'react-router-dom';
 import { SettingsLayout } from '../SettingsLayout';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { entityRouteRef } from '@backstage/plugin-catalog-react';
 
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
@@ -34,11 +35,11 @@ describe('<SettingsPage />', () => {
   });
 
   it('should render the default settings page with 3 tabs', async () => {
-    const { container } = await renderWithEffects(
-      wrapInTestApp(<SettingsPage />),
-    );
+    const { container } = await renderInTestApp(<SettingsPage />, {
+      mountedRoutes: { '/catalog/:namespace/:kind/:name': entityRouteRef },
+    });
 
-    const tabs = container.querySelectorAll('[class*=MuiTabs-root] button');
+    const tabs = container.querySelectorAll('[class*=MuiTabs-root] a');
     expect(tabs).toHaveLength(3);
   });
 
@@ -49,11 +50,11 @@ describe('<SettingsPage />', () => {
       </UserSettingsTab>
     );
     (useOutlet as jest.Mock).mockReturnValue(advancedTabRoute);
-    const { container } = await renderWithEffects(
-      wrapInTestApp(<SettingsPage />),
-    );
+    const { container } = await renderInTestApp(<SettingsPage />, {
+      mountedRoutes: { '/catalog/:namespace/:kind/:name': entityRouteRef },
+    });
 
-    const tabs = container.querySelectorAll('[class*=MuiTabs-root] button');
+    const tabs = container.querySelectorAll('[class*=MuiTabs-root] a');
     expect(tabs).toHaveLength(4);
     expect(tabs[3].textContent).toEqual('Advanced');
   });
@@ -65,11 +66,11 @@ describe('<SettingsPage />', () => {
       </SettingsLayout.Route>
     );
     (useOutlet as jest.Mock).mockReturnValue(advancedTabRoute);
-    const { container } = await renderWithEffects(
-      wrapInTestApp(<SettingsPage />),
-    );
+    const { container } = await renderInTestApp(<SettingsPage />, {
+      mountedRoutes: { '/catalog/:namespace/:kind/:name': entityRouteRef },
+    });
 
-    const tabs = container.querySelectorAll('[class*=MuiTabs-root] button');
+    const tabs = container.querySelectorAll('[class*=MuiTabs-root] a');
     expect(tabs).toHaveLength(4);
     expect(tabs[3].textContent).toEqual('Advanced');
     const user = userEvent.setup();
@@ -90,11 +91,11 @@ describe('<SettingsPage />', () => {
       </SettingsLayout>
     );
     (useOutlet as jest.Mock).mockReturnValue(customLayout);
-    const { container } = await renderWithEffects(
-      wrapInTestApp(<SettingsPage />),
-    );
+    const { container } = await renderInTestApp(<SettingsPage />, {
+      mountedRoutes: { '/catalog/:namespace/:kind/:name': entityRouteRef },
+    });
 
-    const tabs = container.querySelectorAll('[class*=MuiTabs-root] button');
+    const tabs = container.querySelectorAll('[class*=MuiTabs-root] a');
     expect(tabs).toHaveLength(2);
     expect(tabs[0].textContent).toEqual('General');
     expect(tabs[1].textContent).toEqual('Advanced');

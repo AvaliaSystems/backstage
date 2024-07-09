@@ -19,23 +19,23 @@ import {
   catalogApiRef,
   humanizeEntityRef,
 } from '@backstage/plugin-catalog-react';
-import {
-  FormControl,
-  IconButton,
-  InputLabel,
-  LinearProgress,
-  makeStyles,
-  MenuItem,
-  Select,
-} from '@material-ui/core';
+import FormControl from '@material-ui/core/FormControl';
+import IconButton from '@material-ui/core/IconButton';
+import InputLabel from '@material-ui/core/InputLabel';
+import LinearProgress from '@material-ui/core/LinearProgress';
+import MenuItem from '@material-ui/core/MenuItem';
+import Select from '@material-ui/core/Select';
+import { makeStyles } from '@material-ui/core/styles';
 import CloseIcon from '@material-ui/icons/Close';
 import React, { useCallback, useState } from 'react';
-import useAsync from 'react-use/lib/useAsync';
+import useAsync from 'react-use/esm/useAsync';
 import yaml from 'yaml';
-import { type LayoutOptions } from '@backstage/plugin-scaffolder-react';
-import { NextFieldExtensionOptions } from '@backstage/plugin-scaffolder-react/alpha';
+import {
+  LayoutOptions,
+  FieldExtensionOptions,
+} from '@backstage/plugin-scaffolder-react';
 import { TemplateEditorForm } from './TemplateEditorForm';
-import { TemplateEditorTextArea } from '../../components/TemplateEditorPage/TemplateEditorTextArea';
+import { TemplateEditorTextArea } from './TemplateEditorTextArea';
 
 const EXAMPLE_TEMPLATE_PARAMS_YAML = `# Edit the template parameters below to see how they will render in the scaffolder form UI
 parameters:
@@ -114,7 +114,7 @@ export const TemplateFormPreviewer = ({
   layouts = [],
 }: {
   defaultPreviewTemplate?: string;
-  customFieldExtensions?: NextFieldExtensionOptions<any, any>[];
+  customFieldExtensions?: FieldExtensionOptions<any, any>[];
   onClose?: () => void;
   layouts?: LayoutOptions[];
 }) => {
@@ -161,7 +161,8 @@ export const TemplateFormPreviewer = ({
   );
 
   const handleSelectChange = useCallback(
-    selected => {
+    // TODO(Rugvip): Afaik this should be Entity, but didn't want to make runtime changes while fixing types
+    (selected: any) => {
       setSelectedTemplate(selected);
       setTemplateYaml(yaml.stringify(selected.spec));
     },

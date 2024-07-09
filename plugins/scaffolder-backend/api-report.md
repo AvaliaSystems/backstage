@@ -6,44 +6,65 @@
 /// <reference types="node" />
 
 import { ActionContext as ActionContext_2 } from '@backstage/plugin-scaffolder-node';
+import { AuthService } from '@backstage/backend-plugin-api';
+import { AutocompleteHandler } from '@backstage/plugin-scaffolder-node/alpha';
+import * as azure from '@backstage/plugin-scaffolder-backend-module-azure';
+import { BackstageCredentials } from '@backstage/backend-plugin-api';
+import * as bitbucket from '@backstage/plugin-scaffolder-backend-module-bitbucket';
+import * as bitbucketCloud from '@backstage/plugin-scaffolder-backend-module-bitbucket-cloud';
+import * as bitbucketServer from '@backstage/plugin-scaffolder-backend-module-bitbucket-server';
 import { CatalogApi } from '@backstage/catalog-client';
-import { CatalogProcessor } from '@backstage/plugin-catalog-node';
-import { CatalogProcessorEmit } from '@backstage/plugin-catalog-node';
 import { Config } from '@backstage/config';
-import { createPullRequest } from 'octokit-plugin-create-pull-request';
+import { DiscoveryService } from '@backstage/backend-plugin-api';
 import { Duration } from 'luxon';
-import { Entity } from '@backstage/catalog-model';
+import { executeShellCommand as executeShellCommand_2 } from '@backstage/plugin-scaffolder-node';
+import { ExecuteShellCommandOptions } from '@backstage/plugin-scaffolder-node';
 import express from 'express';
-import { GithubCredentialsProvider } from '@backstage/integration';
+import { fetchContents as fetchContents_2 } from '@backstage/plugin-scaffolder-node';
+import * as gerrit from '@backstage/plugin-scaffolder-backend-module-gerrit';
+import * as github from '@backstage/plugin-scaffolder-backend-module-github';
+import * as gitlab from '@backstage/plugin-scaffolder-backend-module-gitlab';
+import { HttpAuthService } from '@backstage/backend-plugin-api';
 import { HumanDuration } from '@backstage/types';
 import { IdentityApi } from '@backstage/plugin-auth-node';
 import { JsonObject } from '@backstage/types';
 import { JsonValue } from '@backstage/types';
 import { Knex } from 'knex';
-import { LocationSpec } from '@backstage/plugin-catalog-common';
+import { LifecycleService } from '@backstage/backend-plugin-api';
 import { Logger } from 'winston';
-import { Observable } from '@backstage/types';
-import { Octokit } from 'octokit';
 import { PermissionEvaluator } from '@backstage/plugin-permission-common';
 import { PermissionRule } from '@backstage/plugin-permission-node';
 import { PermissionRuleParams } from '@backstage/plugin-permission-common';
+import { PermissionsService } from '@backstage/backend-plugin-api';
 import { PluginDatabaseManager } from '@backstage/backend-common';
 import { PluginTaskScheduler } from '@backstage/backend-tasks';
 import { RESOURCE_TYPE_SCAFFOLDER_ACTION } from '@backstage/plugin-scaffolder-common/alpha';
 import { RESOURCE_TYPE_SCAFFOLDER_TEMPLATE } from '@backstage/plugin-scaffolder-common/alpha';
+import { ScaffolderEntitiesProcessor as ScaffolderEntitiesProcessor_2 } from '@backstage/plugin-catalog-backend-module-scaffolder-entity-model';
 import { Schema } from 'jsonschema';
 import { ScmIntegrationRegistry } from '@backstage/integration';
 import { ScmIntegrations } from '@backstage/integration';
-import { SpawnOptionsWithoutStdio } from 'child_process';
+import { SerializedTask as SerializedTask_2 } from '@backstage/plugin-scaffolder-node';
+import { SerializedTaskEvent as SerializedTaskEvent_2 } from '@backstage/plugin-scaffolder-node';
+import { TaskBroker as TaskBroker_2 } from '@backstage/plugin-scaffolder-node';
+import { TaskBrokerDispatchOptions as TaskBrokerDispatchOptions_2 } from '@backstage/plugin-scaffolder-node';
+import { TaskBrokerDispatchResult as TaskBrokerDispatchResult_2 } from '@backstage/plugin-scaffolder-node';
+import { TaskCompletionState as TaskCompletionState_2 } from '@backstage/plugin-scaffolder-node';
+import { TaskContext as TaskContext_2 } from '@backstage/plugin-scaffolder-node';
+import { TaskEventType as TaskEventType_2 } from '@backstage/plugin-scaffolder-node';
+import { TaskRecovery } from '@backstage/plugin-scaffolder-common';
 import { TaskSecrets as TaskSecrets_2 } from '@backstage/plugin-scaffolder-node';
 import { TaskSpec } from '@backstage/plugin-scaffolder-common';
 import { TaskSpecV1beta3 } from '@backstage/plugin-scaffolder-common';
+import { TaskStatus as TaskStatus_2 } from '@backstage/plugin-scaffolder-node';
 import { TemplateAction as TemplateAction_2 } from '@backstage/plugin-scaffolder-node';
 import { TemplateActionOptions } from '@backstage/plugin-scaffolder-node';
 import { TemplateEntityStepV1beta3 } from '@backstage/plugin-scaffolder-common';
+import { TemplateFilter as TemplateFilter_2 } from '@backstage/plugin-scaffolder-node';
+import { TemplateGlobal as TemplateGlobal_2 } from '@backstage/plugin-scaffolder-node';
 import { TemplateParametersV1beta3 } from '@backstage/plugin-scaffolder-common';
 import { UrlReader } from '@backstage/backend-common';
-import { Writable } from 'stream';
+import { WorkspaceProvider } from '@backstage/plugin-scaffolder-node/alpha';
 import { ZodType } from 'zod';
 import { ZodTypeDef } from 'zod';
 
@@ -67,9 +88,10 @@ export const createBuiltinActions: (
 
 // @public
 export interface CreateBuiltInActionsOptions {
-  additionalTemplateFilters?: Record<string, TemplateFilter>;
+  additionalTemplateFilters?: Record<string, TemplateFilter_2>;
   // (undocumented)
-  additionalTemplateGlobals?: Record<string, TemplateGlobal>;
+  additionalTemplateGlobals?: Record<string, TemplateGlobal_2>;
+  auth?: AuthService;
   catalogClient: CatalogApi;
   config: Config;
   integrations: ScmIntegrations;
@@ -80,6 +102,7 @@ export interface CreateBuiltInActionsOptions {
 export function createCatalogRegisterAction(options: {
   catalogClient: CatalogApi;
   integrations: ScmIntegrations;
+  auth?: AuthService;
 }): TemplateAction_2<
   | {
       catalogInfoUrl: string;
@@ -114,17 +137,18 @@ export function createDebugLogAction(): TemplateAction_2<
 // @public
 export function createFetchCatalogEntityAction(options: {
   catalogClient: CatalogApi;
+  auth?: AuthService;
 }): TemplateAction_2<
   {
-    entityRef?: string | undefined;
-    entityRefs?: string[] | undefined;
     optional?: boolean | undefined;
     defaultKind?: string | undefined;
     defaultNamespace?: string | undefined;
+    entityRef?: string | undefined;
+    entityRefs?: string[] | undefined;
   },
   {
-    entity?: any;
     entities?: any[] | undefined;
+    entity?: any;
   }
 >;
 
@@ -136,6 +160,7 @@ export function createFetchPlainAction(options: {
   {
     url: string;
     targetPath?: string | undefined;
+    token?: string | undefined;
   },
   JsonObject
 >;
@@ -148,6 +173,7 @@ export function createFetchPlainFileAction(options: {
   {
     url: string;
     targetPath: string;
+    token?: string | undefined;
   },
   JsonObject
 >;
@@ -156,8 +182,8 @@ export function createFetchPlainFileAction(options: {
 export function createFetchTemplateAction(options: {
   reader: UrlReader;
   integrations: ScmIntegrations;
-  additionalTemplateFilters?: Record<string, TemplateFilter>;
-  additionalTemplateGlobals?: Record<string, TemplateGlobal>;
+  additionalTemplateFilters?: Record<string, TemplateFilter_2>;
+  additionalTemplateGlobals?: Record<string, TemplateGlobal_2>;
 }): TemplateAction_2<
   {
     url: string;
@@ -168,6 +194,9 @@ export function createFetchTemplateAction(options: {
     copyWithoutTemplating?: string[] | undefined;
     cookiecutterCompat?: boolean | undefined;
     replace?: boolean | undefined;
+    trimBlocks?: boolean | undefined;
+    lstripBlocks?: boolean | undefined;
+    token?: string | undefined;
   },
   JsonObject
 >;
@@ -192,454 +221,58 @@ export const createFilesystemRenameAction: () => TemplateAction_2<
   JsonObject
 >;
 
-// @public
-export function createGithubActionsDispatchAction(options: {
-  integrations: ScmIntegrations;
-  githubCredentialsProvider?: GithubCredentialsProvider;
-}): TemplateAction_2<
-  {
-    repoUrl: string;
-    workflowId: string;
-    branchOrTagName: string;
-    workflowInputs?:
-      | {
-          [key: string]: string;
-        }
-      | undefined;
-    token?: string | undefined;
-  },
-  JsonObject
->;
+// @public @deprecated (undocumented)
+export const createGithubActionsDispatchAction: typeof github.createGithubActionsDispatchAction;
 
-// @public
-export function createGithubDeployKeyAction(options: {
-  integrations: ScmIntegrationRegistry;
-}): TemplateAction_2<
-  {
-    repoUrl: string;
-    publicKey: string;
-    privateKey: string;
-    deployKeyName: string;
-    privateKeySecretName?: string | undefined;
-    token?: string | undefined;
-  },
-  JsonObject
->;
+// @public @deprecated (undocumented)
+export const createGithubDeployKeyAction: typeof github.createGithubDeployKeyAction;
 
-// @public
-export function createGithubEnvironmentAction(options: {
-  integrations: ScmIntegrationRegistry;
-}): TemplateAction_2<
-  {
-    repoUrl: string;
-    name: string;
-    deploymentBranchPolicy?:
-      | {
-          protected_branches: boolean;
-          custom_branch_policies: boolean;
-        }
-      | undefined;
-    customBranchPolicyNames?: string[] | undefined;
-    environmentVariables?:
-      | {
-          [key: string]: string;
-        }
-      | undefined;
-    secrets?:
-      | {
-          [key: string]: string;
-        }
-      | undefined;
-    token?: string | undefined;
-  },
-  JsonObject
->;
+// @public @deprecated (undocumented)
+export const createGithubEnvironmentAction: typeof github.createGithubEnvironmentAction;
 
-// @public
-export function createGithubIssuesLabelAction(options: {
-  integrations: ScmIntegrationRegistry;
-  githubCredentialsProvider?: GithubCredentialsProvider;
-}): TemplateAction_2<
-  {
-    repoUrl: string;
-    number: number;
-    labels: string[];
-    token?: string | undefined;
-  },
-  JsonObject
->;
+// @public @deprecated (undocumented)
+export const createGithubIssuesLabelAction: typeof github.createGithubIssuesLabelAction;
 
-// @public
-export interface CreateGithubPullRequestActionOptions {
-  clientFactory?: (
-    input: CreateGithubPullRequestClientFactoryInput,
-  ) => Promise<OctokitWithPullRequestPluginClient>;
-  githubCredentialsProvider?: GithubCredentialsProvider;
-  integrations: ScmIntegrationRegistry;
-}
+// @public @deprecated (undocumented)
+export type CreateGithubPullRequestActionOptions =
+  github.CreateGithubPullRequestActionOptions;
 
-// @public
-export type CreateGithubPullRequestClientFactoryInput = {
-  integrations: ScmIntegrationRegistry;
-  githubCredentialsProvider?: GithubCredentialsProvider;
-  host: string;
-  owner: string;
-  repo: string;
-  token?: string;
-};
+// @public @deprecated (undocumented)
+export const createGithubRepoCreateAction: typeof github.createGithubRepoCreateAction;
 
-// @public
-export function createGithubRepoCreateAction(options: {
-  integrations: ScmIntegrationRegistry;
-  githubCredentialsProvider?: GithubCredentialsProvider;
-}): TemplateAction_2<
-  {
-    repoUrl: string;
-    description?: string | undefined;
-    homepage?: string | undefined;
-    access?: string | undefined;
-    deleteBranchOnMerge?: boolean | undefined;
-    gitAuthorName?: string | undefined;
-    gitAuthorEmail?: string | undefined;
-    allowRebaseMerge?: boolean | undefined;
-    allowSquashMerge?: boolean | undefined;
-    squashMergeCommitTitle?: 'PR_TITLE' | 'COMMIT_OR_PR_TITLE' | undefined;
-    squashMergeCommitMessage?:
-      | 'PR_BODY'
-      | 'COMMIT_MESSAGES'
-      | 'BLANK'
-      | undefined;
-    allowMergeCommit?: boolean | undefined;
-    allowAutoMerge?: boolean | undefined;
-    requireCodeOwnerReviews?: boolean | undefined;
-    bypassPullRequestAllowances?:
-      | {
-          users?: string[] | undefined;
-          teams?: string[] | undefined;
-          apps?: string[] | undefined;
-        }
-      | undefined;
-    requiredApprovingReviewCount?: number | undefined;
-    restrictions?:
-      | {
-          users: string[];
-          teams: string[];
-          apps?: string[] | undefined;
-        }
-      | undefined;
-    requiredStatusCheckContexts?: string[] | undefined;
-    requireBranchesToBeUpToDate?: boolean | undefined;
-    requiredConversationResolution?: boolean | undefined;
-    repoVisibility?: 'internal' | 'private' | 'public' | undefined;
-    collaborators?:
-      | (
-          | {
-              user: string;
-              access: string;
-            }
-          | {
-              team: string;
-              access: string;
-            }
-          | {
-              username: string;
-              access: 'pull' | 'push' | 'admin' | 'maintain' | 'triage';
-            }
-        )[]
-      | undefined;
-    hasProjects?: boolean | undefined;
-    hasWiki?: boolean | undefined;
-    hasIssues?: boolean | undefined;
-    token?: string | undefined;
-    topics?: string[] | undefined;
-    repoVariables?:
-      | {
-          [key: string]: string;
-        }
-      | undefined;
-    secrets?:
-      | {
-          [key: string]: string;
-        }
-      | undefined;
-    requireCommitSigning?: boolean | undefined;
-  },
-  JsonObject
->;
+// @public @deprecated (undocumented)
+export const createGithubRepoPushAction: typeof github.createGithubRepoPushAction;
 
-// @public
-export function createGithubRepoPushAction(options: {
-  integrations: ScmIntegrationRegistry;
-  config: Config;
-  githubCredentialsProvider?: GithubCredentialsProvider;
-}): TemplateAction_2<
-  {
-    repoUrl: string;
-    description?: string | undefined;
-    defaultBranch?: string | undefined;
-    protectDefaultBranch?: boolean | undefined;
-    protectEnforceAdmins?: boolean | undefined;
-    gitCommitMessage?: string | undefined;
-    gitAuthorName?: string | undefined;
-    gitAuthorEmail?: string | undefined;
-    requireCodeOwnerReviews?: boolean | undefined;
-    dismissStaleReviews?: boolean | undefined;
-    bypassPullRequestAllowances?:
-      | {
-          users?: string[];
-          teams?: string[];
-          apps?: string[];
-        }
-      | undefined;
-    requiredApprovingReviewCount?: number | undefined;
-    restrictions?:
-      | {
-          users: string[];
-          teams: string[];
-          apps?: string[];
-        }
-      | undefined;
-    requiredStatusCheckContexts?: string[] | undefined;
-    requireBranchesToBeUpToDate?: boolean | undefined;
-    requiredConversationResolution?: boolean | undefined;
-    sourcePath?: string | undefined;
-    token?: string | undefined;
-    requiredCommitSigning?: boolean | undefined;
-  },
-  JsonObject
->;
+// @public @deprecated (undocumented)
+export const createGithubWebhookAction: typeof github.createGithubWebhookAction;
 
-// @public
-export function createGithubWebhookAction(options: {
-  integrations: ScmIntegrationRegistry;
-  defaultWebhookSecret?: string;
-  githubCredentialsProvider?: GithubCredentialsProvider;
-}): TemplateAction_2<
-  {
-    repoUrl: string;
-    webhookUrl: string;
-    webhookSecret?: string | undefined;
-    events?: string[] | undefined;
-    active?: boolean | undefined;
-    contentType?: 'form' | 'json' | undefined;
-    insecureSsl?: boolean | undefined;
-    token?: string | undefined;
-  },
-  JsonObject
->;
+// @public @deprecated (undocumented)
+export const createPublishAzureAction: typeof azure.createPublishAzureAction;
 
-// @public
-export function createPublishAzureAction(options: {
-  integrations: ScmIntegrationRegistry;
-  config: Config;
-}): TemplateAction_2<
-  {
-    repoUrl: string;
-    description?: string | undefined;
-    defaultBranch?: string | undefined;
-    sourcePath?: string | undefined;
-    token?: string | undefined;
-    gitCommitMessage?: string | undefined;
-    gitAuthorName?: string | undefined;
-    gitAuthorEmail?: string | undefined;
-  },
-  JsonObject
->;
+// @public @deprecated (undocumented)
+export const createPublishBitbucketAction: typeof bitbucket.createPublishBitbucketAction;
 
-// @public @deprecated
-export function createPublishBitbucketAction(options: {
-  integrations: ScmIntegrationRegistry;
-  config: Config;
-}): TemplateAction_2<
-  {
-    repoUrl: string;
-    description?: string | undefined;
-    defaultBranch?: string | undefined;
-    repoVisibility?: 'private' | 'public' | undefined;
-    sourcePath?: string | undefined;
-    enableLFS?: boolean | undefined;
-    token?: string | undefined;
-    gitCommitMessage?: string | undefined;
-    gitAuthorName?: string | undefined;
-    gitAuthorEmail?: string | undefined;
-  },
-  JsonObject
->;
+// @public @deprecated (undocumented)
+export const createPublishBitbucketCloudAction: typeof bitbucketCloud.createPublishBitbucketCloudAction;
 
-// @public
-export function createPublishBitbucketCloudAction(options: {
-  integrations: ScmIntegrationRegistry;
-  config: Config;
-}): TemplateAction_2<
-  {
-    repoUrl: string;
-    description?: string | undefined;
-    defaultBranch?: string | undefined;
-    repoVisibility?: 'private' | 'public' | undefined;
-    sourcePath?: string | undefined;
-    token?: string | undefined;
-  },
-  JsonObject
->;
+// @public @deprecated (undocumented)
+export const createPublishBitbucketServerAction: typeof bitbucketServer.createPublishBitbucketServerAction;
 
-// @public
-export function createPublishBitbucketServerAction(options: {
-  integrations: ScmIntegrationRegistry;
-  config: Config;
-}): TemplateAction_2<
-  {
-    repoUrl: string;
-    description?: string | undefined;
-    defaultBranch?: string | undefined;
-    repoVisibility?: 'private' | 'public' | undefined;
-    sourcePath?: string | undefined;
-    enableLFS?: boolean | undefined;
-    token?: string | undefined;
-    gitCommitMessage?: string | undefined;
-    gitAuthorName?: string | undefined;
-    gitAuthorEmail?: string | undefined;
-  },
-  JsonObject
->;
+// @public @deprecated (undocumented)
+export const createPublishBitbucketServerPullRequestAction: typeof bitbucketServer.createPublishBitbucketServerPullRequestAction;
 
-// @public
-export function createPublishBitbucketServerPullRequestAction(options: {
-  integrations: ScmIntegrationRegistry;
-  config: Config;
-}): TemplateAction_2<
-  {
-    repoUrl: string;
-    title: string;
-    description?: string | undefined;
-    targetBranch?: string | undefined;
-    sourceBranch: string;
-    token?: string | undefined;
-  },
-  JsonObject
->;
+// @public @deprecated (undocumented)
+export const createPublishGerritAction: typeof gerrit.createPublishGerritAction;
 
-// @public
-export function createPublishGerritAction(options: {
-  integrations: ScmIntegrationRegistry;
-  config: Config;
-}): TemplateAction_2<
-  {
-    repoUrl: string;
-    description: string;
-    defaultBranch?: string | undefined;
-    gitCommitMessage?: string | undefined;
-    gitAuthorName?: string | undefined;
-    gitAuthorEmail?: string | undefined;
-    sourcePath?: string | undefined;
-  },
-  JsonObject
->;
+// @public @deprecated (undocumented)
+export const createPublishGerritReviewAction: typeof gerrit.createPublishGerritReviewAction;
 
-// @public
-export function createPublishGerritReviewAction(options: {
-  integrations: ScmIntegrationRegistry;
-  config: Config;
-}): TemplateAction_2<
-  {
-    repoUrl: string;
-    branch?: string | undefined;
-    sourcePath?: string | undefined;
-    gitCommitMessage?: string | undefined;
-    gitAuthorName?: string | undefined;
-    gitAuthorEmail?: string | undefined;
-  },
-  JsonObject
->;
+// @public @deprecated (undocumented)
+export const createPublishGithubAction: typeof github.createPublishGithubAction;
 
-// @public
-export function createPublishGithubAction(options: {
-  integrations: ScmIntegrationRegistry;
-  config: Config;
-  githubCredentialsProvider?: GithubCredentialsProvider;
-}): TemplateAction_2<
-  {
-    repoUrl: string;
-    description?: string | undefined;
-    homepage?: string | undefined;
-    access?: string | undefined;
-    defaultBranch?: string | undefined;
-    protectDefaultBranch?: boolean | undefined;
-    protectEnforceAdmins?: boolean | undefined;
-    deleteBranchOnMerge?: boolean | undefined;
-    gitCommitMessage?: string | undefined;
-    gitAuthorName?: string | undefined;
-    gitAuthorEmail?: string | undefined;
-    allowRebaseMerge?: boolean | undefined;
-    allowSquashMerge?: boolean | undefined;
-    squashMergeCommitTitle?: 'PR_TITLE' | 'COMMIT_OR_PR_TITLE' | undefined;
-    squashMergeCommitMessage?:
-      | 'PR_BODY'
-      | 'COMMIT_MESSAGES'
-      | 'BLANK'
-      | undefined;
-    allowMergeCommit?: boolean | undefined;
-    allowAutoMerge?: boolean | undefined;
-    sourcePath?: string | undefined;
-    bypassPullRequestAllowances?:
-      | {
-          users?: string[];
-          teams?: string[];
-          apps?: string[];
-        }
-      | undefined;
-    requiredApprovingReviewCount?: number | undefined;
-    restrictions?:
-      | {
-          users: string[];
-          teams: string[];
-          apps?: string[];
-        }
-      | undefined;
-    requireCodeOwnerReviews?: boolean | undefined;
-    dismissStaleReviews?: boolean | undefined;
-    requiredStatusCheckContexts?: string[] | undefined;
-    requireBranchesToBeUpToDate?: boolean | undefined;
-    requiredConversationResolution?: boolean | undefined;
-    repoVisibility?: 'internal' | 'private' | 'public' | undefined;
-    collaborators?:
-      | (
-          | {
-              user: string;
-              access: string;
-            }
-          | {
-              team: string;
-              access: string;
-            }
-          | {
-              username: string;
-              access: 'pull' | 'push' | 'admin' | 'maintain' | 'triage';
-            }
-        )[]
-      | undefined;
-    hasProjects?: boolean | undefined;
-    hasWiki?: boolean | undefined;
-    hasIssues?: boolean | undefined;
-    token?: string | undefined;
-    topics?: string[] | undefined;
-    repoVariables?:
-      | {
-          [key: string]: string;
-        }
-      | undefined;
-    secrets?:
-      | {
-          [key: string]: string;
-        }
-      | undefined;
-    requiredCommitSigning?: boolean | undefined;
-  },
-  JsonObject
->;
-
-// @public
+// @public @deprecated (undocumented)
 export const createPublishGithubPullRequestAction: (
-  options: CreateGithubPullRequestActionOptions,
+  options: github.CreateGithubPullRequestActionOptions,
 ) => TemplateAction_2<
   {
     title: string;
@@ -654,31 +287,19 @@ export const createPublishGithubPullRequestAction: (
     reviewers?: string[] | undefined;
     teamReviewers?: string[] | undefined;
     commitMessage?: string | undefined;
-  },
-  JsonObject
->;
-
-// @public
-export function createPublishGitlabAction(options: {
-  integrations: ScmIntegrationRegistry;
-  config: Config;
-}): TemplateAction_2<
-  {
-    repoUrl: string;
-    defaultBranch?: string | undefined;
-    repoVisibility?: 'internal' | 'private' | 'public' | undefined;
-    sourcePath?: string | undefined;
-    token?: string | undefined;
-    gitCommitMessage?: string | undefined;
+    update?: boolean | undefined;
+    forceFork?: boolean | undefined;
     gitAuthorName?: string | undefined;
     gitAuthorEmail?: string | undefined;
-    setUserAsOwner?: boolean | undefined;
-    topics?: string[] | undefined;
+    forceEmptyGitAuthor?: boolean | undefined;
   },
   JsonObject
 >;
 
-// @public
+// @public @deprecated (undocumented)
+export const createPublishGitlabAction: typeof gitlab.createPublishGitlabAction;
+
+// @public @deprecated (undocumented)
 export const createPublishGitlabMergeRequestAction: (options: {
   integrations: ScmIntegrationRegistry;
 }) => TemplateAction_2<
@@ -738,14 +359,14 @@ export function createWaitAction(options?: {
 
 // @public
 export type CreateWorkerOptions = {
-  taskBroker: TaskBroker;
+  taskBroker: TaskBroker_2;
   actionRegistry: TemplateActionRegistry;
   integrations: ScmIntegrations;
   workingDirectory: string;
   logger: Logger;
-  additionalTemplateFilters?: Record<string, TemplateFilter>;
+  additionalTemplateFilters?: Record<string, TemplateFilter_2>;
   concurrentTasksLimit?: number;
-  additionalTemplateGlobals?: Record<string, TemplateGlobal>;
+  additionalTemplateGlobals?: Record<string, TemplateGlobal_2>;
   permissions?: PermissionEvaluator;
 };
 
@@ -754,7 +375,10 @@ export interface CurrentClaimedTask {
   createdBy?: string;
   secrets?: TaskSecrets_2;
   spec: TaskSpec;
+  state?: JsonObject;
   taskId: string;
+  // (undocumented)
+  workspace?: Promise<Buffer>;
 }
 
 // @public
@@ -768,11 +392,13 @@ export class DatabaseTaskStore implements TaskStore {
     >,
   ): Promise<void>;
   // (undocumented)
-  claimTask(): Promise<SerializedTask | undefined>;
+  claimTask(): Promise<SerializedTask_2 | undefined>;
+  // (undocumented)
+  cleanWorkspace({ taskId }: { taskId: string }): Promise<void>;
   // (undocumented)
   completeTask(options: {
     taskId: string;
-    status: TaskStatus;
+    status: TaskStatus_2;
     eventBody: JsonObject;
   }): Promise<void>;
   // (undocumented)
@@ -790,23 +416,44 @@ export class DatabaseTaskStore implements TaskStore {
     >,
   ): Promise<void>;
   // (undocumented)
-  getTask(taskId: string): Promise<SerializedTask>;
+  getTask(taskId: string): Promise<SerializedTask_2>;
+  // (undocumented)
+  getTaskState({ taskId }: { taskId: string }): Promise<
+    | {
+        state: JsonObject;
+      }
+    | undefined
+  >;
   // (undocumented)
   heartbeatTask(taskId: string): Promise<void>;
   // (undocumented)
   list(options: { createdBy?: string }): Promise<{
-    tasks: SerializedTask[];
+    tasks: SerializedTask_2[];
   }>;
   // (undocumented)
   listEvents(options: TaskStoreListEventsOptions): Promise<{
-    events: SerializedTaskEvent[];
+    events: SerializedTaskEvent_2[];
   }>;
   // (undocumented)
   listStaleTasks(options: { timeoutS: number }): Promise<{
     tasks: {
       taskId: string;
+      recovery?: TaskRecovery;
     }[];
   }>;
+  // (undocumented)
+  recoverTasks(options: TaskStoreRecoverTaskOptions): Promise<{
+    ids: string[];
+  }>;
+  // (undocumented)
+  rehydrateWorkspace(options: {
+    taskId: string;
+    targetPath: string;
+  }): Promise<void>;
+  // (undocumented)
+  saveTaskState(options: { taskId: string; state?: JsonObject }): Promise<void>;
+  // (undocumented)
+  serializeWorkspace(options: { path: string; taskId: string }): Promise<void>;
   // (undocumented)
   shutdownTask(options: TaskStoreShutDownTaskOptions): Promise<void>;
 }
@@ -816,39 +463,26 @@ export type DatabaseTaskStoreOptions = {
   database: PluginDatabaseManager | Knex;
 };
 
-// @public
-export const executeShellCommand: (options: RunCommandOptions) => Promise<void>;
+// @public @deprecated
+export const executeShellCommand: typeof executeShellCommand_2;
 
-// @public
-export function fetchContents(options: {
-  reader: UrlReader;
-  integrations: ScmIntegrations;
-  baseUrl?: string;
-  fetchUrl?: string;
-  outputPath: string;
-}): Promise<void>;
-
-// @public (undocumented)
-export type OctokitWithPullRequestPluginClient = Octokit & {
-  createPullRequest(options: createPullRequest.Options): Promise<{
-    data: {
-      html_url: string;
-      number: number;
-      base: {
-        ref: string;
-      };
-    };
-  } | null>;
-};
+// @public @deprecated
+export const fetchContents: typeof fetchContents_2;
 
 // @public
 export interface RouterOptions {
   // (undocumented)
   actions?: TemplateAction_2<any, any>[];
   // (undocumented)
-  additionalTemplateFilters?: Record<string, TemplateFilter>;
+  additionalTemplateFilters?: Record<string, TemplateFilter_2>;
   // (undocumented)
-  additionalTemplateGlobals?: Record<string, TemplateGlobal>;
+  additionalTemplateGlobals?: Record<string, TemplateGlobal_2>;
+  // (undocumented)
+  additionalWorkspaceProviders?: Record<string, WorkspaceProvider>;
+  // (undocumented)
+  auth?: AuthService;
+  // (undocumented)
+  autocompleteHandlers?: Record<string, AutocompleteHandler>;
   // (undocumented)
   catalogClient: CatalogApi;
   concurrentTasksLimit?: number;
@@ -857,7 +491,13 @@ export interface RouterOptions {
   // (undocumented)
   database: PluginDatabaseManager;
   // (undocumented)
+  discovery?: DiscoveryService;
+  // (undocumented)
+  httpAuth?: HttpAuthService;
+  // (undocumented)
   identity?: IdentityApi;
+  // (undocumented)
+  lifecycle?: LifecycleService;
   // (undocumented)
   logger: Logger;
   // (undocumented)
@@ -865,135 +505,64 @@ export interface RouterOptions {
     TemplatePermissionRuleInput | ActionPermissionRuleInput
   >;
   // (undocumented)
-  permissions?: PermissionEvaluator;
+  permissions?: PermissionsService;
   // (undocumented)
   reader: UrlReader;
   // (undocumented)
   scheduler?: PluginTaskScheduler;
   // (undocumented)
-  taskBroker?: TaskBroker;
+  taskBroker?: TaskBroker_2;
   // @deprecated (undocumented)
   taskWorkers?: number;
 }
 
-// @public (undocumented)
-export type RunCommandOptions = {
-  command: string;
-  args: string[];
-  options?: SpawnOptionsWithoutStdio;
-  logStream?: Writable;
-};
+// @public @deprecated
+export type RunCommandOptions = ExecuteShellCommandOptions;
 
-// @public (undocumented)
-export class ScaffolderEntitiesProcessor implements CatalogProcessor {
-  // (undocumented)
-  getProcessorName(): string;
-  // (undocumented)
-  postProcessEntity(
-    entity: Entity,
-    _location: LocationSpec,
-    emit: CatalogProcessorEmit,
-  ): Promise<Entity>;
-  // (undocumented)
-  validateEntityKind(entity: Entity): Promise<boolean>;
-}
+// @public @deprecated
+export const ScaffolderEntitiesProcessor: typeof ScaffolderEntitiesProcessor_2;
 
-// @public
-export type SerializedTask = {
-  id: string;
-  spec: TaskSpec;
-  status: TaskStatus;
-  createdAt: string;
-  lastHeartbeatAt?: string;
-  createdBy?: string;
-  secrets?: TaskSecrets_2;
-};
+// @public @deprecated
+export type SerializedTask = SerializedTask_2;
+
+// @public @deprecated
+export type SerializedTaskEvent = SerializedTaskEvent_2;
+
+// @public @deprecated
+export type TaskBroker = TaskBroker_2;
+
+// @public @deprecated
+export type TaskBrokerDispatchOptions = TaskBrokerDispatchOptions_2;
+
+// @public @deprecated
+export type TaskBrokerDispatchResult = TaskBrokerDispatchResult_2;
+
+// @public @deprecated
+export type TaskCompletionState = TaskCompletionState_2;
+
+// @public @deprecated
+export type TaskContext = TaskContext_2;
+
+// @public @deprecated
+export type TaskEventType = TaskEventType_2;
 
 // @public
-export type SerializedTaskEvent = {
-  id: number;
-  taskId: string;
-  body: JsonObject;
-  type: TaskEventType;
-  createdAt: string;
-};
-
-// @public
-export interface TaskBroker {
-  // (undocumented)
-  cancel?(taskId: string): Promise<void>;
-  // (undocumented)
-  claim(): Promise<TaskContext>;
-  // (undocumented)
-  dispatch(
-    options: TaskBrokerDispatchOptions,
-  ): Promise<TaskBrokerDispatchResult>;
-  // (undocumented)
-  event$(options: { taskId: string; after: number | undefined }): Observable<{
-    events: SerializedTaskEvent[];
-  }>;
-  // (undocumented)
-  get(taskId: string): Promise<SerializedTask>;
-  // (undocumented)
-  list?(options?: { createdBy?: string }): Promise<{
-    tasks: SerializedTask[];
-  }>;
-  // (undocumented)
-  vacuumTasks(options: { timeoutS: number }): Promise<void>;
-}
-
-// @public
-export type TaskBrokerDispatchOptions = {
-  spec: TaskSpec;
-  secrets?: TaskSecrets_2;
-  createdBy?: string;
-};
-
-// @public
-export type TaskBrokerDispatchResult = {
-  taskId: string;
-};
-
-// @public
-export type TaskCompletionState = 'failed' | 'completed';
-
-// @public
-export interface TaskContext {
-  // (undocumented)
-  cancelSignal: AbortSignal;
-  // (undocumented)
-  complete(result: TaskCompletionState, metadata?: JsonObject): Promise<void>;
-  // (undocumented)
-  createdBy?: string;
-  // (undocumented)
-  done: boolean;
-  // (undocumented)
-  emitLog(message: string, logMetadata?: JsonObject): Promise<void>;
-  // (undocumented)
-  getWorkspaceName(): Promise<string>;
-  // (undocumented)
-  isDryRun?: boolean;
-  // (undocumented)
-  secrets?: TaskSecrets_2;
-  // (undocumented)
-  spec: TaskSpec;
-}
-
-// @public
-export type TaskEventType = 'completion' | 'log' | 'cancelled';
-
-// @public
-export class TaskManager implements TaskContext {
+export class TaskManager implements TaskContext_2 {
   // (undocumented)
   get cancelSignal(): AbortSignal;
   // (undocumented)
-  complete(result: TaskCompletionState, metadata?: JsonObject): Promise<void>;
+  cleanWorkspace?(): Promise<void>;
+  // (undocumented)
+  complete(result: TaskCompletionState_2, metadata?: JsonObject): Promise<void>;
   // (undocumented)
   static create(
     task: CurrentClaimedTask,
     storage: TaskStore,
     abortSignal: AbortSignal,
     logger: Logger,
+    auth?: AuthService,
+    config?: Config,
+    additionalWorkspaceProviders?: Record<string, WorkspaceProvider>,
   ): TaskManager;
   // (undocumented)
   get createdBy(): string | undefined;
@@ -1002,23 +571,48 @@ export class TaskManager implements TaskContext {
   // (undocumented)
   emitLog(message: string, logMetadata?: JsonObject): Promise<void>;
   // (undocumented)
+  getInitiatorCredentials(): Promise<BackstageCredentials>;
+  // (undocumented)
+  getTaskState?(): Promise<
+    | {
+        state?: JsonObject;
+      }
+    | undefined
+  >;
+  // (undocumented)
   getWorkspaceName(): Promise<string>;
+  // (undocumented)
+  rehydrateWorkspace?(options: {
+    taskId: string;
+    targetPath: string;
+  }): Promise<void>;
   // (undocumented)
   get secrets(): TaskSecrets_2 | undefined;
   // (undocumented)
+  serializeWorkspace?(options: { path: string }): Promise<void>;
+  // (undocumented)
   get spec(): TaskSpecV1beta3;
+  // (undocumented)
+  updateCheckpoint?(
+    options:
+      | {
+          key: string;
+          status: 'success';
+          value: JsonValue;
+        }
+      | {
+          key: string;
+          status: 'failed';
+          reason: string;
+        },
+  ): Promise<void>;
 }
 
 // @public @deprecated (undocumented)
 export type TaskSecrets = TaskSecrets_2;
 
-// @public
-export type TaskStatus =
-  | 'cancelled'
-  | 'completed'
-  | 'failed'
-  | 'open'
-  | 'processing';
+// @public @deprecated
+export type TaskStatus = TaskStatus_2;
 
 // @public
 export interface TaskStore {
@@ -1026,6 +620,8 @@ export interface TaskStore {
   cancelTask?(options: TaskStoreEmitOptions): Promise<void>;
   // (undocumented)
   claimTask(): Promise<SerializedTask | undefined>;
+  // (undocumented)
+  cleanWorkspace?({ taskId }: { taskId: string }): Promise<void>;
   // (undocumented)
   completeTask(options: {
     taskId: string;
@@ -1040,6 +636,13 @@ export interface TaskStore {
   emitLogEvent(options: TaskStoreEmitOptions): Promise<void>;
   // (undocumented)
   getTask(taskId: string): Promise<SerializedTask>;
+  // (undocumented)
+  getTaskState?({ taskId }: { taskId: string }): Promise<
+    | {
+        state: JsonObject;
+      }
+    | undefined
+  >;
   // (undocumented)
   heartbeatTask(taskId: string): Promise<void>;
   // (undocumented)
@@ -1056,6 +659,28 @@ export interface TaskStore {
       taskId: string;
     }[];
   }>;
+  // (undocumented)
+  recoverTasks?(options: TaskStoreRecoverTaskOptions): Promise<{
+    ids: string[];
+  }>;
+  // (undocumented)
+  rehydrateWorkspace?(options: {
+    taskId: string;
+    targetPath: string;
+  }): Promise<void>;
+  // (undocumented)
+  saveTaskState?(options: {
+    taskId: string;
+    state?: JsonObject;
+  }): Promise<void>;
+  // (undocumented)
+  serializeWorkspace?({
+    path,
+    taskId,
+  }: {
+    path: string;
+    taskId: string;
+  }): Promise<void>;
   // (undocumented)
   shutdownTask?(options: TaskStoreShutDownTaskOptions): Promise<void>;
 }
@@ -1085,6 +710,11 @@ export type TaskStoreListEventsOptions = {
 };
 
 // @public
+export type TaskStoreRecoverTaskOptions = {
+  timeout: HumanDuration;
+};
+
+// @public
 export type TaskStoreShutDownTaskOptions = {
   taskId: string;
 };
@@ -1096,9 +726,13 @@ export class TaskWorker {
   // (undocumented)
   protected onReadyToClaimTask(): Promise<void>;
   // (undocumented)
-  runOneTask(task: TaskContext): Promise<void>;
+  recoverTasks(): Promise<void>;
+  // (undocumented)
+  runOneTask(task: TaskContext_2): Promise<void>;
   // (undocumented)
   start(): void;
+  // (undocumented)
+  stop(): void;
 }
 
 // @public @deprecated (undocumented)
@@ -1115,13 +749,11 @@ export class TemplateActionRegistry {
   register(action: TemplateAction_2): void;
 }
 
-// @public (undocumented)
-export type TemplateFilter = (...args: JsonValue[]) => JsonValue | undefined;
+// @public @deprecated (undocumented)
+export type TemplateFilter = TemplateFilter_2;
 
-// @public (undocumented)
-export type TemplateGlobal =
-  | ((...args: JsonValue[]) => JsonValue | undefined)
-  | JsonValue;
+// @public @deprecated (undocumented)
+export type TemplateGlobal = TemplateGlobal_2;
 
 // @public (undocumented)
 export type TemplatePermissionRuleInput<

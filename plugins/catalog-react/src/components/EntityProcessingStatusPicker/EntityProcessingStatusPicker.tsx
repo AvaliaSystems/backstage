@@ -15,27 +15,29 @@
  */
 
 import { EntityErrorFilter, EntityOrphanFilter } from '../../filters';
-import {
-  Box,
-  Checkbox,
-  FormControlLabel,
-  makeStyles,
-  TextField,
-  Typography,
-} from '@material-ui/core';
+import Box from '@material-ui/core/Box';
+import Checkbox from '@material-ui/core/Checkbox';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
+import TextField from '@material-ui/core/TextField';
+import Typography from '@material-ui/core/Typography';
+import { makeStyles } from '@material-ui/core/styles';
 import CheckBoxIcon from '@material-ui/icons/CheckBox';
 import CheckBoxOutlineBlankIcon from '@material-ui/icons/CheckBoxOutlineBlank';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
-import React, { useState } from 'react';
+import React, { useState, ReactNode } from 'react';
 import { useEntityList } from '../../hooks';
-import { Autocomplete } from '@material-ui/lab';
+import Autocomplete from '@material-ui/lab/Autocomplete';
+import { catalogReactTranslationRef } from '../../translation';
+import { useTranslationRef } from '@backstage/core-plugin-api/alpha';
 
 /** @public */
 export type CatalogReactEntityProcessingStatusPickerClassKey = 'input';
 
 const useStyles = makeStyles(
   {
+    root: {},
     input: {},
+    label: {},
   },
   {
     name: 'CatalogReactEntityProcessingStatusPickerPicker',
@@ -49,6 +51,7 @@ const checkedIcon = <CheckBoxIcon fontSize="small" />;
 export const EntityProcessingStatusPicker = () => {
   const classes = useStyles();
   const { updateFilters } = useEntityList();
+  const { t } = useTranslationRef(catalogReactTranslationRef);
 
   const [selectedAdvancedItems, setSelectedAdvancedItems] = useState<string[]>(
     [],
@@ -69,10 +72,13 @@ export const EntityProcessingStatusPicker = () => {
   const availableAdvancedItems = ['Is Orphan', 'Has Error'];
 
   return (
-    <Box pb={1} pt={1}>
-      <Typography variant="button" component="label">
-        Processing Status
-        <Autocomplete
+    <Box className={classes.root} pb={1} pt={1}>
+      <Typography className={classes.label} variant="button" component="label">
+        {t('entityProcessingStatusPicker.title')}
+        <Autocomplete<string, true>
+          PopperComponent={popperProps => (
+            <div {...popperProps}>{popperProps.children as ReactNode}</div>
+          )}
           multiple
           disableCloseOnSelect
           options={availableAdvancedItems}

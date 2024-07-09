@@ -14,16 +14,15 @@
  * limitations under the License.
  */
 
-import { getVoidLogger } from '@backstage/backend-common';
 import { TaskInvocationDefinition, TaskRunner } from '@backstage/backend-tasks';
 import {
   DocumentCollatorFactory,
   DocumentDecoratorFactory,
-  SearchEngine,
 } from '@backstage/plugin-search-common';
 import { Readable, Transform } from 'stream';
 import { IndexBuilder } from './IndexBuilder';
-import { LunrSearchEngine } from './index';
+import { LunrSearchEngine, SearchEngine } from './index';
+import { mockServices } from '@backstage/backend-test-utils';
 
 class TestDocumentCollatorFactory implements DocumentCollatorFactory {
   readonly type: string = 'anything';
@@ -58,7 +57,7 @@ describe('IndexBuilder', () => {
   let testScheduledTaskRunner: TaskRunner;
 
   beforeEach(() => {
-    const logger = getVoidLogger();
+    const logger = mockServices.logger.mock();
     testScheduledTaskRunner = {
       run: async (task: TaskInvocationDefinition & { fn: () => void }) => {
         task.fn();

@@ -14,25 +14,18 @@
  * limitations under the License.
  */
 
+import { rootLifecycleServiceFactory } from '@backstage/backend-defaults/rootLifecycle';
+import { lifecycleServiceFactory } from '@backstage/backend-defaults/lifecycle';
+import { loggerServiceFactory } from '@backstage/backend-defaults/logger';
 import {
   createServiceRef,
   createServiceFactory,
   coreServices,
   createBackendPlugin,
   createBackendModule,
+  createExtensionPoint,
 } from '@backstage/backend-plugin-api';
 import { BackendInitializer } from './BackendInitializer';
-import { ServiceRegistry } from './ServiceRegistry';
-import { rootLifecycleServiceFactory } from '../services/implementations';
-
-const rootRef = createServiceRef<{ x: number }>({
-  id: '1',
-  scope: 'root',
-});
-
-const pluginRef = createServiceRef<{ x: number }>({
-  id: '2',
-});
 
 class MockLogger {
   debug() {}
@@ -44,39 +37,190 @@ class MockLogger {
   }
 }
 
+const baseFactories = [
+  lifecycleServiceFactory(),
+  rootLifecycleServiceFactory(),
+  createServiceFactory({
+    service: coreServices.rootLogger,
+    deps: {},
+    factory: () => new MockLogger(),
+  })(),
+  loggerServiceFactory(),
+];
+
+const testPlugin = createBackendPlugin({
+  pluginId: 'test',
+  register(reg) {
+    reg.registerInit({
+      deps: {},
+      async init() {},
+    });
+  },
+})();
+
 describe('BackendInitializer', () => {
   it('should initialize root scoped services', async () => {
-    const rootFactory = jest.fn();
-    const pluginFactory = jest.fn();
+    const ref1 = createServiceRef<{ x: number }>({
+      id: '1',
+      scope: 'root',
+    });
+    const ref2 = createServiceRef<{ x: number }>({
+      id: '2',
+      scope: 'root',
+    });
+    const ref3 = createServiceRef<{ x: number }>({
+      id: '3',
+      scope: 'root',
+    });
+    const factory1 = jest.fn();
+    const factory2 = jest.fn();
+    const factory3 = jest.fn();
 
-    const registry = new ServiceRegistry([
+    const services = [
+      ...baseFactories,
       createServiceFactory({
-        service: rootRef,
+        service: ref1,
+        initialization: 'always',
         deps: {},
-        factory: rootFactory,
+        factory: factory1,
       })(),
       createServiceFactory({
-        service: pluginRef,
+        service: ref2,
         deps: {},
-        factory: pluginFactory,
+        factory: factory2,
       })(),
-      rootLifecycleServiceFactory(),
       createServiceFactory({
-        service: coreServices.rootLogger,
+        service: ref3,
+        initialization: 'lazy',
         deps: {},
-        factory: () => new MockLogger(),
+        factory: factory3,
       })(),
-    ]);
+    ];
 
-    const init = new BackendInitializer(registry);
+    const init = new BackendInitializer(services);
     await init.start();
 
-    expect(rootFactory).toHaveBeenCalled();
-    expect(pluginFactory).not.toHaveBeenCalled();
+    expect(factory1).toHaveBeenCalled();
+    expect(factory2).toHaveBeenCalled();
+    expect(factory3).not.toHaveBeenCalled();
+  });
+
+  it('should initialize plugin scoped services with eager initialization', async () => {
+    const ref1 = createServiceRef<{ x: number }>({
+      id: '1',
+    });
+    const ref2 = createServiceRef<{ x: number }>({
+      id: '2',
+    });
+    const ref3 = createServiceRef<{ x: number }>({
+      id: '3',
+    });
+    const factory1 = jest.fn();
+    const factory2 = jest.fn();
+    const factory3 = jest.fn();
+
+    const services = [
+      ...baseFactories,
+      createServiceFactory({
+        service: ref1,
+        initialization: 'always',
+        deps: {},
+        factory: factory1,
+      })(),
+      createServiceFactory({
+        service: ref2,
+        deps: {},
+        factory: factory2,
+      })(),
+      createServiceFactory({
+        service: ref3,
+        initialization: 'lazy',
+        deps: {},
+        factory: factory3,
+      })(),
+    ];
+
+    const init = new BackendInitializer(services);
+    init.add(
+      createBackendPlugin({
+        pluginId: 'test',
+        register(reg) {
+          reg.registerInit({
+            deps: {},
+            async init() {},
+          });
+        },
+      }),
+    );
+    await init.start();
+
+    expect(factory1).toHaveBeenCalled();
+    expect(factory2).not.toHaveBeenCalled();
+    expect(factory3).not.toHaveBeenCalled();
+  });
+
+  it('should initialize modules with extension points', async () => {
+    expect.assertions(3);
+
+    const extensionPoint = createExtensionPoint<{ values: string[] }>({
+      id: 'a',
+    });
+    const init = new BackendInitializer(baseFactories);
+
+    init.add(testPlugin);
+    init.add(
+      createBackendModule({
+        pluginId: 'test',
+        moduleId: 'mod-a',
+        register(reg) {
+          reg.registerInit({
+            deps: { extension: extensionPoint },
+            async init({ extension }) {
+              expect(extension.values).toEqual(['b']);
+              extension.values.push('a');
+            },
+          });
+        },
+      }),
+    );
+
+    init.add(
+      createBackendModule({
+        pluginId: 'test',
+        moduleId: 'mod-b',
+        register(reg) {
+          const values = ['b'];
+          reg.registerExtensionPoint(extensionPoint, { values });
+          reg.registerInit({
+            deps: {},
+            async init() {
+              expect(values).toEqual(['b', 'a', 'c']);
+            },
+          });
+        },
+      }),
+    );
+
+    init.add(
+      createBackendModule({
+        pluginId: 'test',
+        moduleId: 'mod-c',
+        register(reg) {
+          reg.registerInit({
+            deps: { extension: extensionPoint },
+            async init({ extension }) {
+              expect(extension.values).toEqual(['b', 'a']);
+              extension.values.push('c');
+            },
+          });
+        },
+      }),
+    );
+    await init.start();
   });
 
   it('should forward errors when plugins fail to start', async () => {
-    const init = new BackendInitializer(new ServiceRegistry([]));
+    const init = new BackendInitializer([]);
     init.add(
       createBackendPlugin({
         pluginId: 'test',
@@ -88,7 +232,7 @@ describe('BackendInitializer', () => {
             },
           });
         },
-      })(),
+      }),
     );
     await expect(init.start()).rejects.toThrow(
       "Plugin 'test' startup failed; caused by Error: NOPE",
@@ -96,7 +240,8 @@ describe('BackendInitializer', () => {
   });
 
   it('should forward errors when modules fail to start', async () => {
-    const init = new BackendInitializer(new ServiceRegistry([]));
+    const init = new BackendInitializer([]);
+    init.add(testPlugin);
     init.add(
       createBackendModule({
         pluginId: 'test',
@@ -109,7 +254,7 @@ describe('BackendInitializer', () => {
             },
           });
         },
-      })(),
+      }),
     );
     await expect(init.start()).rejects.toThrow(
       "Module 'mod' for plugin 'test' startup failed; caused by Error: NOPE",
@@ -117,7 +262,7 @@ describe('BackendInitializer', () => {
   });
 
   it('should reject duplicate plugins', async () => {
-    const init = new BackendInitializer(new ServiceRegistry([]));
+    const init = new BackendInitializer([]);
     init.add(
       createBackendPlugin({
         pluginId: 'test',
@@ -127,7 +272,7 @@ describe('BackendInitializer', () => {
             async init() {},
           });
         },
-      })(),
+      }),
     );
     init.add(
       createBackendPlugin({
@@ -138,7 +283,7 @@ describe('BackendInitializer', () => {
             async init() {},
           });
         },
-      })(),
+      }),
     );
     await expect(init.start()).rejects.toThrow(
       "Plugin 'test' is already registered",
@@ -146,7 +291,8 @@ describe('BackendInitializer', () => {
   });
 
   it('should reject duplicate modules', async () => {
-    const init = new BackendInitializer(new ServiceRegistry([]));
+    const init = new BackendInitializer([]);
+    init.add(testPlugin);
     init.add(
       createBackendModule({
         pluginId: 'test',
@@ -157,7 +303,7 @@ describe('BackendInitializer', () => {
             async init() {},
           });
         },
-      })(),
+      }),
     );
     init.add(
       createBackendModule({
@@ -169,10 +315,86 @@ describe('BackendInitializer', () => {
             async init() {},
           });
         },
-      })(),
+      }),
     );
     await expect(init.start()).rejects.toThrow(
       "Module 'mod' for plugin 'test' is already registered",
+    );
+  });
+
+  it('should reject modules with circular dependencies', async () => {
+    const extA = createExtensionPoint<string>({ id: 'a' });
+    const extB = createExtensionPoint<string>({ id: 'b' });
+    const init = new BackendInitializer([
+      rootLifecycleServiceFactory(),
+      createServiceFactory({
+        service: coreServices.rootLogger,
+        deps: {},
+        factory: () => new MockLogger(),
+      })(),
+    ]);
+    init.add(testPlugin);
+    init.add(
+      createBackendModule({
+        pluginId: 'test',
+        moduleId: 'mod-a',
+        register(reg) {
+          reg.registerExtensionPoint(extA, 'a');
+          reg.registerInit({
+            deps: { ext: extB },
+            async init() {},
+          });
+        },
+      }),
+    );
+    init.add(
+      createBackendModule({
+        pluginId: 'test',
+        moduleId: 'mod-b',
+        register(reg) {
+          reg.registerExtensionPoint(extB, 'b');
+          reg.registerInit({
+            deps: { ext: extA },
+            async init() {},
+          });
+        },
+      }),
+    );
+    await expect(init.start()).rejects.toThrow(
+      "Circular dependency detected for modules of plugin 'test', 'mod-a' -> 'mod-b' -> 'mod-a'",
+    );
+  });
+
+  it('should reject modules that depend on extension points other plugins', async () => {
+    const init = new BackendInitializer(baseFactories);
+    const extA = createExtensionPoint<string>({ id: 'a' });
+    init.add(
+      createBackendPlugin({
+        pluginId: 'test-a',
+        register(reg) {
+          reg.registerExtensionPoint(extA, 'a');
+          reg.registerInit({
+            deps: {},
+            async init() {},
+          });
+        },
+      }),
+    );
+    init.add(testPlugin);
+    init.add(
+      createBackendModule({
+        pluginId: 'test',
+        moduleId: 'mod',
+        register(reg) {
+          reg.registerInit({
+            deps: { ext: extA },
+            async init() {},
+          });
+        },
+      }),
+    );
+    await expect(init.start()).rejects.toThrow(
+      "Illegal dependency: Module 'mod' for plugin 'test' attempted to depend on extension point 'a' for plugin 'test-a'. Extension points can only be used within their plugin's scope.",
     );
   });
 });

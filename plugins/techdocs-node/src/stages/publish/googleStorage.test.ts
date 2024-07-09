@@ -14,31 +14,29 @@
  * limitations under the License.
  */
 
-import { getVoidLogger } from '@backstage/backend-common';
+import { loggerToWinstonLogger } from '@backstage/backend-common';
 import { Entity, DEFAULT_NAMESPACE } from '@backstage/catalog-model';
 import { ConfigReader } from '@backstage/config';
 import express from 'express';
 import request from 'supertest';
-import mockFs from 'mock-fs';
 import path from 'path';
 import fs from 'fs-extra';
 import { Readable } from 'stream';
 import { GoogleGCSPublish } from './googleStorage';
 import {
-  storageRootDir,
-  StorageFilesMock,
-} from '../../testUtils/StorageFilesMock';
+  createMockDirectory,
+  mockServices,
+} from '@backstage/backend-test-utils';
+
+const mockDir = createMockDirectory();
 
 jest.mock('@google-cloud/storage', () => {
   class GCSFile {
-    constructor(
-      private readonly filePath: string,
-      private readonly storage: StorageFilesMock,
-    ) {}
+    constructor(private readonly filePath: string) {}
 
     exists() {
       return new Promise(async (resolve, reject) => {
-        if (this.storage.fileExists(this.filePath)) {
+        if (fs.pathExistsSync(mockDir.resolve(this.filePath))) {
           resolve([true]);
         } else {
           reject();
@@ -51,11 +49,14 @@ jest.mock('@google-cloud/storage', () => {
       readable._read = () => {};
 
       process.nextTick(() => {
-        if (this.storage.fileExists(this.filePath)) {
+        if (fs.pathExistsSync(mockDir.resolve(this.filePath))) {
           if (readable.eventNames().includes('pipe')) {
             readable.emit('pipe');
           }
-          readable.emit('data', this.storage.readFile(this.filePath));
+          readable.emit(
+            'data',
+            fs.readFileSync(mockDir.resolve(this.filePath)),
+          );
           readable.emit('end');
         } else {
           readable.emit(
@@ -74,10 +75,7 @@ jest.mock('@google-cloud/storage', () => {
   }
 
   class Bucket {
-    constructor(
-      private readonly bucketName: string,
-      private readonly storage: StorageFilesMock,
-    ) {}
+    constructor(private readonly bucketName: string) {}
 
     async getMetadata() {
       if (this.bucketName === 'bad_bucket_name') {
@@ -88,7 +86,9 @@ jest.mock('@google-cloud/storage', () => {
 
     upload(source: string, { destination }: { destination: string }) {
       return new Promise(async resolve => {
-        this.storage.writeFile(destination, source);
+        mockDir.addContent({
+          [destination]: fs.readFileSync(source, 'utf8'),
+        });
         resolve(null);
       });
     }
@@ -97,7 +97,7 @@ jest.mock('@google-cloud/storage', () => {
       if (this.bucketName === 'delete_stale_files_error') {
         throw Error('Message');
       }
-      return new GCSFile(destinationFilePath, this.storage);
+      return new GCSFile(destinationFilePath);
     }
 
     getFilesStream() {
@@ -119,14 +119,8 @@ jest.mock('@google-cloud/storage', () => {
   }
 
   class Storage {
-    storage = new StorageFilesMock();
-
-    constructor() {
-      this.storage.emptyFiles();
-    }
-
     bucket(bucketName: string) {
-      return new Bucket(bucketName, this.storage);
+      return new Bucket(bucketName);
     }
   }
 
@@ -142,10 +136,10 @@ const getEntityRootDir = (entity: Entity) => {
     metadata: { namespace, name },
   } = entity;
 
-  return path.join(storageRootDir, namespace || DEFAULT_NAMESPACE, kind, name);
+  return mockDir.resolve(namespace || DEFAULT_NAMESPACE, kind, name);
 };
 
-const logger = getVoidLogger();
+const logger = loggerToWinstonLogger(mockServices.logger.mock());
 jest.spyOn(logger, 'info').mockReturnValue(logger);
 jest.spyOn(logger, 'error').mockReturnValue(logger);
 
@@ -220,13 +214,9 @@ describe('GoogleGCSPublish', () => {
   };
 
   beforeEach(() => {
-    mockFs({
+    mockDir.setContent({
       [directory]: files,
     });
-  });
-
-  afterEach(() => {
-    mockFs.restore();
   });
 
   describe('getReadiness', () => {
@@ -300,8 +290,7 @@ describe('GoogleGCSPublish', () => {
     });
 
     it('should fail to publish a directory', async () => {
-      const wrongPathToGeneratedDirectory = path.join(
-        storageRootDir,
+      const wrongPathToGeneratedDirectory = mockDir.resolve(
         'wrong',
         'path',
         'to',
@@ -315,13 +304,9 @@ describe('GoogleGCSPublish', () => {
         directory: wrongPathToGeneratedDirectory,
       });
 
-      // Can not do exact error message match due to mockFs adding unexpected characters in the path when throwing the error
-      // Issue reported https://github.com/tschaub/mock-fs/issues/118
-      await expect(fails).rejects.toMatchObject({
-        message: expect.stringContaining(
-          `Unable to upload file(s) to Google Cloud Storage. Error: Failed to read template directory: ENOENT, no such file or directory`,
-        ),
-      });
+      await expect(fails).rejects.toThrow(
+        `Unable to upload file(s) to Google Cloud Storage. Error: Failed to read template directory: ENOENT: no such file or directory, scandir '${wrongPathToGeneratedDirectory}'`,
+      );
 
       await expect(fails).rejects.toMatchObject({
         message: expect.stringContaining(wrongPathToGeneratedDirectory),

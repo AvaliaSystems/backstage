@@ -17,28 +17,34 @@
 import {
   DatabaseManager,
   getRootLogger,
+  LegacyRootDatabaseService,
   PluginDatabaseManager,
 } from '@backstage/backend-common';
 import { Config } from '@backstage/config';
 import { once } from 'lodash';
 import { Duration } from 'luxon';
-import { Logger } from 'winston';
 import { migrateBackendTasks } from '../database/migrateBackendTasks';
 import { PluginTaskSchedulerImpl } from './PluginTaskSchedulerImpl';
 import { PluginTaskSchedulerJanitor } from './PluginTaskSchedulerJanitor';
 import { PluginTaskScheduler } from './types';
+import { LoggerService } from '@backstage/backend-plugin-api';
 
 /**
  * Deals with the scheduling of distributed tasks.
  *
  * @public
+ * @deprecated Please migrate to the new backend system, and depend on `coreServices.scheduler` from  `@backstage/backend-plugin-api` instead, or use `DefaultSchedulerService` from `@backstage/backend-defaults`
  */
 export class TaskScheduler {
+  /**
+   * @deprecated
+   * It is only used by the legacy backend system, and should not be used in the new backend system.
+   */
   static fromConfig(
     config: Config,
     options?: {
-      databaseManager?: DatabaseManager;
-      logger?: Logger;
+      databaseManager?: LegacyRootDatabaseService;
+      logger?: LoggerService;
     },
   ): TaskScheduler {
     const databaseManager =
@@ -50,8 +56,8 @@ export class TaskScheduler {
   }
 
   constructor(
-    private readonly databaseManager: DatabaseManager,
-    private readonly logger: Logger,
+    private readonly databaseManager: LegacyRootDatabaseService,
+    private readonly logger: LoggerService,
   ) {}
 
   /**
@@ -59,6 +65,7 @@ export class TaskScheduler {
    *
    * @param pluginId - The unique ID of the plugin, for example "catalog"
    * @returns A {@link PluginTaskScheduler} instance
+   * @deprecated Please migrate to the new backend system, and depend on `coreServices.scheduler` from  `@backstage/backend-plugin-api` instead, or use `DefaultSchedulerService` from `@backstage/backend-defaults`
    */
   forPlugin(pluginId: string): PluginTaskScheduler {
     return TaskScheduler.forPlugin({
@@ -68,10 +75,13 @@ export class TaskScheduler {
     });
   }
 
+  /**
+   * @deprecated Please migrate to the new backend system, and depend on `coreServices.scheduler` from  `@backstage/backend-plugin-api` instead, or use `DefaultSchedulerService` from `@backstage/backend-defaults`
+   */
   static forPlugin(opts: {
     pluginId: string;
     databaseManager: PluginDatabaseManager;
-    logger: Logger;
+    logger: LoggerService;
   }): PluginTaskScheduler {
     const databaseFactory = once(async () => {
       const knex = await opts.databaseManager.getClient();
@@ -80,12 +90,14 @@ export class TaskScheduler {
         await migrateBackendTasks(knex);
       }
 
-      const janitor = new PluginTaskSchedulerJanitor({
-        knex,
-        waitBetweenRuns: Duration.fromObject({ minutes: 1 }),
-        logger: opts.logger,
-      });
-      janitor.start();
+      if (process.env.NODE_ENV !== 'test') {
+        const janitor = new PluginTaskSchedulerJanitor({
+          knex,
+          waitBetweenRuns: Duration.fromObject({ minutes: 1 }),
+          logger: opts.logger,
+        });
+        janitor.start();
+      }
 
       return knex;
     });

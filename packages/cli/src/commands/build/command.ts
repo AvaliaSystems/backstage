@@ -45,6 +45,7 @@ export async function command(opts: OptionValues): Promise<void> {
       targetDir: paths.targetDir,
       configPaths,
       skipBuildDependencies: Boolean(opts.skipBuildDependencies),
+      minify: Boolean(opts.minify),
     });
   }
 
@@ -65,6 +66,5 @@ export async function command(opts: OptionValues): Promise<void> {
   return buildPackage({
     outputs,
     minify: Boolean(opts.minify),
-    useApiExtractor: Boolean(opts.experimentalTypeBuild),
   });
 }

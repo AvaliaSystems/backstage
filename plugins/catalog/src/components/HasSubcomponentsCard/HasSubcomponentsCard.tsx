@@ -22,24 +22,32 @@ import {
   componentEntityColumns,
   RelatedEntitiesCard,
 } from '../RelatedEntitiesCard';
+import { catalogTranslationRef } from '../../translation';
+import { useTranslationRef } from '@backstage/core-plugin-api/alpha';
 
 /** @public */
 export interface HasSubcomponentsCardProps {
   variant?: InfoCardVariants;
   tableOptions?: TableOptions;
+  title?: string;
 }
 
 export function HasSubcomponentsCard(props: HasSubcomponentsCardProps) {
-  const { variant = 'gridItem', tableOptions = {} } = props;
+  const { t } = useTranslationRef(catalogTranslationRef);
+  const {
+    variant = 'gridItem',
+    tableOptions = {},
+    title = t('hasSubcomponentsCard.title'),
+  } = props;
   return (
     <RelatedEntitiesCard
       variant={variant}
-      title="Has subcomponents"
+      title={title}
       entityKind="Component"
       relationType={RELATION_HAS_PART}
       columns={componentEntityColumns}
       asRenderableEntities={asComponentEntities}
-      emptyMessage="No subcomponent is part of this component"
+      emptyMessage={t('hasSubcomponentsCard.emptyMessage')}
       emptyHelpLink="https://backstage.io/docs/features/software-catalog/descriptor-format#specsubcomponentof-optional"
       tableOptions={tableOptions}
     />

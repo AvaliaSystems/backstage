@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import { loggerToWinstonLogger } from '@backstage/backend-common';
 import {
   coreServices,
   createBackendModule,
@@ -27,19 +26,18 @@ import { BitbucketServerEntityProvider } from '../providers';
  */
 export const catalogModuleBitbucketServerEntityProvider = createBackendModule({
   pluginId: 'catalog',
-  moduleId: 'bitbucketServerEntityProvider',
+  moduleId: 'bitbucket-server-entity-provider',
   register(env) {
     env.registerInit({
       deps: {
         catalog: catalogProcessingExtensionPoint,
-        config: coreServices.config,
+        config: coreServices.rootConfig,
         logger: coreServices.logger,
         scheduler: coreServices.scheduler,
       },
       async init({ catalog, config, logger, scheduler }) {
-        const winstonLogger = loggerToWinstonLogger(logger);
         const providers = BitbucketServerEntityProvider.fromConfig(config, {
-          logger: winstonLogger,
+          logger,
           scheduler,
         });
 

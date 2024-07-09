@@ -1,6 +1,18 @@
 {
   "releases": {
     "Release Notes": [
+      "releases/v1.28.0",
+      "releases/v1.27.0",
+      "releases/v1.26.0",
+      "releases/v1.25.0",
+      "releases/v1.24.0",
+      "releases/v1.23.0",
+      "releases/v1.22.0",
+      "releases/v1.21.0",
+      "releases/v1.20.0",
+      "releases/v1.19.0",
+      "releases/v1.18.0",
+      "releases/v1.17.0",
       "releases/v1.16.0",
       "releases/v1.15.0",
       "releases/v1.14.0",
@@ -31,40 +43,32 @@
       "overview/versioning-policy",
       "overview/threat-model",
       "overview/support",
-      "overview/glossary",
       "overview/logos"
     ],
     "Getting Started": [
       "getting-started/index",
-      "getting-started/configuration",
-      "getting-started/create-an-app",
       {
         "type": "category",
-        "label": "App configuration",
+        "label": "Configuring Backstage",
         "items": [
+          "getting-started/config/database",
+          "getting-started/config/authentication",
           "getting-started/configure-app-with-plugins",
           "getting-started/app-custom-theme",
           "getting-started/homepage"
         ]
       },
-      "getting-started/keeping-backstage-updated",
-      "getting-started/concepts",
-      "getting-started/contributors",
-      "getting-started/getting-involved",
-      "getting-started/project-structure"
-    ],
-    "Local Development": [
       {
         "type": "category",
-        "label": "CLI",
+        "label": "Using Backstage",
         "items": [
-          "local-dev/cli-overview",
-          "local-dev/cli-build-system",
-          "local-dev/cli-commands"
+          "getting-started/logging-in",
+          "getting-started/register-a-component",
+          "getting-started/create-a-component"
         ]
       },
-      "local-dev/linking-local-packages",
-      "local-dev/debugging"
+      "getting-started/keeping-backstage-updated",
+      "getting-started/concepts"
     ],
     "Core Features": [
       {
@@ -95,6 +99,7 @@
           "features/kubernetes/installation",
           "features/kubernetes/configuration",
           "features/kubernetes/authentication",
+          "features/kubernetes/authentication-strategies",
           "features/kubernetes/troubleshooting",
           "features/kubernetes/proxy"
         ]
@@ -110,10 +115,11 @@
           "features/software-templates/input-examples",
           "features/software-templates/builtin-actions",
           "features/software-templates/writing-custom-actions",
+          "features/software-templates/writing-tests-for-actions",
           "features/software-templates/writing-custom-field-extensions",
           "features/software-templates/writing-custom-step-layouts",
-          "features/software-templates/authorizing-parameters-steps-and-actions",
-          "features/software-templates/testing-scaffolder-alpha",
+          "features/software-templates/authorizing-scaffolder-template-details",
+          "features/software-templates/migrating-to-rjsf-v5",
           "features/software-templates/migrating-from-v1beta2-to-v1beta3"
         ]
       },
@@ -223,6 +229,11 @@
       },
       {
         "type": "category",
+        "label": "Harness",
+        "items": ["integrations/harness/locations"]
+      },
+      {
+        "type": "category",
         "label": "Google GCS",
         "items": ["integrations/google-cloud-storage/locations"]
       },
@@ -241,9 +252,18 @@
       "plugins/integrating-plugin-into-software-catalog",
       "plugins/integrating-search-into-plugins",
       "plugins/composability",
-      "plugins/customization",
+      "plugins/internationalization",
       "plugins/analytics",
       "plugins/feature-flags",
+      {
+        "type": "category",
+        "label": "OpenAPI",
+        "items": [
+          "openapi/01-getting-started",
+          "openapi/generate-client",
+          "openapi/test-case-validation"
+        ]
+      },
       {
         "type": "category",
         "label": "Backends and APIs",
@@ -264,7 +284,7 @@
         "label": "Publishing",
         "items": [
           "plugins/publish-private",
-          "plugins/add-to-marketplace",
+          "plugins/add-to-directory",
           "plugins/observability"
         ]
       }
@@ -283,6 +303,7 @@
         "items": [
           "auth/auth0/provider",
           "auth/atlassian/provider",
+          "auth/aws-alb/provider",
           "auth/microsoft/provider",
           "auth/microsoft/easy-auth",
           "auth/bitbucket/provider",
@@ -292,9 +313,11 @@
           "auth/gitlab/provider",
           "auth/google/provider",
           "auth/google/gcp-iap-auth",
+          "auth/guest/provider",
           "auth/okta/provider",
           "auth/oauth2-proxy/provider",
-          "auth/onelogin/provider"
+          "auth/onelogin/provider",
+          "auth/vmware-cloud/provider"
         ]
       },
       "auth/identity-resolver",
@@ -302,8 +325,8 @@
       "auth/oidc",
       "auth/add-auth-provider",
       "auth/service-to-service-auth",
-      "auth/troubleshooting",
-      "auth/glossary"
+      "auth/autologout",
+      "auth/troubleshooting"
     ],
     "Permissions": [
       "permissions/overview",
@@ -324,6 +347,26 @@
         ]
       }
     ],
+    "Tooling": [
+      {
+        "type": "category",
+        "label": "Backstage CLI",
+        "items": [
+          "tooling/cli/overview",
+          "tooling/cli/build-system",
+          "tooling/cli/commands"
+        ]
+      },
+      {
+        "type": "category",
+        "label": "Local Development",
+        "items": [
+          "tooling/local-dev/linking-local-packages",
+          "tooling/local-dev/debugging"
+        ]
+      },
+      "tooling/package-metadata"
+    ],
     "Deployment": [
       "deployment/index",
       "deployment/scaling",
@@ -331,60 +374,14 @@
       "deployment/k8s",
       "deployment/heroku",
       "deployment/koyeb",
+      "deployment/flightcontrol",
       {
         "type": "category",
         "label": "Using Backstage Deploy (alpha)",
         "items": ["deployment/backstage-deploy/aws-lightsail"]
       }
     ],
-    "Designing for Backstage": [
-      "dls/design",
-      "dls/component-design-guidelines",
-      "dls/contributing-to-storybook",
-      "dls/figma"
-    ],
-    "API Reference": [
-      {
-        "type": "category",
-        "label": "Guides",
-        "items": ["api/utility-apis"]
-      },
-      {
-        "type": "category",
-        "label": "API Reference",
-        "items": ["reference/index"]
-      },
-      "api/deprecations"
-    ],
-    "Tutorials": [
-      "tutorials/journey",
-      "tutorials/quickstart-app-plugin",
-      "tutorials/react-router-stable-migration",
-      "tutorials/package-role-migration",
-      "tutorials/migrating-away-from-core",
-      "tutorials/configuring-plugin-databases",
-      "tutorials/switching-sqlite-postgres",
-      "tutorials/using-backstage-proxy-within-plugin",
-      "tutorials/yarn-migration"
-    ],
-    "Architecture Decision Records (ADRs)": [
-      "architecture-decisions/adrs-overview",
-      "architecture-decisions/adrs-adr001",
-      "architecture-decisions/adrs-adr002",
-      "architecture-decisions/adrs-adr003",
-      "architecture-decisions/adrs-adr004",
-      "architecture-decisions/adrs-adr005",
-      "architecture-decisions/adrs-adr006",
-      "architecture-decisions/adrs-adr007",
-      "architecture-decisions/adrs-adr008",
-      "architecture-decisions/adrs-adr009",
-      "architecture-decisions/adrs-adr010",
-      "architecture-decisions/adrs-adr011",
-      "architecture-decisions/adrs-adr012",
-      "architecture-decisions/adrs-adr013"
-    ],
-    "FAQ": ["FAQ"],
-    "Experimental Backend System": [
+    "New Backend System": [
       "backend-system/index",
       {
         "type": "category",
@@ -418,9 +415,136 @@
       {
         "type": "category",
         "label": "Core Services",
-        "items": ["backend-system/core-services/index"]
+        "items": [
+          "backend-system/core-services/index",
+          "backend-system/core-services/auth",
+          "backend-system/core-services/cache",
+          "backend-system/core-services/database",
+          "backend-system/core-services/discovery",
+          "backend-system/core-services/http-auth",
+          "backend-system/core-services/http-router",
+          "backend-system/core-services/identity",
+          "backend-system/core-services/lifecycle",
+          "backend-system/core-services/logger",
+          "backend-system/core-services/permissions",
+          "backend-system/core-services/plugin-metadata",
+          "backend-system/core-services/root-config",
+          "backend-system/core-services/root-http-router",
+          "backend-system/core-services/root-lifecycle",
+          "backend-system/core-services/root-logger",
+          "backend-system/core-services/scheduler",
+          "backend-system/core-services/token-manager",
+          "backend-system/core-services/url-reader",
+          "backend-system/core-services/user-info"
+        ]
       }
     ],
-    "Accessibility": ["accessibility/index"]
+    "New Frontend System": [
+      "frontend-system/index",
+      {
+        "type": "category",
+        "label": "Architecture",
+        "items": [
+          "frontend-system/architecture/index",
+          "frontend-system/architecture/app",
+          "frontend-system/architecture/extensions",
+          "frontend-system/architecture/plugins",
+          "frontend-system/architecture/extension-overrides",
+          "frontend-system/architecture/utility-apis",
+          "frontend-system/architecture/routes",
+          "frontend-system/architecture/naming-patterns",
+          "frontend-system/architecture/references"
+        ]
+      },
+      {
+        "type": "category",
+        "label": "Building Plugins",
+        "items": [
+          "frontend-system/building-plugins/index",
+          "frontend-system/building-plugins/testing",
+          "frontend-system/building-plugins/extension-types",
+          "frontend-system/building-plugins/built-in-data-refs",
+          "frontend-system/building-plugins/migrating"
+        ]
+      },
+      {
+        "type": "category",
+        "label": "Building Apps",
+        "items": [
+          "frontend-system/building-apps/index",
+          "frontend-system/building-apps/configuring-extensions",
+          "frontend-system/building-apps/built-in-extensions",
+          "frontend-system/building-apps/migrating"
+        ]
+      },
+      {
+        "type": "category",
+        "label": "Utility APIs",
+        "items": [
+          "frontend-system/utility-apis/index",
+          "frontend-system/utility-apis/creating",
+          "frontend-system/utility-apis/consuming",
+          "frontend-system/utility-apis/configuring"
+        ]
+      }
+    ],
+    "Designing for Backstage": [
+      "dls/design",
+      "dls/component-design-guidelines",
+      "dls/contributing-to-storybook",
+      "dls/figma"
+    ],
+    "API Reference": [
+      {
+        "type": "category",
+        "label": "Guides",
+        "items": ["api/utility-apis"]
+      },
+      {
+        "type": "category",
+        "label": "API Reference",
+        "items": ["reference/index"]
+      },
+      "api/deprecations"
+    ],
+    "Tutorials": [
+      "tutorials/quickstart-app-plugin",
+      "tutorials/react-router-stable-migration",
+      "tutorials/react18-migration",
+      "tutorials/package-role-migration",
+      "tutorials/migrating-away-from-core",
+      "tutorials/configuring-plugin-databases",
+      "tutorials/switching-sqlite-postgres",
+      "tutorials/using-backstage-proxy-within-plugin",
+      "tutorials/yarn-migration",
+      "tutorials/migrate-to-mui5",
+      "tutorials/auth-service-migration",
+      "tutorials/enable-public-entry",
+      "tutorials/setup-opentelemetry"
+    ],
+    "Architecture Decision Records (ADRs)": [
+      "architecture-decisions/adrs-overview",
+      "architecture-decisions/adrs-adr001",
+      "architecture-decisions/adrs-adr002",
+      "architecture-decisions/adrs-adr003",
+      "architecture-decisions/adrs-adr004",
+      "architecture-decisions/adrs-adr005",
+      "architecture-decisions/adrs-adr006",
+      "architecture-decisions/adrs-adr007",
+      "architecture-decisions/adrs-adr008",
+      "architecture-decisions/adrs-adr009",
+      "architecture-decisions/adrs-adr010",
+      "architecture-decisions/adrs-adr011",
+      "architecture-decisions/adrs-adr012",
+      "architecture-decisions/adrs-adr013"
+    ],
+    "FAQ": ["faq/index", "faq/product", "faq/technical"],
+    "Accessibility": ["accessibility/index"],
+    "Contribute": [
+      "contribute/index",
+      "contribute/getting-involved",
+      "contribute/project-structure"
+    ],
+    "References": ["references/glossary"]
   }
 }

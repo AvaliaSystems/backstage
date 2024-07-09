@@ -6,8 +6,11 @@ on:
   pull_request:
     paths-ignore:
       - 'yarn.lock'
-      - '.github/workflows/verify_kubernetes.yml'
+      - '.github/workflows/verify_e2e-kubernetes.yml'
       - 'packages/backend-common/src/**'
+
+permissions:
+  contents: read
 
 jobs:
   verify:
@@ -15,8 +18,13 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [16.x, 18.x]
+        node-version: [18.x, 20.x]
 
     name: Kubernetes ${{ matrix.node-version }}
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@17d0e2bd7d51742c71671bd19fa12bdc9d40a3d6 # v2.8.1
+        with:
+          egress-policy: audit
+
       - run: echo NOOP

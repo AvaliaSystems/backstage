@@ -15,46 +15,47 @@
  */
 
 import { ScmIntegrations } from '@backstage/integration';
-import {
-  TaskContext,
-  TaskTrackType,
-  WorkflowResponse,
-  WorkflowRunner,
-} from './types';
+import { TaskTrackType, WorkflowResponse, WorkflowRunner } from './types';
 import * as winston from 'winston';
 import fs from 'fs-extra';
 import path from 'path';
 import nunjucks from 'nunjucks';
-import { JsonObject, JsonValue } from '@backstage/types';
-import { InputError, NotAllowedError } from '@backstage/errors';
+import { JsonArray, JsonObject, JsonValue } from '@backstage/types';
+import { InputError, NotAllowedError, stringifyError } from '@backstage/errors';
 import { PassThrough } from 'stream';
 import { generateExampleOutput, isTruthy } from './helper';
 import { validate as validateJsonSchema } from 'jsonschema';
 import { TemplateActionRegistry } from '../actions';
 import {
-  TemplateFilter,
   SecureTemplater,
   SecureTemplateRenderer,
-  TemplateGlobal,
 } from '../../lib/templating/SecureTemplater';
 import {
+  TaskRecovery,
   TaskSpec,
   TaskSpecV1beta3,
   TaskStep,
 } from '@backstage/plugin-scaffolder-common';
 
-import { TemplateAction } from '@backstage/plugin-scaffolder-node';
+import {
+  TemplateAction,
+  TemplateFilter,
+  TemplateGlobal,
+  TaskContext,
+} from '@backstage/plugin-scaffolder-node';
 import { createConditionAuthorizer } from '@backstage/plugin-permission-node';
 import { UserEntity } from '@backstage/catalog-model';
 import { createCounterMetric, createHistogramMetric } from '../../util/metrics';
 import { createDefaultFilters } from '../../lib/templating/filters';
 import {
   AuthorizeResult,
-  PermissionEvaluator,
   PolicyDecision,
 } from '@backstage/plugin-permission-common';
 import { scaffolderActionRules } from '../../service/rules';
 import { actionExecutePermission } from '@backstage/plugin-scaffolder-common/alpha';
+import { PermissionsService } from '@backstage/backend-plugin-api';
+import { loggerToWinstonLogger } from '@backstage/backend-common';
+import { BackstageLoggerTransport, WinstonLogger } from './logger';
 
 type NunjucksWorkflowRunnerOptions = {
   workingDirectory: string;
@@ -63,11 +64,12 @@ type NunjucksWorkflowRunnerOptions = {
   logger: winston.Logger;
   additionalTemplateFilters?: Record<string, TemplateFilter>;
   additionalTemplateGlobals?: Record<string, TemplateGlobal>;
-  permissions?: PermissionEvaluator;
+  permissions?: PermissionsService;
 };
 
 type TemplateContext = {
   parameters: JsonObject;
+  EXPERIMENTAL_recovery?: TaskRecovery;
   steps: {
     [stepName: string]: { output: { [outputName: string]: JsonValue } };
   };
@@ -76,7 +78,18 @@ type TemplateContext = {
     entity?: UserEntity;
     ref?: string;
   };
+  each?: JsonValue;
 };
+
+type CheckpointState =
+  | {
+      status: 'failed';
+      reason: string;
+    }
+  | {
+      status: 'success';
+      value: JsonValue;
+    };
 
 const isValidTaskSpec = (taskSpec: TaskSpec): taskSpec is TaskSpecV1beta3 => {
   return taskSpec.apiVersion === 'scaffolder.backstage.io/v1beta3';
@@ -85,29 +98,37 @@ const isValidTaskSpec = (taskSpec: TaskSpec): taskSpec is TaskSpecV1beta3 => {
 const createStepLogger = ({
   task,
   step,
+  rootLogger,
 }: {
   task: TaskContext;
   step: TaskStep;
+  rootLogger: winston.Logger;
 }) => {
-  const metadata = { stepId: step.id };
-  const taskLogger = winston.createLogger({
+  const taskLogger = WinstonLogger.create({
     level: process.env.LOG_LEVEL || 'info',
     format: winston.format.combine(
       winston.format.colorize(),
       winston.format.simple(),
     ),
-    defaultMeta: {},
+    transports: [new BackstageLoggerTransport(rootLogger, task, step.id)],
   });
 
+  taskLogger.addRedactions(Object.values(task.secrets ?? {}));
+
+  // This stream logger should be deprecated. We're going to replace it with
+  // just using the logger directly, as all those logs get written to step logs
+  // using the stepLogStream above.
+  // Initially this stream used to be the only way to write to the client logs, but that
+  // has changed over time, there's not really a need for this anymore.
+  // You can just create a simple wrapper like the below in your action to write to the main logger.
+  // This way we also get recactions for free.
   const streamLogger = new PassThrough();
   streamLogger.on('data', async data => {
     const message = data.toString().trim();
     if (message?.length > 1) {
-      await task.emitLog(message, metadata);
+      taskLogger.info(message);
     }
   });
-
-  taskLogger.add(new winston.transports.Stream({ stream: streamLogger }));
 
   return { taskLogger, streamLogger };
 };
@@ -118,6 +139,7 @@ const isActionAuthorized = createConditionAuthorizer(
 
 export class NunjucksWorkflowRunner implements WorkflowRunner {
   private readonly defaultTemplateFilters: Record<string, TemplateFilter>;
+
   constructor(private readonly options: NunjucksWorkflowRunnerOptions) {
     this.defaultTemplateFilters = createDefaultFilters({
       integrations: this.options.integrations,
@@ -222,7 +244,7 @@ export class NunjucksWorkflowRunner implements WorkflowRunner {
 
     try {
       if (step.if) {
-        const ifResult = await this.render(step.if, context, renderTemplate);
+        const ifResult = this.render(step.if, context, renderTemplate);
         if (!isTruthy(ifResult)) {
           await stepTrack.skipFalsy();
           return;
@@ -231,14 +253,15 @@ export class NunjucksWorkflowRunner implements WorkflowRunner {
 
       const action: TemplateAction<JsonObject> =
         this.options.actionRegistry.get(step.action);
-      const { taskLogger, streamLogger } = createStepLogger({ task, step });
+      const { taskLogger, streamLogger } = createStepLogger({
+        task,
+        step,
+        rootLogger: this.options.logger,
+      });
 
       if (task.isDryRun) {
         const redactedSecrets = Object.fromEntries(
-          Object.entries(task.secrets ?? {}).map(secret => [
-            secret[0],
-            '[REDACTED]',
-          ]),
+          Object.entries(task.secrets ?? {}).map(secret => [secret[0], '***']),
         );
         const debugInput =
           (step.input &&
@@ -275,61 +298,139 @@ export class NunjucksWorkflowRunner implements WorkflowRunner {
           return;
         }
       }
+      const iterations = (
+        step.each
+          ? Object.entries(this.render(step.each, context, renderTemplate)).map(
+              ([key, value]) => ({
+                each: { key, value },
+              }),
+            )
+          : [{}]
+      ).map(i => ({
+        ...i,
+        // Secrets are only passed when templating the input to actions for security reasons
+        input: step.input
+          ? this.render(
+              step.input,
+              { ...context, secrets: task.secrets ?? {}, ...i },
+              renderTemplate,
+            )
+          : {},
+      }));
+      for (const iteration of iterations) {
+        const actionId = `${action.id}${
+          iteration.each ? `[${iteration.each.key}]` : ''
+        }`;
 
-      // Secrets are only passed when templating the input to actions for security reasons
-      const input =
-        (step.input &&
-          this.render(
-            step.input,
-            { ...context, secrets: task.secrets ?? {} },
-            renderTemplate,
-          )) ??
-        {};
-
-      if (action.schema?.input) {
-        const validateResult = validateJsonSchema(input, action.schema.input);
-        if (!validateResult.valid) {
-          const errors = validateResult.errors.join(', ');
-          throw new InputError(
-            `Invalid input passed to action ${action.id}, ${errors}`,
+        if (action.schema?.input) {
+          const validateResult = validateJsonSchema(
+            iteration.input,
+            action.schema.input,
+          );
+          if (!validateResult.valid) {
+            const errors = validateResult.errors.join(', ');
+            throw new InputError(
+              `Invalid input passed to action ${actionId}, ${errors}`,
+            );
+          }
+        }
+        if (
+          !isActionAuthorized(decision, {
+            action: action.id,
+            input: iteration.input,
+          })
+        ) {
+          throw new NotAllowedError(
+            `Unauthorized action: ${actionId}. The action is not allowed. Input: ${JSON.stringify(
+              iteration.input,
+              null,
+              2,
+            )}`,
           );
         }
       }
-
-      if (!isActionAuthorized(decision, { action: action.id, input })) {
-        throw new NotAllowedError(
-          `Unauthorized action: ${
-            action.id
-          }. The action is not allowed. Input: ${JSON.stringify(
-            input,
-            null,
-            2,
-          )}`,
-        );
-      }
-
       const tmpDirs = new Array<string>();
       const stepOutput: { [outputName: string]: JsonValue } = {};
+      const prevTaskState = await task.getTaskState?.();
 
-      await action.handler({
-        input,
-        secrets: task.secrets ?? {},
-        logger: taskLogger,
-        logStream: streamLogger,
-        workspacePath,
-        createTemporaryDirectory: async () => {
-          const tmpDir = await fs.mkdtemp(`${workspacePath}_step-${step.id}-`);
-          tmpDirs.push(tmpDir);
-          return tmpDir;
-        },
-        output(name: string, value: JsonValue) {
-          stepOutput[name] = value;
-        },
-        templateInfo: task.spec.templateInfo,
-        user: task.spec.user,
-        isDryRun: task.isDryRun,
-        signal: task.cancelSignal,
-      });
+      for (const iteration of iterations) {
+        if (iteration.each) {
+          taskLogger.info(
+            `Running step each: ${JSON.stringify(
+              iteration.each,
+              (k, v) => (k ? v.toString() : v),
+              0,
+            )}`,
+          );
+        }
+        await action.handler({
+          input: iteration.input,
+          secrets: task.secrets ?? {},
+          // TODO(blam): move to LoggerService and away from Winston
+          logger: loggerToWinstonLogger(taskLogger),
+          logStream: streamLogger,
+          workspacePath,
+          async checkpoint<U extends JsonValue>(
+            keySuffix: string,
+            fn: () => Promise<U>,
+          ) {
+            const key = `v1.task.checkpoint.${keySuffix}`;
+            try {
+              let prevValue: U | undefined;
+              if (prevTaskState) {
+                const prevState = (
+                  prevTaskState.state?.checkpoints as {
+                    [key: string]: CheckpointState;
+                  }
+                )?.[key];
+                if (prevState && prevState.status === 'success') {
+                  prevValue = prevState.value as U;
+                }
+              }
+
+              const value = prevValue ? prevValue : await fn();
+
+              if (!prevValue) {
+                task.updateCheckpoint?.({
+                  key,
+                  status: 'success',
+                  value,
+                });
+              }
+              return value;
+            } catch (err) {
+              task.updateCheckpoint?.({
+                key,
+                status: 'failed',
+                reason: stringifyError(err),
+              });
+              throw err;
+            } finally {
+              await task.serializeWorkspace?.({ path: workspacePath });
+            }
+          },
+          createTemporaryDirectory: async () => {
+            const tmpDir = await fs.mkdtemp(
+              `${workspacePath}_step-${step.id}-`,
+            );
+            tmpDirs.push(tmpDir);
+            return tmpDir;
+          },
+          output(name: string, value: JsonValue) {
+            if (step.each) {
+              stepOutput[name] = stepOutput[name] || [];
+              (stepOutput[name] as JsonArray).push(value);
+            } else {
+              stepOutput[name] = value;
+            }
+          },
+          templateInfo: task.spec.templateInfo,
+          user: task.spec.user,
+          isDryRun: task.isDryRun,
+          signal: task.cancelSignal,
+          getInitiatorCredentials: () => task.getInitiatorCredentials(),
+        });
+      }
 
       // Remove all temporary directories that were created when executing the action
       for (const tmpDir of tmpDirs) {
@@ -347,6 +448,8 @@ export class NunjucksWorkflowRunner implements WorkflowRunner {
       await taskTrack.markFailed(step, err);
       await stepTrack.markFailed();
       throw err;
+    } finally {
+      await task.serializeWorkspace?.({ path: workspacePath });
     }
   }
 
@@ -356,10 +459,9 @@ export class NunjucksWorkflowRunner implements WorkflowRunner {
         'Wrong template version executed with the workflow engine',
       );
     }
-    const workspacePath = path.join(
-      this.options.workingDirectory,
-      await task.getWorkspaceName(),
-    );
+    const taskId = await task.getWorkspaceName();
+
+    const workspacePath = path.join(this.options.workingDirectory, taskId);
 
     const { additionalTemplateFilters, additionalTemplateGlobals } =
       this.options;
@@ -373,6 +475,8 @@ export class NunjucksWorkflowRunner implements WorkflowRunner {
     });
 
     try {
+      await task.rehydrateWorkspace?.({ taskId, targetPath: workspacePath });
+
       const taskTrack = await this.tracker.taskStart(task);
       await fs.ensureDir(workspacePath);
 
@@ -386,7 +490,7 @@ export class NunjucksWorkflowRunner implements WorkflowRunner {
         this.options.permissions && task.spec.steps.length
           ? await this.options.permissions.authorizeConditional(
               [{ permission: actionExecutePermission }],
-              { token: task.secrets?.backstageToken },
+              { credentials: await task.getInitiatorCredentials() },
             )
           : [{ result: AuthorizeResult.ALLOW }];
 
@@ -408,6 +512,7 @@ export class NunjucksWorkflowRunner implements WorkflowRunner {
       return { output };
     } finally {
       if (workspacePath) {
+        await task.cleanWorkspace?.();
         await fs.remove(workspacePath);
       }
     }

@@ -18,9 +18,9 @@ import { PluginTaskScheduler, TaskRunner } from '@backstage/backend-tasks';
 import { Config } from '@backstage/config';
 import {
   GithubCredentialsProvider,
-  ScmIntegrations,
-  GithubIntegrationConfig,
   GithubIntegration,
+  GithubIntegrationConfig,
+  ScmIntegrations,
   SingleInstanceGithubCredentialsProvider,
 } from '@backstage/integration';
 import {
@@ -34,23 +34,41 @@ import { LocationSpec } from '@backstage/plugin-catalog-common';
 
 import { graphql } from '@octokit/graphql';
 import * as uuid from 'uuid';
-import { Logger } from 'winston';
 import {
-  readProviderConfigs,
   GithubEntityProviderConfig,
+  readProviderConfigs,
 } from './GithubEntityProviderConfig';
-import { getOrganizationRepositories } from '../lib/github';
 import {
-  satisfiesTopicFilter,
+  getOrganizationRepositories,
+  getOrganizationRepository,
+  RepositoryResponse,
+} from '../lib/github';
+import {
   satisfiesForkFilter,
+  satisfiesTopicFilter,
   satisfiesVisibilityFilter,
 } from '../lib/util';
 
-import { EventParams, EventSubscriber } from '@backstage/plugin-events-node';
-import { PushEvent, Commit } from '@octokit/webhooks-types';
+import {
+  EventParams,
+  EventsService,
+  EventSubscriber,
+} from '@backstage/plugin-events-node';
+import {
+  Commit,
+  PushEvent,
+  RepositoryArchivedEvent,
+  RepositoryDeletedEvent,
+  RepositoryEditedEvent,
+  RepositoryEvent,
+  RepositoryRenamedEvent,
+  RepositoryTransferredEvent,
+  RepositoryUnarchivedEvent,
+} from '@octokit/webhooks-types';
 import { Minimatch } from 'minimatch';
+import { LoggerService } from '@backstage/backend-plugin-api';
 
-const TOPIC_REPO_PUSH = 'github.push';
+const EVENT_TOPICS = ['github.push', 'github.repository'];
 
 type Repository = {
   name: string;
@@ -73,7 +91,8 @@ type Repository = {
  */
 export class GithubEntityProvider implements EntityProvider, EventSubscriber {
   private readonly config: GithubEntityProviderConfig;
-  private readonly logger: Logger;
+  private readonly events?: EventsService;
+  private readonly logger: LoggerService;
   private readonly integration: GithubIntegrationConfig;
   private readonly scheduleFn: () => Promise<void>;
   private connection?: EntityProviderConnection;
@@ -82,7 +101,8 @@ export class GithubEntityProvider implements EntityProvider, EventSubscriber {
   static fromConfig(
     config: Config,
     options: {
-      logger: Logger;
+      events?: EventsService;
+      logger: LoggerService;
       schedule?: TaskRunner;
       scheduler?: PluginTaskScheduler;
     },
@@ -118,6 +138,7 @@ export class GithubEntityProvider implements EntityProvider, EventSubscriber {
         integration,
         options.logger,
         taskRunner,
+        options.events,
       );
     });
   }
@@ -125,10 +146,12 @@ export class GithubEntityProvider implements EntityProvider, EventSubscriber {
   private constructor(
     config: GithubEntityProviderConfig,
     integration: GithubIntegration,
-    logger: Logger,
+    logger: LoggerService,
     taskRunner: TaskRunner,
+    events?: EventsService,
   ) {
     this.config = config;
+    this.events = events;
     this.integration = integration.config;
     this.logger = logger.child({
       target: this.getProviderName(),
@@ -146,6 +169,11 @@ export class GithubEntityProvider implements EntityProvider, EventSubscriber {
   /** {@inheritdoc @backstage/plugin-catalog-backend#EntityProvider.connect} */
   async connect(connection: EntityProviderConnection): Promise<void> {
     this.connection = connection;
+    await this.events?.subscribe({
+      id: this.getProviderName(),
+      topics: EVENT_TOPICS,
+      onEvent: params => this.onEvent(params),
+    });
     return await this.scheduleFn();
   }
 
@@ -163,29 +191,24 @@ export class GithubEntityProvider implements EntityProvider, EventSubscriber {
           try {
             await this.refresh(logger);
           } catch (error) {
-            logger.error(`${this.getProviderName()} refresh failed`, error);
+            logger.error(
+              `${this.getProviderName()} refresh failed, ${error}`,
+              error,
+            );
           }
         },
       });
     };
   }
 
-  async refresh(logger: Logger) {
+  async refresh(logger: LoggerService) {
     if (!this.connection) {
       throw new Error('Not initialized');
     }
 
     const targets = await this.findCatalogFiles();
     const matchingTargets = this.matchesFilters(targets);
-    const entities = matchingTargets
-      .map(repository => this.createLocationUrl(repository))
-      .map(GithubEntityProvider.toLocationSpec)
-      .map(location => {
-        return {
-          locationKey: this.getProviderName(),
-          entity: locationSpecToLocationEntity({ location }),
-        };
-      });
+    const entities = this.toDeferredEntitiesFromRepos(matchingTargets);
 
     await this.connection.applyMutation({
       type: 'full',
@@ -197,38 +220,32 @@ export class GithubEntityProvider implements EntityProvider, EventSubscriber {
     );
   }
 
-  // go to the server and get all of the repositories
-  private async findCatalogFiles(): Promise<Repository[]> {
+  private async createGraphqlClient() {
     const organization = this.config.organization;
     const host = this.integration.host;
-    const catalogPath = this.config.catalogPath;
     const orgUrl = `https://${host}/${organization}`;
 
     const { headers } = await this.githubCredentialsProvider.getCredentials({
       url: orgUrl,
     });
 
-    const client = graphql.defaults({
+    return graphql.defaults({
       baseUrl: this.integration.apiBaseUrl,
       headers,
     });
+  }
+
+  // go to the server and get all repositories
+  private async findCatalogFiles(): Promise<Repository[]> {
+    const organization = this.config.organization;
+    const catalogPath = this.config.catalogPath;
+    const client = await this.createGraphqlClient();
 
     const { repositories: repositoriesFromGithub } =
       await getOrganizationRepositories(client, organization, catalogPath);
-    const repositories = repositoriesFromGithub.map(r => {
-      return {
-        url: r.url,
-        name: r.name,
-        defaultBranchRef: r.defaultBranchRef?.name,
-        repositoryTopics: r.repositoryTopics.nodes.map(t => t.topic.name),
-        isArchived: r.isArchived,
-        isFork: r.isFork,
-        isCatalogInfoFilePresent:
-          r.catalogInfoFile?.__typename === 'Blob' &&
-          r.catalogInfoFile.text !== '',
-        visibility: r.visibility,
-      };
-    });
+    const repositories = repositoriesFromGithub.map(
+      this.createRepoFromGithubResponse,
+    );
 
     if (this.config.validateLocationsExist) {
       return repositories.filter(
@@ -239,13 +256,13 @@ export class GithubEntityProvider implements EntityProvider, EventSubscriber {
     return repositories;
   }
 
-  private matchesFilters(repositories: Repository[]) {
+  private matchesFilters(repositories: Repository[]): Repository[] {
     const repositoryFilter = this.config.filters?.repository;
     const topicFilters = this.config.filters?.topic;
     const allowForks = this.config.filters?.allowForks ?? true;
     const visibilities = this.config.filters?.visibility ?? [];
 
-    const matchingRepositories = repositories.filter(r => {
+    return repositories.filter(r => {
       const repoTopics: string[] = r.repositoryTopics;
       return (
         !r.isArchived &&
@@ -256,7 +273,6 @@ export class GithubEntityProvider implements EntityProvider, EventSubscriber {
         r.defaultBranchRef
       );
     });
-    return matchingRepositories;
   }
 
   private createLocationUrl(repository: Repository): string {
@@ -279,23 +295,34 @@ export class GithubEntityProvider implements EntityProvider, EventSubscriber {
   /** {@inheritdoc @backstage/plugin-events-node#EventSubscriber.onEvent} */
   async onEvent(params: EventParams): Promise<void> {
     this.logger.debug(`Received event from ${params.topic}`);
-    if (params.topic !== TOPIC_REPO_PUSH) {
-      return;
-    }
+    if (EVENT_TOPICS.some(topic => topic === params.topic)) {
+      if (!this.connection) {
+        throw new Error('Not initialized');
+      }
 
-    await this.onRepoPush(params.eventPayload as PushEvent);
+      switch (params.topic) {
+        case 'github.push':
+          await this.onPush(params.eventPayload as PushEvent);
+          return;
+
+        case 'github.repository':
+          await this.onRepoChange(params.eventPayload as RepositoryEvent);
+          return;
+
+        default: // should never be reached
+          this.logger.warn(
+            `Missing implementation for event of topic ${params.topic}`,
+          );
+      }
+    }
   }
 
   /** {@inheritdoc @backstage/plugin-events-node#EventSubscriber.supportsEventTopics} */
   supportsEventTopics(): string[] {
-    return [TOPIC_REPO_PUSH];
+    return EVENT_TOPICS;
   }
 
-  private async onRepoPush(event: PushEvent) {
-    if (!this.connection) {
-      throw new Error('Not initialized');
-    }
-
+  private async onPush(event: PushEvent) {
     if (this.config.organization !== event.repository.organization) {
       this.logger.debug(
         `skipping push event from organization ${event.repository.organization}`,
@@ -315,18 +342,7 @@ export class GithubEntityProvider implements EntityProvider, EventSubscriber {
       return;
     }
 
-    const repository: Repository = {
-      url: event.repository.url,
-      name: event.repository.name,
-      defaultBranchRef: event.repository.default_branch,
-      repositoryTopics: event.repository.topics,
-      isArchived: event.repository.archived,
-      isFork: event.repository.fork,
-      // we can consider this file present because
-      // only the catalog file will be recovered from the commits
-      isCatalogInfoFilePresent: true,
-      visibility: event.repository.visibility,
-    };
+    const repository = this.createRepoFromEvent(event);
 
     const matchingTargets = this.matchesFilters([repository]);
     if (matchingTargets.length === 0) {
@@ -357,22 +373,29 @@ export class GithubEntityProvider implements EntityProvider, EventSubscriber {
     );
 
     if (modified.length > 0) {
-      await this.connection.refresh({
+      const catalogPath = this.config.catalogPath.startsWith('/')
+        ? this.config.catalogPath.substring(1)
+        : this.config.catalogPath;
+
+      await this.connection!.refresh({
         keys: [
-          ...modified.map(
-            filePath =>
-              `url:${event.repository.url}/tree/${branch}/${filePath}`,
-          ),
-          ...modified.map(
-            filePath =>
-              `url:${event.repository.url}/blob/${branch}/${filePath}`,
-          ),
+          ...new Set([
+            ...modified.map(
+              filePath =>
+                `url:${event.repository.url}/tree/${branch}/${filePath}`,
+            ),
+            ...modified.map(
+              filePath =>
+                `url:${event.repository.url}/blob/${branch}/${filePath}`,
+            ),
+            `url:${event.repository.url}/tree/${branch}/${catalogPath}`,
+          ]),
         ],
       });
     }
 
     if (added.length > 0 || removed.length > 0) {
-      await this.connection.applyMutation({
+      await this.connection!.applyMutation({
         type: 'delta',
         added: added,
         removed: removed,
@@ -382,6 +405,263 @@ export class GithubEntityProvider implements EntityProvider, EventSubscriber {
     this.logger.info(
       `Processed Github push event: added ${added.length} - removed ${removed.length} - modified ${modified.length}`,
     );
+  }
+
+  private async onRepoChange(event: RepositoryEvent) {
+    if (this.config.organization !== event.repository.organization) {
+      this.logger.debug(
+        `skipping repository event from organization ${event.repository.organization}`,
+      );
+      return;
+    }
+
+    const action = event.action;
+    switch (action) {
+      case 'archived':
+        await this.onRepoArchived(event as RepositoryArchivedEvent);
+        return;
+
+      // A repository was created.
+      case 'created':
+        // skip these events
+        return;
+
+      case 'deleted':
+        await this.onRepoDeleted(event as RepositoryDeletedEvent);
+        return;
+
+      case 'edited':
+        await this.onRepoEdited(event as RepositoryEditedEvent);
+        return;
+
+      // The visibility of a repository was changed to `private`.
+      case 'privatized':
+        // skip these events
+        return;
+
+      // The visibility of a repository was changed to `public`.
+      case 'publicized':
+        // skip these events
+        return;
+
+      case 'renamed':
+        await this.onRepoRenamed(event as RepositoryRenamedEvent);
+        return;
+
+      case 'transferred':
+        await this.onRepoTransferred(event as RepositoryTransferredEvent);
+        return;
+
+      case 'unarchived':
+        await this.onRepoUnarchived(event as RepositoryUnarchivedEvent);
+        return;
+
+      default: // should never be reached
+        this.logger.warn(
+          `Missing implementation for event of topic repository with action ${action}`,
+        );
+    }
+  }
+
+  /**
+   * A repository was archived.
+   *
+   * Removes all entities associated with the repository.
+   *
+   * @param event - The repository archived event.
+   * @private
+   */
+  private async onRepoArchived(event: RepositoryArchivedEvent) {
+    const repository = this.createRepoFromEvent(event);
+    await this.removeEntitiesForRepo(repository);
+    this.logger.debug(
+      `Removed entities for archived repository ${repository.name}`,
+    );
+  }
+
+  /**
+   * A repository was deleted.
+   *
+   * Removes all entities associated with the repository.
+   *
+   * @param event - The repository deleted event.
+   * @private
+   */
+  private async onRepoDeleted(event: RepositoryDeletedEvent) {
+    const repository = this.createRepoFromEvent(event);
+    await this.removeEntitiesForRepo(repository);
+    this.logger.debug(
+      `Removed entities for deleted repository ${repository.name}`,
+    );
+  }
+
+  /**
+   * The topics, default branch, description, or homepage of a repository was changed.
+   *
+   * We are interested in potential topic changes as these can be used as part of the filters.
+   *
+   * Removes all entities associated with the repository if the repository no longer matches the filters.
+   *
+   * @param event - The repository edited event.
+   * @private
+   */
+  private async onRepoEdited(event: RepositoryEditedEvent) {
+    const repository = this.createRepoFromEvent(event);
+
+    const matchingTargets = this.matchesFilters([repository]);
+    if (matchingTargets.length === 0) {
+      await this.removeEntitiesForRepo(repository);
+    }
+    // else: repository is (still) matching the filters, so we don't need to do anything
+  }
+
+  /**
+   * The name of a repository was changed.
+   *
+   * Removes all entities associated with the repository's old name.
+   * Creates new entities for the repository's new name if it still matches the filters.
+   *
+   * @param event - The repository renamed event.
+   * @private
+   */
+  private async onRepoRenamed(event: RepositoryRenamedEvent) {
+    const repository = this.createRepoFromEvent(event);
+    const oldRepoName = event.changes.repository.name.from;
+    const urlParts = event.repository.url.split('/');
+    urlParts[urlParts.length - 1] = oldRepoName;
+    const oldRepoUrl = urlParts.join('/');
+    const oldRepository: Repository = {
+      ...repository,
+      name: oldRepoName,
+      url: oldRepoUrl,
+    };
+    await this.removeEntitiesForRepo(oldRepository);
+
+    const matchingTargets = this.matchesFilters([repository]);
+    if (matchingTargets.length === 0) {
+      this.logger.debug(
+        `skipping repository transferred event for repository ${repository.name} because it didn't match provider filters`,
+      );
+      return;
+    }
+
+    await this.addEntitiesForRepo(repository);
+  }
+
+  /**
+   * Ownership of the repository was transferred to a user or organization account.
+   * This event is only sent to the account where the ownership is transferred.
+   * To receive the `repository.transferred` event, the new owner account must have the GitHub App installed,
+   * and the App must be subscribed to "Repository" events.
+   *
+   * Creates new entities for the repository if it matches the filters.
+   *
+   * @param event - The repository unarchived event.
+   * @private
+   */
+  private async onRepoTransferred(event: RepositoryTransferredEvent) {
+    const repository = this.createRepoFromEvent(event);
+
+    const matchingTargets = this.matchesFilters([repository]);
+    if (matchingTargets.length === 0) {
+      this.logger.debug(
+        `skipping repository transferred event for repository ${repository.name} because it didn't match provider filters`,
+      );
+      return;
+    }
+
+    await this.addEntitiesForRepo(repository);
+  }
+
+  /**
+   * A previously archived repository was unarchived.
+   *
+   * Creates new entities for the repository if it matches the filters.
+   *
+   * @param event - The repository unarchived event.
+   * @private
+   */
+  private async onRepoUnarchived(event: RepositoryUnarchivedEvent) {
+    const repository = this.createRepoFromEvent(event);
+
+    const matchingTargets = this.matchesFilters([repository]);
+    if (matchingTargets.length === 0) {
+      this.logger.debug(
+        `skipping repository transferred event for repository ${repository.name} because it didn't match provider filters`,
+      );
+      return;
+    }
+
+    await this.addEntitiesForRepo(repository);
+  }
+
+  private async removeEntitiesForRepo(repository: Repository) {
+    const removed = this.toDeferredEntitiesFromRepos([repository]);
+    await this.connection!.applyMutation({
+      type: 'delta',
+      added: [],
+      removed: removed,
+    });
+  }
+
+  private async addEntitiesForRepo(repository: Repository) {
+    if (this.config.validateLocationsExist) {
+      const organization = this.config.organization;
+      const catalogPath = this.config.catalogPath;
+      const client = await this.createGraphqlClient();
+
+      const repositoryFromGithub = await getOrganizationRepository(
+        client,
+        organization,
+        repository.name,
+        catalogPath,
+      ).then(r => (r ? this.createRepoFromGithubResponse(r) : null));
+
+      if (!repositoryFromGithub?.isCatalogInfoFilePresent) {
+        return;
+      }
+    }
+
+    const added = this.toDeferredEntitiesFromRepos([repository]);
+    await this.connection!.applyMutation({
+      type: 'delta',
+      added: added,
+      removed: [],
+    });
+  }
+
+  private createRepoFromEvent(event: RepositoryEvent | PushEvent): Repository {
+    return {
+      url: event.repository.url,
+      name: event.repository.name,
+      defaultBranchRef: event.repository.default_branch,
+      repositoryTopics: event.repository.topics,
+      isArchived: event.repository.archived,
+      isFork: event.repository.fork,
+      // we can consider this file present because
+      // only the catalog file will be recovered from the commits
+      isCatalogInfoFilePresent: true,
+      visibility: event.repository.visibility,
+    };
+  }
+
+  private createRepoFromGithubResponse(
+    repositoryResponse: RepositoryResponse,
+  ): Repository {
+    return {
+      url: repositoryResponse.url,
+      name: repositoryResponse.name,
+      defaultBranchRef: repositoryResponse.defaultBranchRef?.name,
+      repositoryTopics: repositoryResponse.repositoryTopics.nodes.map(
+        t => t.topic.name,
+      ),
+      isArchived: repositoryResponse.isArchived,
+      isFork: repositoryResponse.isFork,
+      isCatalogInfoFilePresent:
+        repositoryResponse.catalogInfoFile?.__typename === 'Blob' &&
+        repositoryResponse.catalogInfoFile.text !== '',
+      visibility: repositoryResponse.visibility,
+    };
   }
 
   private collectDeferredEntitiesFromCommit(
@@ -427,6 +707,20 @@ export class GithubEntityProvider implements EntityProvider, EventSubscriber {
         return {
           locationKey: this.getProviderName(),
           entity: entity,
+        };
+      });
+  }
+
+  private toDeferredEntitiesFromRepos(
+    repositories: Repository[],
+  ): DeferredEntity[] {
+    return repositories
+      .map(repository => this.createLocationUrl(repository))
+      .map(GithubEntityProvider.toLocationSpec)
+      .map(location => {
+        return {
+          locationKey: this.getProviderName(),
+          entity: locationSpecToLocationEntity({ location }),
         };
       });
   }

@@ -18,6 +18,7 @@ import { makeStyles } from '@material-ui/core/styles';
 import TabUI, { TabProps } from '@material-ui/core/Tab';
 import Tabs from '@material-ui/core/Tabs';
 import React, { useCallback, useEffect, useState } from 'react';
+import { Link } from '../../components/Link';
 
 // TODO(blam): Remove this implementation when the Tabs are ready
 // This is just a temporary solution to implementing tabs for now
@@ -85,7 +86,7 @@ export function HeaderTabs(props: HeaderTabsProps) {
       if (selectedIndex === undefined) {
         setSelectedTab(index);
       }
-      if (onChange && selectedIndex !== index) onChange(index);
+      if (onChange) onChange(index);
     },
     [selectedIndex, onChange],
   );
@@ -95,11 +96,12 @@ export function HeaderTabs(props: HeaderTabsProps) {
       setSelectedTab(selectedIndex);
     }
   }, [selectedIndex]);
-
+  function removeLeadingSlash(path: string) {
+    return path.replace(/^\//, '');
+  }
   return (
     <Box className={styles.tabsWrapper}>
       <Tabs
-        selectionFollowsFocus
         indicatorColor="primary"
         textColor="inherit"
         variant="scrollable"
@@ -110,13 +112,15 @@ export function HeaderTabs(props: HeaderTabsProps) {
       >
         {tabs.map((tab, index) => (
           <TabUI
-            {...tab.tabProps}
             data-testid={`header-tab-${index}`}
             label={tab.label}
             key={tab.id}
+            component={Link}
+            to={removeLeadingSlash(tab.id)}
             value={index}
             className={styles.defaultTab}
             classes={{ selected: styles.selected, root: styles.tabRoot }}
+            {...tab.tabProps}
           />
         ))}
       </Tabs>

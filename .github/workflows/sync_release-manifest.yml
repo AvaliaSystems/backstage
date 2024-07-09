@@ -7,16 +7,21 @@ jobs:
   create-new-version:
     runs-on: ubuntu-latest
     steps:
-      # Setup node & install deps before checkout, keeping install quick
-      - uses: actions/setup-node@v3
+      - name: Harden Runner
+        uses: step-security/harden-runner@17d0e2bd7d51742c71671bd19fa12bdc9d40a3d6 # v2.8.1
         with:
-          node-version: 16
+          egress-policy: audit
+
+      # Setup node & install deps before checkout, keeping install quick
+      - uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
+        with:
+          node-version: 18.x
       - name: Install dependencies
         # Just the deps for the assemble manifest script
         run: npm install semver@7.3.5 fs-extra@10.0.0 @manypkg/get-packages@1.1.1
 
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           path: backstage
           # 'v' prefix is added here for the tag, we keep it out of the manifest logic
@@ -24,7 +29,7 @@ jobs:
 
       # Checkout backstage/versions into /backstage/versions, which is where store the output
       - name: Checkout versions
-        uses: actions/checkout@v3
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           repository: backstage/versions
           path: backstage/versions
@@ -48,7 +53,7 @@ jobs:
           git push
 
       - name: Dispatch update-helper update
-        uses: actions/github-script@v6
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         with:
           github-token: ${{ secrets.GH_SERVICE_ACCOUNT_TOKEN }}
           # TODO(Rugvip): Remove the create-app dispatch once we've been on the release version for a while

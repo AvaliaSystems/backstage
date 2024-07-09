@@ -14,46 +14,22 @@
  * limitations under the License.
  */
 
-import { Config } from '@backstage/config';
-import { HumanDuration, JsonObject } from '@backstage/types';
+import { Config, readDurationFromConfig } from '@backstage/config';
+import { HumanDuration } from '@backstage/types';
 import { TaskScheduleDefinition } from './types';
 import { Duration } from 'luxon';
 
-const propsOfHumanDuration = [
-  'years',
-  'months',
-  'weeks',
-  'days',
-  'hours',
-  'minutes',
-  'seconds',
-  'milliseconds',
-];
-
-function convertToHumanDuration(config: Config, key: string): HumanDuration {
-  const props = config.getConfig(key).keys();
-  if (!props.find(prop => propsOfHumanDuration.includes(prop))) {
-    throw new Error(
-      `HumanDuration needs at least one of: ${propsOfHumanDuration}`,
-    );
+function readDuration(config: Config, key: string): HumanDuration {
+  if (typeof config.get(key) === 'string') {
+    const value = config.getString(key);
+    const duration = Duration.fromISO(value);
+    if (!duration.isValid) {
+      throw new Error(`Invalid duration: ${value}`);
+    }
+    return duration.toObject();
   }
 
-  const invalidProps = props.filter(
-    prop => !propsOfHumanDuration.includes(prop),
-  );
-  if (invalidProps.length > 0) {
-    throw new Error(
-      `HumanDuration does not contain properties: ${invalidProps}`,
-    );
-  }
-
-  return config.get<JsonObject>(key) as HumanDuration;
-}
-
-function readDuration(config: Config, key: string): Duration | HumanDuration {
-  return typeof config.get(key) === 'string'
-    ? Duration.fromISO(config.getString(key))
-    : convertToHumanDuration(config, key);
+  return readDurationFromConfig(config, { key });
 }
 
 function readCronOrDuration(
@@ -75,6 +51,7 @@ function readCronOrDuration(
  *
  * @param config - config for a TaskScheduleDefinition.
  * @public
+ * @deprecated Please import `readSchedulerServiceTaskScheduleDefinitionFromConfig` from `@backstage/backend-plugin-api` instead
  */
 export function readTaskScheduleDefinitionFromConfig(
   config: Config,

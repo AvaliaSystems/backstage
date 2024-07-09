@@ -23,23 +23,27 @@ import {
   resourceEntityColumns,
   resourceEntityHelpLink,
 } from '../RelatedEntitiesCard';
+import { catalogTranslationRef } from '../../translation';
+import { useTranslationRef } from '@backstage/core-plugin-api/alpha';
 
 /** @public */
 export interface HasResourcesCardProps {
   variant?: InfoCardVariants;
+  title?: string;
 }
 
 export function HasResourcesCard(props: HasResourcesCardProps) {
-  const { variant = 'gridItem' } = props;
+  const { t } = useTranslationRef(catalogTranslationRef);
+  const { variant = 'gridItem', title = t('hasResourcesCard.title') } = props;
   return (
     <RelatedEntitiesCard
       variant={variant}
-      title="Has resources"
+      title={title}
       entityKind="Resource"
       relationType={RELATION_HAS_PART}
       columns={resourceEntityColumns}
       asRenderableEntities={asResourceEntities}
-      emptyMessage="No resource is part of this system"
+      emptyMessage={t('hasResourcesCard.emptyMessage')}
       emptyHelpLink={resourceEntityHelpLink}
     />
   );

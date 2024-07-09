@@ -20,10 +20,10 @@ import {
   ANNOTATION_ORIGIN_LOCATION,
   DEFAULT_NAMESPACE,
   Entity,
-  GroupEntity,
+  isGroupEntity,
+  isUserEntity,
   parseEntityRef,
   stringifyEntityRef,
-  UserEntity,
 } from '@backstage/catalog-model';
 import { Config } from '@backstage/config';
 import {
@@ -38,15 +38,15 @@ import {
   EntityProvider,
   EntityProviderConnection,
 } from '@backstage/plugin-catalog-node';
-import { EventBroker, EventParams } from '@backstage/plugin-events-node';
+import { EventParams, EventsService } from '@backstage/plugin-events-node';
 import { graphql } from '@octokit/graphql';
 import {
   InstallationCreatedEvent,
   InstallationEvent,
+  MembershipEvent,
   OrganizationEvent,
   OrganizationMemberAddedEvent,
   OrganizationMemberRemovedEvent,
-  MembershipEvent,
   TeamCreatedEvent,
   TeamDeletedEvent,
   TeamEditedEvent,
@@ -54,7 +54,6 @@ import {
 } from '@octokit/webhooks-types';
 import { merge } from 'lodash';
 import * as uuid from 'uuid';
-import { Logger } from 'winston';
 
 import {
   assignGroupsToUsers,
@@ -78,6 +77,15 @@ import {
   getOrganizationTeamsFromUsers,
 } from '../lib/github';
 import { splitTeamSlug } from '../lib/util';
+import { areGroupEntities, areUserEntities } from '../lib/guards';
+import { LoggerService } from '@backstage/backend-plugin-api';
+
+const EVENT_TOPICS = [
+  'github.installation',
+  'github.membership',
+  'github.organization',
+  'github.team',
+];
 
 /**
  * Options for {@link GithubMultiOrgEntityProvider}.
@@ -100,10 +108,15 @@ export interface GithubMultiOrgEntityProviderOptions {
   githubUrl: string;
 
   /**
-   * The list of the GitHub orgs to consume. By default will consume all accessible
+   * The list of the GitHub orgs to consume. By default, it will consume all accessible
    * orgs on the given GitHub instance (support for GitHub App integration only).
    */
   orgs?: string[];
+
+  /**
+   * Passing the optional EventsService enables event-based delta updates.
+   */
+  events?: EventsService;
 
   /**
    * The refresh schedule to use.
@@ -123,12 +136,21 @@ export interface GithubMultiOrgEntityProviderOptions {
   /**
    * The logger to use.
    */
-  logger: Logger;
+  logger: LoggerService;
 
   /**
    * Optionally supply a custom credentials provider, replacing the default one.
    */
   githubCredentialsProvider?: GithubCredentialsProvider;
+
+  /**
+   * Use the default namespace for groups. By default, groups will be namespaced according to their GitHub org.
+   *
+   * @remarks
+   *
+   * If set to true, groups with the same name across different orgs will be considered the same group.
+   */
+  alwaysUseDefaultNamespace?: boolean;
 
   /**
    * Optionally include a user transformer for transforming from GitHub users to User Entities
@@ -137,14 +159,9 @@ export interface GithubMultiOrgEntityProviderOptions {
 
   /**
    * Optionally include a team transformer for transforming from GitHub teams to Group Entities.
-   * By default groups will be namespaced according to their GitHub org.
+   * By default, groups will be namespaced according to their GitHub org.
    */
   teamTransformer?: TeamTransformer;
-
-  /**
-   * An EventBroker to subscribe this provider to GitHub events to trigger delta mutations
-   */
-  eventBroker?: EventBroker;
 }
 
 type CreateDeltaOperation = (entities: Entity[]) => {
@@ -189,30 +206,27 @@ export class GithubMultiOrgEntityProvider implements EntityProvider {
       orgs: options.orgs,
       userTransformer: options.userTransformer,
       teamTransformer: options.teamTransformer,
+      events: options.events,
+      alwaysUseDefaultNamespace: options.alwaysUseDefaultNamespace,
     });
 
     provider.schedule(options.schedule);
-
-    if (options.eventBroker) {
-      options.eventBroker.subscribe({
-        supportsEventTopics: provider.supportsEventTopics.bind(provider),
-        onEvent: provider.onEvent.bind(provider),
-      });
-    }
 
     return provider;
   }
 
   constructor(
     private readonly options: {
+      events?: EventsService;
       id: string;
       gitHubConfig: GithubIntegrationConfig;
       githubCredentialsProvider: GithubCredentialsProvider;
       githubUrl: string;
-      logger: Logger;
+      logger: LoggerService;
       orgs?: string[];
       userTransformer?: UserTransformer;
       teamTransformer?: TeamTransformer;
+      alwaysUseDefaultNamespace?: boolean;
     },
   ) {}
 
@@ -224,6 +238,11 @@ export class GithubMultiOrgEntityProvider implements EntityProvider {
   /** {@inheritdoc @backstage/plugin-catalog-backend#EntityProvider.connect} */
   async connect(connection: EntityProviderConnection) {
     this.connection = connection;
+    await this.options.events?.subscribe({
+      id: this.getProviderName(),
+      topics: EVENT_TOPICS,
+      onEvent: params => this.onEvent(params),
+    });
     await this.scheduleFn?.();
   }
 
@@ -231,7 +250,7 @@ export class GithubMultiOrgEntityProvider implements EntityProvider {
    * Runs one single complete ingestion. This is only necessary if you use
    * manual scheduling.
    */
-  async read(options?: { logger?: Logger }) {
+  async read(options?: { logger?: LoggerService }) {
     if (!this.connection) {
       throw new Error('Not initialized');
     }
@@ -240,65 +259,65 @@ export class GithubMultiOrgEntityProvider implements EntityProvider {
     const { markReadComplete } = trackProgress(logger);
 
     const allUsersMap = new Map();
-    const allGroups: Entity[] = [];
+    const allTeams: Entity[] = [];
 
     const orgsToProcess = this.options.orgs?.length
       ? this.options.orgs
       : await this.getAllOrgs(this.options.gitHubConfig);
 
     for (const org of orgsToProcess) {
-      try {
-        const { headers, type: tokenType } =
-          await this.options.githubCredentialsProvider.getCredentials({
-            url: `${this.options.githubUrl}/${org}`,
-          });
-        const client = graphql.defaults({
-          baseUrl: this.options.gitHubConfig.apiBaseUrl,
-          headers,
+      const { headers, type: tokenType } =
+        await this.options.githubCredentialsProvider.getCredentials({
+          url: `${this.options.githubUrl}/${org}`,
         });
+      const client = graphql.defaults({
+        baseUrl: this.options.gitHubConfig.apiBaseUrl,
+        headers,
+      });
 
-        logger.info(`Reading GitHub users and teams for org: ${org}`);
+      logger.info(`Reading GitHub users and teams for org: ${org}`);
 
-        const { users } = await getOrganizationUsers(
-          client,
-          org,
-          tokenType,
-          this.options.userTransformer,
-        );
+      const { users } = await getOrganizationUsers(
+        client,
+        org,
+        tokenType,
+        this.options.userTransformer,
+      );
 
-        const { groups } = await getOrganizationTeams(
-          client,
-          org,
-          this.defaultMultiOrgTeamTransformer.bind(this),
-        );
+      const { teams } = await getOrganizationTeams(
+        client,
+        org,
+        this.defaultMultiOrgTeamTransformer.bind(this),
+      );
 
-        // Grab current users from `allUsersMap` if they already exist in our
-        // pending users so we can append to their group membership relations
-        const pendingUsers = users.map(u => {
-          const userRef = stringifyEntityRef(u);
-          if (!allUsersMap.has(userRef)) {
-            allUsersMap.set(userRef, u);
-          }
+      // Grab current users from `allUsersMap` if they already exist in our
+      // pending users so we can append to their group membership relations
+      const pendingUsers = users.map(u => {
+        const userRef = stringifyEntityRef(u);
+        if (!allUsersMap.has(userRef)) {
+          allUsersMap.set(userRef, u);
+        }
 
-          return allUsersMap.get(userRef);
-        });
+        return allUsersMap.get(userRef);
+      });
 
-        assignGroupsToUsers(pendingUsers, groups);
-        buildOrgHierarchy(groups);
-
-        allGroups.push(...groups);
-      } catch (e) {
-        logger.error(`Failed to read GitHub org data for ${org}: ${e}`);
+      if (areGroupEntities(teams)) {
+        buildOrgHierarchy(teams);
+        if (areUserEntities(pendingUsers)) {
+          assignGroupsToUsers(pendingUsers, teams);
+        }
       }
+
+      allTeams.push(...teams);
     }
 
     const allUsers = Array.from(allUsersMap.values());
 
-    const { markCommitComplete } = markReadComplete({ allUsers, allGroups });
+    const { markCommitComplete } = markReadComplete({ allUsers, allTeams });
 
     await this.connection.applyMutation({
       type: 'full',
-      entities: [...allUsers, ...allGroups].map(entity => ({
+      entities: [...allUsers, ...allTeams].map(entity => ({
         locationKey: `github-multi-org-provider:${this.options.id}`,
         entity: withLocations(
           `https://${this.options.gitHubConfig.host}`,
@@ -308,15 +327,6 @@ export class GithubMultiOrgEntityProvider implements EntityProvider {
     });
 
     markCommitComplete();
-  }
-
-  private supportsEventTopics(): string[] {
-    return [
-      'github.installation',
-      'github.organization',
-      'github.team',
-      'github.membership',
-    ];
   }
 
   private async onEvent(params: EventParams): Promise<void> {
@@ -422,41 +432,45 @@ export class GithubMultiOrgEntityProvider implements EntityProvider {
       this.options.userTransformer,
     );
 
-    const { groups } = await getOrganizationTeams(
+    const { teams } = await getOrganizationTeams(
       client,
       org,
       this.defaultMultiOrgTeamTransformer.bind(this),
     );
 
-    // Fetch group memberships of users in case they already exist and
-    // have memberships in groups from other applicable orgs
-    for (const userOrg of applicableOrgs) {
-      const { headers: orgHeaders } =
-        await this.options.githubCredentialsProvider.getCredentials({
-          url: `${this.options.githubUrl}/${userOrg}`,
+    if (users.length) {
+      // Fetch group memberships of users in case they already exist and
+      // have memberships in groups from other applicable orgs
+      for (const userOrg of applicableOrgs) {
+        const { headers: orgHeaders } =
+          await this.options.githubCredentialsProvider.getCredentials({
+            url: `${this.options.githubUrl}/${userOrg}`,
+          });
+        const orgClient = graphql.defaults({
+          baseUrl: this.options.gitHubConfig.apiBaseUrl,
+          headers: orgHeaders,
         });
-      const orgClient = graphql.defaults({
-        baseUrl: this.options.gitHubConfig.apiBaseUrl,
-        headers: orgHeaders,
-      });
 
-      const { groups: userGroups } = await getOrganizationTeamsFromUsers(
-        orgClient,
-        userOrg,
-        users.map(
-          u =>
-            u.metadata.annotations?.[ANNOTATION_GITHUB_USER_LOGIN] ||
-            u.metadata.name,
-        ),
-        this.defaultMultiOrgTeamTransformer.bind(this),
-      );
+        const { teams: userTeams } = await getOrganizationTeamsFromUsers(
+          orgClient,
+          userOrg,
+          users.map(
+            u =>
+              u.metadata.annotations?.[ANNOTATION_GITHUB_USER_LOGIN] ||
+              u.metadata.name,
+          ),
+          this.defaultMultiOrgTeamTransformer.bind(this),
+        );
 
-      assignGroupsToUsers(users, userGroups);
+        if (areGroupEntities(userTeams) && areUserEntities(users)) {
+          assignGroupsToUsers(users, userTeams);
+        }
+      }
     }
 
     const { added, removed } = this.createAddEntitiesOperation([
       ...users,
-      ...groups,
+      ...teams,
     ]);
     await this.connection.applyMutation({
       type: 'delta',
@@ -511,7 +525,7 @@ export class GithubMultiOrgEntityProvider implements EntityProvider {
       updateMemberships = true;
     }
 
-    const user = (await userTransformer(
+    const user = await userTransformer(
       {
         name,
         avatarUrl,
@@ -523,7 +537,11 @@ export class GithubMultiOrgEntityProvider implements EntityProvider {
         client,
         query: '',
       },
-    )) as UserEntity;
+    );
+
+    if (!user) {
+      return;
+    }
 
     if (updateMemberships) {
       for (const userOrg of userApplicableOrgs) {
@@ -536,14 +554,16 @@ export class GithubMultiOrgEntityProvider implements EntityProvider {
           headers: orgHeaders,
         });
 
-        const { groups } = await getOrganizationTeamsFromUsers(
+        const { teams } = await getOrganizationTeamsFromUsers(
           orgClient,
           userOrg,
           [login],
           this.defaultMultiOrgTeamTransformer.bind(this),
         );
 
-        assignGroupsToUsers([user], groups);
+        if (isUserEntity(user) && areGroupEntities(teams)) {
+          assignGroupsToUsers([user], teams);
+        }
       }
     }
 
@@ -623,7 +643,7 @@ export class GithubMultiOrgEntityProvider implements EntityProvider {
     });
 
     const teamSlug = event.team.slug;
-    const { group } = await getOrganizationTeam(
+    const { team } = await getOrganizationTeam(
       client,
       org,
       teamSlug,
@@ -637,37 +657,42 @@ export class GithubMultiOrgEntityProvider implements EntityProvider {
       this.options.userTransformer,
     );
 
-    const usersFromChangedGroup =
-      group.spec.members?.map(m =>
-        stringifyEntityRef(parseEntityRef(m, { defaultKind: 'user' })),
-      ) || [];
+    const usersFromChangedGroup = isGroupEntity(team)
+      ? team.spec.members?.map(m =>
+          stringifyEntityRef(parseEntityRef(m, { defaultKind: 'user' })),
+        ) || []
+      : [];
     const usersToRebuild = users.filter(u =>
       usersFromChangedGroup.includes(stringifyEntityRef(u)),
     );
 
-    // Update memberships of associated members of this group in case the group entity ref changed
-    for (const userOrg of applicableOrgs) {
-      const { headers: orgHeaders } =
-        await this.options.githubCredentialsProvider.getCredentials({
-          url: `${this.options.githubUrl}/${userOrg}`,
+    if (usersToRebuild.length) {
+      // Update memberships of associated members of this group in case the group entity ref changed
+      for (const userOrg of applicableOrgs) {
+        const { headers: orgHeaders } =
+          await this.options.githubCredentialsProvider.getCredentials({
+            url: `${this.options.githubUrl}/${userOrg}`,
+          });
+        const orgClient = graphql.defaults({
+          baseUrl: this.options.gitHubConfig.apiBaseUrl,
+          headers: orgHeaders,
         });
-      const orgClient = graphql.defaults({
-        baseUrl: this.options.gitHubConfig.apiBaseUrl,
-        headers: orgHeaders,
-      });
 
-      const { groups } = await getOrganizationTeamsFromUsers(
-        orgClient,
-        userOrg,
-        usersToRebuild.map(
-          u =>
-            u.metadata.annotations?.[ANNOTATION_GITHUB_USER_LOGIN] ||
-            u.metadata.name,
-        ),
-        this.defaultMultiOrgTeamTransformer.bind(this),
-      );
+        const { teams } = await getOrganizationTeamsFromUsers(
+          orgClient,
+          userOrg,
+          usersToRebuild.map(
+            u =>
+              u.metadata.annotations?.[ANNOTATION_GITHUB_USER_LOGIN] ||
+              u.metadata.name,
+          ),
+          this.defaultMultiOrgTeamTransformer.bind(this),
+        );
 
-      assignGroupsToUsers(usersToRebuild, groups);
+        if (areGroupEntities(teams) && areUserEntities(usersToRebuild)) {
+          assignGroupsToUsers(usersToRebuild, teams);
+        }
+      }
     }
 
     const oldName = event.changes.name?.from || '';
@@ -693,7 +718,7 @@ export class GithubMultiOrgEntityProvider implements EntityProvider {
     const { removed } = this.createRemoveEntitiesOperation([oldGroup]);
     const { added } = this.createAddEntitiesOperation([
       ...usersToRebuild,
-      group,
+      team,
     ]);
     await this.connection.applyMutation({
       type: 'delta',
@@ -729,7 +754,7 @@ export class GithubMultiOrgEntityProvider implements EntityProvider {
     });
 
     const teamSlug = event.team.slug;
-    const { group } = await getOrganizationTeam(
+    const { team } = await getOrganizationTeam(
       client,
       org,
       teamSlug,
@@ -739,7 +764,7 @@ export class GithubMultiOrgEntityProvider implements EntityProvider {
     const userTransformer =
       this.options.userTransformer || defaultUserTransformer;
     const { name, avatar_url: avatarUrl, email, login } = event.member;
-    const user = (await userTransformer(
+    const user = await userTransformer(
       {
         name,
         avatarUrl,
@@ -751,31 +776,40 @@ export class GithubMultiOrgEntityProvider implements EntityProvider {
         client,
         query: '',
       },
-    )) as UserEntity;
+    );
 
-    const { orgs } = await getOrganizationsFromUser(client, login);
-    const userApplicableOrgs = orgs.filter(o => applicableOrgs.includes(o));
-    for (const userOrg of userApplicableOrgs) {
-      const { headers: orgHeaders } =
-        await this.options.githubCredentialsProvider.getCredentials({
-          url: `${this.options.githubUrl}/${userOrg}`,
+    const mutationEntities = [team];
+
+    if (user && isUserEntity(user)) {
+      const { orgs } = await getOrganizationsFromUser(client, login);
+      const userApplicableOrgs = orgs.filter(o => applicableOrgs.includes(o));
+      for (const userOrg of userApplicableOrgs) {
+        const { headers: orgHeaders } =
+          await this.options.githubCredentialsProvider.getCredentials({
+            url: `${this.options.githubUrl}/${userOrg}`,
+          });
+        const orgClient = graphql.defaults({
+          baseUrl: this.options.gitHubConfig.apiBaseUrl,
+          headers: orgHeaders,
         });
-      const orgClient = graphql.defaults({
-        baseUrl: this.options.gitHubConfig.apiBaseUrl,
-        headers: orgHeaders,
-      });
 
-      const { groups } = await getOrganizationTeamsFromUsers(
-        orgClient,
-        userOrg,
-        [login],
-        this.defaultMultiOrgTeamTransformer.bind(this),
-      );
+        const { teams } = await getOrganizationTeamsFromUsers(
+          orgClient,
+          userOrg,
+          [login],
+          this.defaultMultiOrgTeamTransformer.bind(this),
+        );
 
-      assignGroupsToUsers([user], groups);
+        if (areGroupEntities(teams)) {
+          assignGroupsToUsers([user], teams);
+        }
+      }
+
+      mutationEntities.push(user);
     }
 
-    const { added, removed } = this.createAddEntitiesOperation([user, group]);
+    const { added, removed } =
+      this.createAddEntitiesOperation(mutationEntities);
     await this.connection.applyMutation({
       type: 'delta',
       removed,
@@ -802,7 +836,10 @@ export class GithubMultiOrgEntityProvider implements EntityProvider {
           try {
             await this.read({ logger });
           } catch (error) {
-            logger.error(`${this.getProviderName()} refresh failed`, error);
+            logger.error(
+              `${this.getProviderName()} refresh failed, ${error}`,
+              error,
+            );
           }
         },
       });
@@ -812,15 +849,18 @@ export class GithubMultiOrgEntityProvider implements EntityProvider {
   private async defaultMultiOrgTeamTransformer(
     team: GithubTeam,
     ctx: TransformerContext,
-  ): Promise<GroupEntity | undefined> {
+  ): Promise<Entity | undefined> {
     if (this.options.teamTransformer) {
       return await this.options.teamTransformer(team, ctx);
     }
 
     const result = await defaultOrganizationTeamTransformer(team, ctx);
 
-    if (result) {
-      result.metadata.namespace = ctx.org.toLocaleLowerCase('en-US');
+    if (result && result.spec) {
+      if (!this.options.alwaysUseDefaultNamespace) {
+        result.metadata.namespace = ctx.org.toLocaleLowerCase('en-US');
+      }
+
       // Group `spec.members` inherits the namespace of it's group so need to explicitly specify refs here
       result.spec.members = team.members.map(
         user => `${DEFAULT_NAMESPACE}/${user.login}`,
@@ -877,7 +917,7 @@ export class GithubMultiOrgEntityProvider implements EntityProvider {
 }
 
 // Helps wrap the timing and logging behaviors
-function trackProgress(logger: Logger) {
+function trackProgress(logger: LoggerService) {
   let timestamp = Date.now();
   let summary: string;
 
@@ -885,9 +925,9 @@ function trackProgress(logger: Logger) {
 
   function markReadComplete(read: {
     allUsers: unknown[];
-    allGroups: unknown[];
+    allTeams: unknown[];
   }) {
-    summary = `${read.allUsers.length} GitHub users and ${read.allGroups.length} GitHub groups`;
+    summary = `${read.allUsers.length} GitHub users and ${read.allTeams.length} GitHub groups`;
     const readDuration = ((Date.now() - timestamp) / 1000).toFixed(1);
     timestamp = Date.now();
     logger.info(`Read ${summary} in ${readDuration} seconds. Committing...`);

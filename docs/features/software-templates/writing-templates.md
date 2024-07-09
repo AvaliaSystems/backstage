@@ -231,31 +231,47 @@ spec:
             inputType: tel
 ```
 
-### Hide or mask sensitive data on Review step
+### Using Secrets
 
-Sometimes, specially in custom fields, you collect some data on Create form that
-must not be shown to the user on Review step. To hide or mask this data, you can
-use `ui:widget: password` or set some properties of `ui:backstage`:
+You may want to mark things as secret and make sure that these values are protected and not available through REST endpoints. You can do this by using the built in `ui:field: Secret`.
+
+You can define this property as any normal parameter, however the consumption of this parameter will not be available through `${{ parameters.myKey }}` you will instead need to use `${{ secrets.myKey }}` in your `template.yaml`.
+
+Parameters will be automatically masked in the review step.
 
 ```yaml
-- title: Hide or mask values
-  properties:
-    password:
-      title: Password
-      type: string
-      ui:widget: password # will print '******' as value for property 'password' on Review Step
-    masked:
-      title: Masked
-      type: string
-      ui:backstage:
-        review:
-          mask: '<some-value-to-show>' # will print '<some-value-to-show>' as value for property 'Masked' on Review Step
-    hidden:
-      title: Hidden
-      type: string
-      ui:backstage:
-        review:
-          show: false # won't print any info about 'hidden' property on Review Step
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: v1beta3-demo
+  title: Test Action template
+  description: scaffolder v1beta3 template demo
+spec:
+  owner: backstage/techdocs-core
+  type: service
+
+  parameters:
+    - title: Authenticaion
+      description: Provide authentication for the resource
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          # use the built in Secret field extension
+          ui:field: Secret
+        password:
+          type: string
+          ui:field: Secret
+
+  steps:
+    - id: setupAuthentication
+      action: auth:create
+      input:
+        # make sure to use ${{ secrets.parameterName }} to reference these values
+        username: ${{ secrets.username }}
+        password: ${{ secrets.password }}
 ```
 
 ### Custom step layouts
@@ -295,9 +311,36 @@ spec:
 ```
 
 If you have a feature flag `experimental-feature` active then
-your first step would be shown. The same goes for the nested properties in the
+your first set of parameter fields would be shown. The same goes for the nested properties in the
 spec. Make sure to use the key `backstage:featureFlag` in your templates if
 you want to use this functionality.
+
+Feature Flags cannot be used in `spec.steps[].if`(the conditional on whether to execute an step/action). But you can use feature flags to display parameters that allow for skipping steps.
+
+```yaml
+spec:
+  type: website
+  owner: team-a
+  parameters:
+    - name: Enter some stuff
+      description: Enter some stuff
+      backstage:featureFlag: experimental-feature
+      properties:
+        skipStep:
+          type: boolean
+          title: Whether or not to skip a step.
+          default: false
+        restOfParameters:
+          ...
+  steps:
+    - id: skipMe
+      name: A step to skip if the feature flag is turned on and the user selects true
+      action: debug:log
+      if: ${{ parameters.skipStep }}
+      input:
+        message: |
+        ...
+```
 
 ### The Repository Picker
 
@@ -499,6 +542,7 @@ template. These follow the same standard format:
 - id: fetch-base # A unique id for the step
   name: Fetch Base # A title displayed in the frontend
   if: ${{ parameters.name }} # Optional condition, skip the step if not truthy
+  each: ${{ parameters.iterable }} # Optional iterable, run the same step multiple times
   action: fetch:template # An action to call
   input: # Input that is passed as arguments to the action handler
     url: ./template
@@ -509,6 +553,27 @@ template. These follow the same standard format:
 By default we ship some [built in actions](./builtin-actions.md) that you can
 take a look at, or you can
 [create your own custom actions](./writing-custom-actions.md).
+
+When `each` is provided, the current iteration value is available in the `${{ each }}` input.
+
+Examples:
+
+```yaml
+each: ['apples', 'oranges']
+input:
+  values:
+    fruit: ${{ each.value }}
+```
+
+```yaml
+each: [{ name: 'apple', count: 3 }, { name: 'orange', count: 1 }]
+input:
+  values:
+    fruit: ${{ each.value.name }}
+    count: ${{ each.value.count }}
+```
+
+When `each` is used, the outputs of a repeated step are returned as an array of outputs from each iteration.
 
 ## Outputs
 
@@ -605,3 +670,247 @@ output things. You can grab that output using `steps.$stepId.output.$property`.
 You can read more about all the `inputs` and `outputs` defined in the actions in
 code part of the `JSONSchema`, or you can read more about our
 [built in actions](./builtin-actions.md).
+
+## Built in Filters
+
+Template filters are functions that help you transform data, extract specific information,
+and perform various operations in Scaffolder Templates.
+
+This section introduces the built-in filters provided by Backstage and offers examples of
+how to use them in the Scaffolder templates. It's important to mention that Backstage also leverages the
+native filters from the Nunjucks library. For a complete list of these native filters and their usage,
+refer to the [Nunjucks documentation](https://mozilla.github.io/nunjucks/templating.html#builtin-filters).
+
+To create your own custom filters, look to the section [Custom Filters](#custom-filters) hereafter.
+
+### parseRepoUrl
+
+The `parseRepoUrl` filter parse a repository URL into
+its components, such as `owner`, repository `name`, and more.
+
+**Usage Example:**
+
+```yaml
+- id: log
+  name: Parse Repo URL
+  action: debug:log
+  input:
+    extra: ${{ parameters.repoUrl | parseRepoUrl }}
+```
+
+- **Input**: `github.com?repo=backstage&org=backstage`
+- **Output**: [RepoSpec](https://github.com/backstage/backstage/blob/v1.17.2/plugins/scaffolder-backend/src/scaffolder/actions/builtin/publish/util.ts#L39)
+
+### parseEntityRef
+
+The `parseEntityRef` filter allows you to extract different parts of
+an entity reference, such as the `kind`, `namespace`, and `name`.
+
+**Usage example**
+
+1. Without context
+
+```yaml
+- id: log
+  name: Parse Entity Reference
+  action: debug:log
+  input:
+    extra: ${{ parameters.owner | parseEntityRef }}
+```
+
+- **Input**: `group:techdocs`
+- **Output**: [CompoundEntityRef](https://github.com/backstage/backstage/blob/v1.17.2/packages/catalog-model/src/types.ts#L23)
+
+2. With context
+
+```yaml
+- id: log
+  name: Parse Entity Reference
+  action: debug:log
+  input:
+    extra: ${{ parameters.owner | parseEntityRef({ defaultKind:"group", defaultNamespace:"another-namespace" }) }}
+```
+
+- **Input**: `techdocs`
+- **Output**: [CompoundEntityRef](https://github.com/backstage/backstage/blob/v1.17.2/packages/catalog-model/src/types.ts#L23)
+
+### pick
+
+This `pick` filter allows you to select specific properties (`kind`, `namespace`, `name`) from an object.
+
+**Usage Example**
+
+```yaml
+- id: log
+  name: Pick
+  action: debug:log
+  input:
+    extra: ${{ parameters.owner | parseEntityRef | pick('name') }}
+```
+
+- **Input**: `{ kind: 'Group', namespace: 'default', name: 'techdocs' }`
+- **Output**: `techdocs`
+
+### projectSlug
+
+The `projectSlug` filter generates a project slug from a repository URL
+
+**Usage Example**
+
+```yaml
+- id: log
+  name: Project Slug
+  action: debug:log
+  input:
+    extra: ${{ parameters.repoUrl | projectSlug }}
+```
+
+- **Input**: `github.com?repo=backstage&org=backstage`
+- **Output**: `backstage/backstage`
+
+## Custom Filters
+
+Whenever it is needed to extend the built-in filters with yours `${{ parameters.name | my-filter1 | my-filter2 | etc }}`, then you can add them
+using the property `additionalTemplateFilters`.
+
+The `additionalTemplateFilters` property accepts as type a `Record`
+
+```ts title="plugins/scaffolder-backend/src/service/Router.ts"
+  additionalTemplateFilters?: Record<string, TemplateFilter>;
+```
+
+where the first parameter is the name of the filter and the second receives a list of `JSON value` arguments. The `templateFilter()` function must return a JsonValue which is either a Json array, object or primitive.
+
+```ts title="plugins/scaffolder-node/src/types.ts"
+export type TemplateFilter = (...args: JsonValue[]) => JsonValue | undefined;
+```
+
+From a practical coding point of view, you will translate that into the following snippet code handling 2 filters:
+
+```ts"
+...
+additionalTemplateFilters: {
+  base64: (...args: JsonValue[]) => btoa(args.join("")),
+  betterFilter: (...args: JsonValue[]) => { return `This is a much better string than "${args}", don't you think?` }
+}
+```
+
+And within your template, you will be able to use the filters using a parameter and the filter passed using the pipe symbol
+
+```yaml
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: test
+  title: Test
+spec:
+  owner: user:guest
+  type: service
+
+  parameters:
+    - title: Test custom filters
+      properties:
+        userName:
+          title: Name of the user
+          type: string
+
+  steps:
+    - id: debug
+      name: debug
+      action: debug:log
+      input:
+        message: ${{ parameters.userName | betterFilter | base64 }}
+```
+
+Next, you will have to register the property `addTemplateFilters` using the `scaffolderTemplatingExtensionPoint` of a new `BackendModule` [created](../../backend-system/architecture/06-modules.md).
+
+Here is a very simplified example of how to do that:
+
+```ts title="packages/backend-next/src/index.ts"
+/* highlight-add-start */
+import { scaffolderTemplatingExtensionPoint } from '@backstage/plugin-scaffolder-node/alpha';
+import { createBackendModule } from '@backstage/backend-plugin-api';
+/* highlight-add-end */
+
+/* highlight-add-start */
+const scaffolderModuleCustomFilters = createBackendModule({
+  pluginId: 'scaffolder', // name of the plugin that the module is targeting
+  moduleId: 'custom-filters',
+  register(env) {
+    env.registerInit({
+      deps: {
+        scaffolder: scaffolderTemplatingExtensionPoint,
+        // ... and other dependencies as needed
+      },
+      async init({ scaffolder /* ..., other dependencies */ }) {
+        scaffolder.addTemplateFilters({
+          base64: (...args: JsonValue[]) => btoa(args.join('')),
+          betterFilter: (...args: JsonValue[]) => {
+            return `This is a much better string than "${args}", don't you think?`;
+          },
+        });
+      },
+    });
+  },
+});
+/* highlight-add-end */
+
+const backend = createBackend();
+backend.add(import('@backstage/plugin-scaffolder-backend/alpha'));
+/* highlight-add-next-line */
+backend.add(scaffolderModuleCustomFilters());
+```
+
+If you still use the legacy backend system, then you will use the `createRouter()` function of the `Scaffolder plugin`
+
+```ts title="packages/backend/src/plugins/scaffolder.ts"
+export default async function createPlugin({
+  logger,
+  config,
+}: PluginEnvironment): Promise<Router> {
+  ...
+  return await createRouter({
+    logger,
+    config,
+
+    additionalTemplateFilters: {
+        <YOUR_FILTERS>
+    }
+  });
+```
+
+## Template Editor
+
+Writing template is most of the times an iterative process. You will need to test your template to make sure it has a good user experience and that it works as expected. To help on this process the scaffolder comes with a build in template editor that allows you to test your template in a real environment for querying data and execute the actions on dry-run mode to see the results of those one.
+
+To access to the template editor you can go to the templates page and select "Template Editor" from the context menu or navigate to the `{scaffolder-path}/edit` url. (i.e. the default route would be `/create/edit`)
+
+![Context menu](../../assets/software-templates/context-menu.png)
+
+The template editor has 3 main sections:
+
+1. **Load Template Directory**: Load a local template directory, allowing you to both edit and try executing your own template.
+2. **Edit Template Form**: Preview and edit a template form, either using a sample template or by loading a template from the catalog.
+3. **Custom Field Explorer**: View and play around with available installed custom field extensions.
+
+### Load Template Directory
+
+Allow to load a directory on your local file system that contains a template and editing the files in it while previewing the form and executing the template.
+
+![template editor load dir](../../assets/software-templates/template-editor-load-dir.png)
+
+If you complete the form in the right side and click on `Create` button, the template will be executed in dry-run mode and the result will be shown in the `Dry-run result` drawer that will pop-up at the bottom of the screen.
+
+Here we could find all the file system results of the template execution as well as the logs of each action that was executed.
+
+![dry run drawer example](../../assets/software-templates/template-editor-dry-run.png)
+
+### Edit Template Form
+
+This is a reduced version of the template editor that allows you to select any template from the catalog and do some modifications on the form presented to the user to test some changes.
+
+Have in mind that changes in this form will not be saved on the template and is meant to test out changes to replicate them manually on the template file after.
+
+### Custom Field Explorer
+
+The custom filed explorer allows you to select any custom field loaded on the backstage instance and test different values and configurations.

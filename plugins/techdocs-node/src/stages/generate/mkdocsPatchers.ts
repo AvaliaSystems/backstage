@@ -138,29 +138,45 @@ export const patchMkdocsYmlPreBuild = async (
  * Update the mkdocs.yml file before TechDocs generator uses it to generate docs site.
  *
  * List of tasks:
- * - Add techdocs-core plugin to mkdocs file if it doesn't exist
+ * - Add all provided default plugins
  *
  * This function will not throw an error since this is not critical to the whole TechDocs pipeline.
  * Instead it will log warnings if there are any errors in reading, parsing or writing YAML.
  *
  * @param mkdocsYmlPath - Absolute path to mkdocs.yml or equivalent of a docs site
  * @param logger - A logger instance
+ * @param defaultPlugins - List of default mkdocs plugins
  */
-export const pathMkdocsYmlWithTechdocsPlugin = async (
+export const patchMkdocsYmlWithPlugins = async (
   mkdocsYmlPath: string,
   logger: Logger,
+  defaultPlugins: string[] = ['techdocs-core'],
 ) => {
   await patchMkdocsFile(mkdocsYmlPath, logger, mkdocsYml => {
-    // Modify mkdocs.yaml to contain the needed techdocs-core plugin if it is not there
+    // Modify mkdocs.yaml to contain the required default plugins.
+    // If no plugins are defined we can just return the defaults.
     if (!('plugins' in mkdocsYml)) {
-      mkdocsYml.plugins = ['techdocs-core'];
+      mkdocsYml.plugins = defaultPlugins;
       return true;
     }
 
-    if (mkdocsYml.plugins && !mkdocsYml.plugins.includes('techdocs-core')) {
-      mkdocsYml.plugins.push('techdocs-core');
-      return true;
-    }
-    return false;
+    // Otherwise, check each default plugin and include it if necessary.
+    let changesMade = false;
+
+    defaultPlugins.forEach(dp => {
+      // if the plugin isn't there as a string, and isn't there as an object (which may itself contain extra config)
+      // then we need to add it
+      if (
+        !(
+          mkdocsYml.plugins!.includes(dp) ||
+          mkdocsYml.plugins!.some(p => p.hasOwnProperty(dp))
+        )
+      ) {
+        mkdocsYml.plugins = [...new Set([...mkdocsYml.plugins!, dp])];
+        changesMade = true;
+      }
+    });
+
+    return changesMade;
   });
 };

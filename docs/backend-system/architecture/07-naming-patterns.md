@@ -6,22 +6,22 @@ sidebar_label: Naming Patterns
 description: Naming patterns in the backend system
 ---
 
-> **DISCLAIMER: The new backend system is in alpha, and still under active development. While we have reviewed the interfaces carefully, they may still be iterated on before the stable release.**
-
 These are the naming patterns to adhere to within the backend system. They help us keep exports consistent across packages and make it easier to understand the usage and intent of exports.
+
+As a rule, all names should be camel case, with the exceptions of plugin and module IDs, which should be kebab case.
 
 ### Plugins
 
-| Description | Pattern      | Examples                            |
-| ----------- | ------------ | ----------------------------------- |
-| export      | `<id>Plugin` | `catalogPlugin`, `scaffolderPlugin` |
-| ID          | `'<id>'`     | `'catalog'`, `'scaffolder'`         |
+| Description | Pattern           | Examples                              |
+| ----------- | ----------------- | ------------------------------------- |
+| export      | `<camelId>Plugin` | `catalogPlugin`, `userSettingsPlugin` |
+| ID          | `'<kebab-id>'`    | `'catalog'`, `'user-settings'`        |
 
 Example:
 
 ```ts
-export const catalogPlugin = createBackendPlugin({
-  pluginId: 'catalog',
+export const userSettingsPlugin = createBackendPlugin({
+  pluginId: 'user-settings',
   ...
 })
 ```
@@ -31,14 +31,14 @@ export const catalogPlugin = createBackendPlugin({
 | Description | Pattern                      | Examples                            |
 | ----------- | ---------------------------- | ----------------------------------- |
 | export      | `<pluginId>Module<ModuleId>` | `catalogModuleGithubEntityProvider` |
-| ID          | `'<moduleId>'`               | `'githubEntityProvider'`            |
+| ID          | `'<module-id>'`              | `'github-entity-provider'`          |
 
 Example:
 
 ```ts
 export const catalogModuleGithubEntityProvider = createBackendModule({
   pluginId: 'catalog',
-  moduleId: 'githubEntityProvider',
+  moduleId: 'github-entity-provider',
   ...
 })
 ```
@@ -91,6 +91,6 @@ export const catalogClientServiceFactory = createServiceFactory({
 })
 ```
 
-An exception to the above service reference naming pattern has been made for the all of the core services in the core API. The `@backstage/backend-plugin-api` makes all core service references available via a single `coreServices` collection. Likewise, the `@backstage/backend-test-utils` exports all mock service implementations via a single `mockServices` collection. This means that the table above is slightly misleading, since `loggerServiceRef` and `databaseServiceRef` are instead available as `coreServices.logger` and `coreService.database`. We recommend that plugins avoid this patterns unless they have a very large number of services that they need to export.
+An exception to the above service reference naming pattern has been made for all of the core services in the core API. The `@backstage/backend-plugin-api` makes all core service references available via a single `coreServices` collection. Likewise, the `@backstage/backend-test-utils` exports all mock service implementations via a single `mockServices` collection. This means that the table above is slightly misleading, since `loggerServiceRef` and `databaseServiceRef` are instead available as `coreServices.logger` and `coreService.database`. We recommend that plugins avoid this patterns unless they have a very large number of services that they need to export.
 
 While it is often preferred to prefix root scoped services with `Root`, it is not required. For example, `RootHttpRouterService` and `RootLifecycleService` follow this pattern, but `ConfigService` doesn't and it is a root scoped service.

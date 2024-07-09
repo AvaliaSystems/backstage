@@ -15,7 +15,7 @@
  */
 
 import { createApp } from '@backstage/app-defaults';
-import { FlatRoutes } from '@backstage/core-app-api';
+import { AppRouter, FlatRoutes } from '@backstage/core-app-api';
 import {
   AlertDisplay,
   OAuthRequestDialog,
@@ -25,6 +25,8 @@ import {
   SidebarPage,
   SidebarSpace,
   SidebarSpacer,
+  SignInPage,
+  SignInProviderConfig,
 } from '@backstage/core-components';
 import {
   AnyApiFactory,
@@ -42,12 +44,22 @@ import {
   ScmIntegrationsApi,
   scmIntegrationsApiRef,
 } from '@backstage/integration-react';
-import { Box } from '@material-ui/core';
+import Box from '@material-ui/core/Box';
 import BookmarkIcon from '@material-ui/icons/Bookmark';
-import React, { ComponentType, ReactNode, PropsWithChildren } from 'react';
-import ReactDOM from 'react-dom';
+import React, { ComponentType, PropsWithChildren, ReactNode } from 'react';
 import { createRoutesFromChildren, Route } from 'react-router-dom';
 import { SidebarThemeSwitcher } from './SidebarThemeSwitcher';
+import 'react-dom';
+import { SidebarSignOutButton } from '../components';
+
+let ReactDOMPromise: Promise<
+  typeof import('react-dom') | typeof import('react-dom/client')
+>;
+if (process.env.HAS_REACT_DOM_CLIENT) {
+  ReactDOMPromise = import('react-dom/client');
+} else {
+  ReactDOMPromise = import('react-dom');
+}
 
 export function isReactRouterBeta(): boolean {
   const [obj] = createRoutesFromChildren(<Route index element={<div />} />);
@@ -85,6 +97,7 @@ export class DevAppBuilder {
   private readonly rootChildren = new Array<ReactNode>();
   private readonly routes = new Array<JSX.Element>();
   private readonly sidebarItems = new Array<JSX.Element>();
+  private readonly signInProviders = new Array<SignInProviderConfig>();
 
   private defaultPage?: string;
   private themes?: Array<AppTheme>;
@@ -120,6 +133,16 @@ export class DevAppBuilder {
   }
 
   /**
+   * Adds a new sidebar item to the dev app.
+   *
+   * Useful for adding only sidebar items without a corresponding page.
+   */
+  addSidebarItem(sidebarItem: JSX.Element): DevAppBuilder {
+    this.sidebarItems.push(sidebarItem);
+    return this;
+  }
+
+  /**
    * Adds a page component along with accompanying sidebar item.
    *
    * If no path is provided one will be generated.
@@ -142,6 +165,7 @@ export class DevAppBuilder {
         />,
       );
     }
+
     this.routes.push(
       <MaybeGatheringRoute
         key={path}
@@ -158,6 +182,14 @@ export class DevAppBuilder {
    */
   addThemes(themes: AppTheme[]) {
     this.themes = themes;
+    return this;
+  }
+
+  /**
+   * Adds new sign in provider for the dev app
+   */
+  addSignInProvider(provider: SignInProviderConfig) {
+    this.signInProviders.push(provider);
     return this;
   }
 
@@ -184,6 +216,18 @@ export class DevAppBuilder {
       apis,
       plugins: this.plugins,
       themes: this.themes,
+      components: {
+        SignInPage: props => {
+          return (
+            <SignInPage
+              {...props}
+              providers={['guest', ...this.signInProviders]}
+              title="Select a sign-in method"
+              align="center"
+            />
+          );
+        },
+      },
       bindRoutes: ({ bind }) => {
         for (const plugin of this.plugins ?? []) {
           const targets: Record<string, RouteRef<any>> = {};
@@ -195,35 +239,31 @@ export class DevAppBuilder {
       },
     });
 
-    const AppProvider = app.getProvider();
-    const AppRouter = app.getRouter();
+    const DevApp = (
+      <>
+        <AlertDisplay />
+        <OAuthRequestDialog />
+        {this.rootChildren}
+        <AppRouter>
+          <SidebarPage>
+            <Sidebar>
+              <SidebarSpacer />
+              {this.sidebarItems}
+              <SidebarSpace />
+              <SidebarDivider />
+              <SidebarThemeSwitcher />
+              <SidebarSignOutButton />
+            </Sidebar>
+            <FlatRoutes>
+              {this.routes}
+              <Route path="/_external_route" element={<FakePage />} />
+            </FlatRoutes>
+          </SidebarPage>
+        </AppRouter>
+      </>
+    );
 
-    const DevApp = () => {
-      return (
-        <AppProvider>
-          <AlertDisplay />
-          <OAuthRequestDialog />
-          {this.rootChildren}
-          <AppRouter>
-            <SidebarPage>
-              <Sidebar>
-                <SidebarSpacer />
-                {this.sidebarItems}
-                <SidebarSpace />
-                <SidebarDivider />
-                <SidebarThemeSwitcher />
-              </Sidebar>
-              <FlatRoutes>
-                {this.routes}
-                <Route path="/_external_route" element={<FakePage />} />
-              </FlatRoutes>
-            </SidebarPage>
-          </AppRouter>
-        </AppProvider>
-      );
-    };
-
-    return DevApp;
+    return app.createRoot(DevApp);
   }
 
   /**
@@ -240,7 +280,15 @@ export class DevAppBuilder {
       window.location.pathname = this.defaultPage;
     }
 
-    ReactDOM.render(<DevApp />, document.getElementById('root'));
+    ReactDOMPromise.then(ReactDOM => {
+      if ('createRoot' in ReactDOM) {
+        ReactDOM.createRoot(document.getElementById('root')!).render(
+          <DevApp />,
+        );
+      } else {
+        ReactDOM.render(<DevApp />, document.getElementById('root'));
+      }
+    });
   }
 }
 

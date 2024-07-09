@@ -162,7 +162,6 @@ const applyConditions = <TResourceType extends string, TResource>(
 };
 
 /**
-
  * Takes some permission conditions and returns a definitive authorization result
  * on the resource to which they apply.
  *
@@ -482,6 +481,7 @@ export function createPermissionIntegrationRouter<
     },
   );
 
+  // TODO(belugas): Remove this when dropping support to the legacy backend system because setting the error handler manually is no logger required in the new system.
   router.use(errorHandler());
 
   return router;

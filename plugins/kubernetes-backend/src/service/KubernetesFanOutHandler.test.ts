@@ -14,25 +14,38 @@
  * limitations under the License.
  */
 
-import { getVoidLogger } from '@backstage/backend-common';
 import {
   ClusterDetails,
   CustomResource,
   ObjectFetchParams,
   KubernetesServiceLocator,
+  ServiceLocatorRequestContext,
 } from '../types/types';
+import { KubernetesCredential } from '../auth/types';
 import { KubernetesFanOutHandler } from './KubernetesFanOutHandler';
 import { KubernetesClientBasedFetcher } from './KubernetesFetcher';
 import { rest } from 'msw';
 import { setupServer } from 'msw/node';
-import { setupRequestMockHandlers } from '@backstage/backend-test-utils';
-import { ObjectsByEntityResponse } from '@backstage/plugin-kubernetes-common';
+import {
+  mockServices,
+  setupRequestMockHandlers,
+} from '@backstage/backend-test-utils';
+import {
+  FetchResponse,
+  KubernetesRequestAuth,
+  ObjectsByEntityResponse,
+} from '@backstage/plugin-kubernetes-common';
 import { Config, ConfigReader } from '@backstage/config';
+import { Entity } from '@backstage/catalog-model';
+import { BackstageCredentials } from '@backstage/backend-plugin-api';
 
 describe('KubernetesFanOutHandler', () => {
   const fetchObjectsForService = jest.fn();
   const fetchPodMetricsByNamespaces = jest.fn();
-  const getClustersByEntity = jest.fn();
+  const getClustersByEntity = jest.fn<
+    Promise<{ clusters: ClusterDetails[] }>,
+    [Entity]
+  >();
 
   let config: Config;
   let sut: KubernetesFanOutHandler;
@@ -50,6 +63,14 @@ describe('KubernetesFanOutHandler', () => {
       requestTotal: '1001',
     },
     pod: {},
+  };
+
+  const mockCredentials: BackstageCredentials = {
+    $$type: '@backstage/BackstageCredentials',
+    principal: {
+      userEntityRef: 'user:default/guest',
+      type: 'user',
+    },
   };
 
   const entity = {
@@ -71,7 +92,8 @@ describe('KubernetesFanOutHandler', () => {
 
   const cluster1 = {
     name: 'test-cluster',
-    authProvider: 'serviceAccount',
+    url: '',
+    authMetadata: {},
     customResources: [
       {
         group: 'some-other-crd.example.com',
@@ -83,7 +105,8 @@ describe('KubernetesFanOutHandler', () => {
 
   const cluster2 = {
     name: 'cluster-two',
-    authProvider: 'serviceAccount',
+    url: '',
+    authMetadata: {},
     customResources: [
       {
         group: 'crd-two.example.com',
@@ -93,7 +116,7 @@ describe('KubernetesFanOutHandler', () => {
     ],
   };
 
-  const mockClusterResourceMap = {
+  const mockClusterResourceMap: Record<string, FetchResponse[]> = {
     'test-cluster': [
       {
         resources: [
@@ -168,7 +191,7 @@ describe('KubernetesFanOutHandler', () => {
 
   const getKubernetesFanOutHandler = (customResources: CustomResource[]) => {
     return new KubernetesFanOutHandler({
-      logger: getVoidLogger(),
+      logger: mockServices.logger.mock(),
       fetcher: {
         fetchObjectsForService,
         fetchPodMetricsByNamespaces,
@@ -177,10 +200,15 @@ describe('KubernetesFanOutHandler', () => {
         getClustersByEntity,
       },
       customResources: customResources,
-      authTranslator: {
-        decorateClusterDetailsWithAuth: async (clusterDetails, _) => {
-          return clusterDetails;
-        },
+      authStrategy: {
+        getCredential: jest
+          .fn<
+            Promise<KubernetesCredential>,
+            [ClusterDetails, KubernetesRequestAuth]
+          >()
+          .mockResolvedValue({ type: 'anonymous' }),
+        validateCluster: jest.fn().mockReturnValue([]),
+        presentAuthMetadata: jest.fn(),
       },
       config,
     });
@@ -308,7 +336,11 @@ describe('KubernetesFanOutHandler', () => {
     );
 
     fetchPodMetricsByNamespaces.mockImplementation(
-      (_clusterDetails: ClusterDetails, namespaces: Set<string>) =>
+      (
+        _clusterDetails: ClusterDetails,
+        _: KubernetesCredential,
+        namespaces: Set<string>,
+      ) =>
         Promise.resolve({
           errors: [],
           responses: Array.from(namespaces).map(() => {
@@ -338,37 +370,42 @@ describe('KubernetesFanOutHandler', () => {
 
   describe('getKubernetesObjectsByEntity', () => {
     it('retrieve objects for one cluster', async () => {
-      getClustersByEntity.mockImplementation(() =>
-        Promise.resolve({
-          clusters: [
-            {
-              name: 'test-cluster',
-              authProvider: 'serviceAccount',
-            },
-          ],
-        }),
-      );
+      getClustersByEntity.mockResolvedValue({
+        clusters: [
+          {
+            name: 'test-cluster',
+            title: 'cluster-title',
+            url: '',
+            authMetadata: {},
+          },
+        ],
+      });
 
       sut = getKubernetesFanOutHandler([]);
 
-      const result = await sut.getKubernetesObjectsByEntity({
-        entity,
-        auth: {},
-      });
+      const result = await sut.getKubernetesObjectsByEntity(
+        {
+          entity,
+          auth: {},
+        },
+        { credentials: mockCredentials },
+      );
 
       expect(getClustersByEntity).toHaveBeenCalledTimes(1);
       expect(fetchObjectsForService).toHaveBeenCalledTimes(1);
       expect(fetchPodMetricsByNamespaces).toHaveBeenCalledTimes(1);
       expect(fetchPodMetricsByNamespaces).toHaveBeenCalledWith(
         expect.anything(),
+        { type: 'anonymous' },
         new Set(['ns-test-component-test-cluster']),
         expect.anything(),
       );
-      expect(result).toStrictEqual({
+      expect(result).toStrictEqual<ObjectsByEntityResponse>({
         items: [
           {
             cluster: {
               name: 'test-cluster',
+              title: 'cluster-title',
             },
             errors: [],
             podMetrics: [POD_METRICS_FIXTURE],
@@ -387,10 +424,13 @@ describe('KubernetesFanOutHandler', () => {
 
       sut = getKubernetesFanOutHandler([]);
 
-      await sut.getKubernetesObjectsByEntity({
-        entity,
-        auth: {},
-      });
+      await sut.getKubernetesObjectsByEntity(
+        {
+          entity,
+          auth: {},
+        },
+        { credentials: mockCredentials },
+      );
 
       expect(fetchObjectsForService).toHaveBeenCalledTimes(1);
       expect(
@@ -419,10 +459,13 @@ describe('KubernetesFanOutHandler', () => {
 
       sut = getKubernetesFanOutHandler([]);
 
-      await sut.getKubernetesObjectsByEntity({
-        entity,
-        auth: {},
-      });
+      await sut.getKubernetesObjectsByEntity(
+        {
+          entity,
+          auth: {},
+        },
+        { credentials: mockCredentials },
+      );
 
       expect(fetchObjectsForService).toHaveBeenCalledTimes(2);
       expect(fetchObjectsForService).toHaveBeenCalledWith(
@@ -457,7 +500,8 @@ describe('KubernetesFanOutHandler', () => {
           clusters: [
             {
               name: 'test-cluster',
-              authProvider: 'serviceAccount',
+              url: '',
+              authMetadata: {},
             },
             cluster2,
           ],
@@ -473,10 +517,13 @@ describe('KubernetesFanOutHandler', () => {
         },
       ]);
 
-      await sut.getKubernetesObjectsByEntity({
-        entity,
-        auth: {},
-      });
+      await sut.getKubernetesObjectsByEntity(
+        {
+          entity,
+          auth: {},
+        },
+        { credentials: mockCredentials },
+      );
 
       expect(fetchObjectsForService).toHaveBeenCalledTimes(2);
       expect(fetchObjectsForService).toHaveBeenCalledWith(
@@ -511,7 +558,8 @@ describe('KubernetesFanOutHandler', () => {
           clusters: [
             {
               name: 'profile-cluster-1',
-              authProvider: 'serviceAccount',
+              url: '',
+              authMetadata: {},
               customResourceProfile: 'build',
               customResources: [
                 {
@@ -534,10 +582,13 @@ describe('KubernetesFanOutHandler', () => {
         },
       ]);
 
-      await sut.getKubernetesObjectsByEntity({
-        entity,
-        auth: {},
-      });
+      await sut.getKubernetesObjectsByEntity(
+        {
+          entity,
+          auth: {},
+        },
+        { credentials: mockCredentials },
+      );
 
       expect(fetchObjectsForService).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -559,7 +610,8 @@ describe('KubernetesFanOutHandler', () => {
           clusters: [
             {
               name: 'profile-cluster-1',
-              authProvider: 'serviceAccount',
+              url: '',
+              authMetadata: {},
             },
           ],
         }),
@@ -574,10 +626,13 @@ describe('KubernetesFanOutHandler', () => {
         },
       ]);
 
-      await sut.getKubernetesObjectsByEntity({
-        entity,
-        auth: {},
-      });
+      await sut.getKubernetesObjectsByEntity(
+        {
+          entity,
+          auth: {},
+        },
+        { credentials: mockCredentials },
+      );
 
       expect(fetchObjectsForService).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -599,7 +654,8 @@ describe('KubernetesFanOutHandler', () => {
           clusters: [
             {
               name: 'test-cluster',
-              authProvider: 'serviceAccount',
+              url: '',
+              authMetadata: {},
             },
           ],
         }),
@@ -638,16 +694,20 @@ describe('KubernetesFanOutHandler', () => {
 
       sut = getKubernetesFanOutHandler([]);
 
-      const result = await sut.getKubernetesObjectsByEntity({
-        entity,
-        auth: {},
-      });
+      const result = await sut.getKubernetesObjectsByEntity(
+        {
+          entity,
+          auth: {},
+        },
+        { credentials: mockCredentials },
+      );
 
       expect(getClustersByEntity).toHaveBeenCalledTimes(1);
       expect(fetchObjectsForService).toHaveBeenCalledTimes(1);
       expect(fetchPodMetricsByNamespaces).toHaveBeenCalledTimes(1);
       expect(fetchPodMetricsByNamespaces).toHaveBeenCalledWith(
         expect.anything(),
+        { type: 'anonymous' },
         new Set(['ns-a', 'ns-b']),
         expect.anything(),
       );
@@ -696,7 +756,8 @@ describe('KubernetesFanOutHandler', () => {
           clusters: [
             {
               name: 'test-cluster',
-              authProvider: 'serviceAccount',
+              url: '',
+              authMetadata: {},
             },
           ],
         }),
@@ -715,10 +776,13 @@ describe('KubernetesFanOutHandler', () => {
 
       sut = getKubernetesFanOutHandler([]);
 
-      const result = await sut.getKubernetesObjectsByEntity({
-        entity,
-        auth: {},
-      });
+      const result = await sut.getKubernetesObjectsByEntity(
+        {
+          entity,
+          auth: {},
+        },
+        { credentials: mockCredentials },
+      );
 
       expect(getClustersByEntity).toHaveBeenCalledTimes(1);
       expect(fetchObjectsForService).toHaveBeenCalledTimes(1);
@@ -735,12 +799,14 @@ describe('KubernetesFanOutHandler', () => {
           clusters: [
             {
               name: 'test-cluster',
-              authProvider: 'serviceAccount',
+              url: '',
+              authMetadata: {},
               dashboardUrl: 'https://k8s.foo.coom',
             },
             {
               name: 'other-cluster',
-              authProvider: 'google',
+              url: '',
+              authMetadata: {},
             },
           ],
         }),
@@ -748,12 +814,15 @@ describe('KubernetesFanOutHandler', () => {
 
       sut = getKubernetesFanOutHandler([]);
 
-      const result = await sut.getKubernetesObjectsByEntity({
-        entity,
-        auth: {
-          google: 'google_token_123',
+      const result = await sut.getKubernetesObjectsByEntity(
+        {
+          entity,
+          auth: {
+            google: 'google_token_123',
+          },
         },
-      });
+        { credentials: mockCredentials },
+      );
 
       expect(getClustersByEntity).toHaveBeenCalledTimes(1);
       expect(fetchObjectsForService).toHaveBeenCalledTimes(2);
@@ -786,15 +855,18 @@ describe('KubernetesFanOutHandler', () => {
           clusters: [
             {
               name: 'test-cluster',
-              authProvider: 'serviceAccount',
+              url: '',
+              authMetadata: {},
             },
             {
               name: 'other-cluster',
-              authProvider: 'google',
+              url: '',
+              authMetadata: {},
             },
             {
               name: 'empty-cluster',
-              authProvider: 'google',
+              url: '',
+              authMetadata: {},
             },
           ],
         }),
@@ -802,12 +874,15 @@ describe('KubernetesFanOutHandler', () => {
 
       sut = getKubernetesFanOutHandler([]);
 
-      const result = await sut.getKubernetesObjectsByEntity({
-        entity,
-        auth: {
-          google: 'google_token_123',
+      const result = await sut.getKubernetesObjectsByEntity(
+        {
+          entity,
+          auth: {
+            google: 'google_token_123',
+          },
         },
-      });
+        { credentials: mockCredentials },
+      );
 
       expect(getClustersByEntity).toHaveBeenCalledTimes(1);
       expect(fetchObjectsForService).toHaveBeenCalledTimes(3);
@@ -839,19 +914,23 @@ describe('KubernetesFanOutHandler', () => {
           clusters: [
             {
               name: 'test-cluster',
-              authProvider: 'serviceAccount',
+              url: '',
+              authMetadata: {},
             },
             {
               name: 'other-cluster',
-              authProvider: 'google',
+              url: '',
+              authMetadata: {},
             },
             {
               name: 'empty-cluster',
-              authProvider: 'google',
+              url: '',
+              authMetadata: {},
             },
             {
               name: 'error-cluster',
-              authProvider: 'google',
+              url: '',
+              authMetadata: {},
             },
           ],
         }),
@@ -859,12 +938,15 @@ describe('KubernetesFanOutHandler', () => {
 
       sut = getKubernetesFanOutHandler([]);
 
-      const result = await sut.getKubernetesObjectsByEntity({
-        entity,
-        auth: {
-          google: 'google_token_123',
+      const result = await sut.getKubernetesObjectsByEntity(
+        {
+          entity,
+          auth: {
+            google: 'google_token_123',
+          },
         },
-      });
+        { credentials: mockCredentials },
+      );
 
       expect(getClustersByEntity).toHaveBeenCalledTimes(1);
       expect(fetchObjectsForService).toHaveBeenCalledTimes(4);
@@ -917,12 +999,14 @@ describe('KubernetesFanOutHandler', () => {
           clusters: [
             {
               name: 'test-cluster',
-              authProvider: 'serviceAccount',
+              url: '',
+              authMetadata: {},
               dashboardUrl: 'https://k8s.foo.coom',
             },
             {
               name: 'other-cluster',
-              authProvider: 'google',
+              url: '',
+              authMetadata: {},
             },
           ],
         }),
@@ -932,7 +1016,11 @@ describe('KubernetesFanOutHandler', () => {
       // and an error for the second call.
       fetchPodMetricsByNamespaces
         .mockImplementationOnce(
-          (_clusterDetails: ClusterDetails, namespaces: Set<string>) =>
+          (
+            _clusterDetails: ClusterDetails,
+            _: KubernetesCredential,
+            namespaces: Set<string>,
+          ) =>
             Promise.resolve({
               errors: [],
               responses: Array.from(namespaces).map(() => {
@@ -971,12 +1059,15 @@ describe('KubernetesFanOutHandler', () => {
 
       sut = getKubernetesFanOutHandler([]);
 
-      const result = await sut.getKubernetesObjectsByEntity({
-        entity,
-        auth: {
-          google: 'google_token_123',
+      const result = await sut.getKubernetesObjectsByEntity(
+        {
+          entity,
+          auth: {
+            google: 'google_token_123',
+          },
         },
-      });
+        { credentials: mockCredentials },
+      );
 
       expect(getClustersByEntity).toHaveBeenCalledTimes(1);
       expect(fetchObjectsForService).toHaveBeenCalledTimes(2);
@@ -1015,7 +1106,8 @@ describe('KubernetesFanOutHandler', () => {
         clusters: [
           {
             name: 'test-cluster',
-            authProvider: 'serviceAccount',
+            url: '',
+            authMetadata: {},
             skipMetricsLookup: true,
           },
         ],
@@ -1024,10 +1116,13 @@ describe('KubernetesFanOutHandler', () => {
 
       sut = getKubernetesFanOutHandler([]);
 
-      const result = sut.getKubernetesObjectsByEntity({
-        entity,
-        auth: {},
-      });
+      const result = sut.getKubernetesObjectsByEntity(
+        {
+          entity,
+          auth: {},
+        },
+        { credentials: mockCredentials },
+      );
       await expect(result).rejects.toThrow(nonFetchError);
     });
 
@@ -1054,26 +1149,29 @@ describe('KubernetesFanOutHandler', () => {
         );
 
         const fleet: jest.Mocked<KubernetesServiceLocator> = {
-          getClustersByEntity: jest.fn().mockResolvedValue({
-            clusters: [
-              {
-                name: 'works',
-                url: 'https://works',
-                authProvider: 'serviceAccount',
-                serviceAccountToken: 'token',
-                skipMetricsLookup: true,
-              },
-              {
-                name: 'fails',
-                url: 'https://fails',
-                authProvider: 'serviceAccount',
-                serviceAccountToken: 'token',
-                skipMetricsLookup: true,
-              },
-            ],
-          }),
+          getClustersByEntity: jest
+            .fn<
+              Promise<{ clusters: ClusterDetails[] }>,
+              [Entity, ServiceLocatorRequestContext]
+            >()
+            .mockResolvedValue({
+              clusters: [
+                {
+                  name: 'works',
+                  url: 'https://works',
+                  authMetadata: {},
+                  skipMetricsLookup: true,
+                },
+                {
+                  name: 'fails',
+                  url: 'https://fails',
+                  authMetadata: {},
+                  skipMetricsLookup: true,
+                },
+              ],
+            }),
         };
-        const logger = getVoidLogger();
+        const logger = mockServices.logger.mock();
         const kubernetesFanOutHandler = new KubernetesFanOutHandler({
           logger,
           fetcher: new KubernetesClientBasedFetcher({ logger }),
@@ -1093,19 +1191,27 @@ describe('KubernetesFanOutHandler', () => {
               objectType: 'services',
             },
           ],
-          authTranslator: {
-            decorateClusterDetailsWithAuth: async (clusterDetails, _) => {
-              return clusterDetails;
-            },
+          authStrategy: {
+            getCredential: jest
+              .fn<
+                Promise<KubernetesCredential>,
+                [ClusterDetails, KubernetesRequestAuth]
+              >()
+              .mockResolvedValue({ type: 'bearer token', token: 'token' }),
+            validateCluster: jest.fn().mockReturnValue([]),
+            presentAuthMetadata: jest.fn(),
           },
           config,
         });
 
         const result =
-          await kubernetesFanOutHandler.getKubernetesObjectsByEntity({
-            entity,
-            auth: {},
-          });
+          await kubernetesFanOutHandler.getKubernetesObjectsByEntity(
+            {
+              entity,
+              auth: {},
+            },
+            { credentials: mockCredentials },
+          );
 
         const expected: ObjectsByEntityResponse = {
           items: [
@@ -1147,17 +1253,20 @@ describe('KubernetesFanOutHandler', () => {
 
       sut = getKubernetesFanOutHandler([]);
 
-      await sut.getCustomResourcesByEntity({
-        entity,
-        auth: {},
-        customResources: [
-          {
-            group: 'parameter-crd.example.com',
-            apiVersion: 'v1alpha1',
-            plural: 'parameter-crd',
-          },
-        ],
-      });
+      await sut.getCustomResourcesByEntity(
+        {
+          entity,
+          auth: {},
+          customResources: [
+            {
+              group: 'parameter-crd.example.com',
+              apiVersion: 'v1alpha1',
+              plural: 'parameter-crd',
+            },
+          ],
+        },
+        { credentials: mockCredentials },
+      );
 
       expect(fetchObjectsForService).toHaveBeenCalledTimes(1);
       expect(fetchObjectsForService).toHaveBeenCalledWith(
@@ -1192,7 +1301,8 @@ describe('KubernetesFanOutHandler', () => {
           clusters: [
             {
               name: 'test-cluster',
-              authProvider: 'serviceAccount',
+              url: '',
+              authMetadata: {},
             },
             cluster2,
           ],
@@ -1208,17 +1318,20 @@ describe('KubernetesFanOutHandler', () => {
         },
       ]);
 
-      await sut.getCustomResourcesByEntity({
-        entity,
-        auth: {},
-        customResources: [
-          {
-            group: 'parameter-crd.example.com',
-            apiVersion: 'v1alpha1',
-            plural: 'parameter-crd',
-          },
-        ],
-      });
+      await sut.getCustomResourcesByEntity(
+        {
+          entity,
+          auth: {},
+          customResources: [
+            {
+              group: 'parameter-crd.example.com',
+              apiVersion: 'v1alpha1',
+              plural: 'parameter-crd',
+            },
+          ],
+        },
+        { credentials: mockCredentials },
+      );
 
       expect(fetchObjectsForService).toHaveBeenCalledTimes(2);
       expect(fetchObjectsForService).toHaveBeenCalledWith(
@@ -1265,7 +1378,8 @@ describe('KubernetesFanOutHandler', () => {
           clusters: [
             {
               name: 'profile-cluster-1',
-              authProvider: 'serviceAccount',
+              url: '',
+              authMetadata: {},
               customResourceProfile: 'build',
             },
           ],
@@ -1274,17 +1388,20 @@ describe('KubernetesFanOutHandler', () => {
 
       sut = getKubernetesFanOutHandler([]);
 
-      await sut.getCustomResourcesByEntity({
-        entity,
-        auth: {},
-        customResources: [
-          {
-            group: 'parameter-crd.example.com',
-            apiVersion: 'v1alpha1',
-            plural: 'parameter-crd',
-          },
-        ],
-      });
+      await sut.getCustomResourcesByEntity(
+        {
+          entity,
+          auth: {},
+          customResources: [
+            {
+              group: 'parameter-crd.example.com',
+              apiVersion: 'v1alpha1',
+              plural: 'parameter-crd',
+            },
+          ],
+        },
+        { credentials: mockCredentials },
+      );
 
       expect(fetchObjectsForService).toHaveBeenCalledWith(
         expect.objectContaining({

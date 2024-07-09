@@ -14,6 +14,7 @@ import { FetchApi } from '@backstage/core-plugin-api';
 import { IconComponent } from '@backstage/core-plugin-api';
 import { IdentityApi } from '@backstage/core-plugin-api';
 import { JsonValue } from '@backstage/types';
+import { JSX as JSX_2 } from 'react';
 import { Observable } from '@backstage/types';
 import { ProfileInfo } from '@backstage/core-plugin-api';
 import { ProfileInfoApi } from '@backstage/core-plugin-api';
@@ -21,14 +22,15 @@ import { PropsWithChildren } from 'react';
 import { default as React_2 } from 'react';
 import { RouteRef } from '@backstage/core-plugin-api';
 import { SessionApi } from '@backstage/core-plugin-api';
+import { SignalApi } from '@backstage/plugin-signals-react';
 import { StorageApi } from '@backstage/core-plugin-api';
 import { StorageValueSnapshot } from '@backstage/core-plugin-api';
-import { TabProps } from '@material-ui/core';
+import { TabProps } from '@material-ui/core/Tab';
 
 // @public (undocumented)
 export const DefaultProviderSettings: (props: {
   configuredProviders: string[];
-}) => JSX.Element;
+}) => React_2.JSX.Element;
 
 // @public (undocumented)
 export const ProviderSettingsItem: (props: {
@@ -36,17 +38,19 @@ export const ProviderSettingsItem: (props: {
   description: string;
   icon: IconComponent;
   apiRef: ApiRef<ProfileInfoApi & SessionApi>;
-}) => JSX.Element;
+}) => React_2.JSX.Element;
 
 // @public (undocumented)
-export const Router: (props: { providerSettings?: JSX.Element }) => JSX.Element;
+export const Router: (props: {
+  providerSettings?: JSX.Element;
+}) => React_2.JSX.Element;
 
 // @public (undocumented)
-export const Settings: (props: { icon?: IconComponent }) => JSX.Element;
+export const Settings: (props: { icon?: IconComponent }) => React_2.JSX.Element;
 
 // @public (undocumented)
 export const SettingsLayout: {
-  (props: SettingsLayoutProps): JSX.Element;
+  (props: SettingsLayoutProps): React_2.JSX.Element;
   Route: (props: SettingsLayoutRouteProps) => null;
 };
 
@@ -74,51 +78,53 @@ export type SettingsLayoutRouteProps = {
 export const USER_SETTINGS_TAB_KEY = 'plugin.user-settings.settingsLayoutRoute';
 
 // @public (undocumented)
-export const UserSettingsAppearanceCard: () => JSX.Element;
+export const UserSettingsAppearanceCard: () => React_2.JSX.Element;
 
 // @public (undocumented)
 export const UserSettingsAuthProviders: (props: {
   providerSettings?: JSX.Element;
-}) => JSX.Element;
+}) => React_2.JSX.Element;
 
 // @public (undocumented)
-export const UserSettingsFeatureFlags: () => JSX.Element;
+export const UserSettingsFeatureFlags: () => React_2.JSX.Element;
 
 // @public (undocumented)
-export const UserSettingsGeneral: () => JSX.Element;
+export const UserSettingsGeneral: () => React_2.JSX.Element;
 
 // @public (undocumented)
-export const UserSettingsIdentityCard: () => JSX.Element;
+export const UserSettingsIdentityCard: () => React_2.JSX.Element;
 
 // @public (undocumented)
-export const UserSettingsMenu: () => JSX.Element;
+export const UserSettingsLanguageToggle: () => React_2.JSX.Element | null;
+
+// @public (undocumented)
+export const UserSettingsMenu: () => React_2.JSX.Element;
 
 // @public (undocumented)
 export const UserSettingsPage: (props: {
   providerSettings?: JSX.Element | undefined;
-}) => JSX.Element;
+}) => JSX_2.Element;
 
 // @public (undocumented)
-export const UserSettingsPinToggle: () => JSX.Element;
+export const UserSettingsPinToggle: () => React_2.JSX.Element;
 
 // @public (undocumented)
 const userSettingsPlugin: BackstagePlugin<
   {
     settingsPage: RouteRef<undefined>;
   },
-  {},
   {}
 >;
 export { userSettingsPlugin as plugin };
 export { userSettingsPlugin };
 
 // @public (undocumented)
-export const UserSettingsProfileCard: () => JSX.Element;
+export const UserSettingsProfileCard: () => React_2.JSX.Element;
 
 // @public (undocumented)
 export const UserSettingsSignInAvatar: (props: {
   size?: number;
-}) => JSX.Element;
+}) => React_2.JSX.Element;
 
 // @public
 export class UserSettingsStorage implements StorageApi {
@@ -128,6 +134,7 @@ export class UserSettingsStorage implements StorageApi {
     discoveryApi: DiscoveryApi;
     errorApi: ErrorApi;
     identityApi: IdentityApi;
+    signalApi?: SignalApi;
     namespace?: string;
   }): UserSettingsStorage;
   // (undocumented)
@@ -145,7 +152,9 @@ export class UserSettingsStorage implements StorageApi {
 }
 
 // @public @deprecated
-export const UserSettingsTab: (props: UserSettingsTabProps) => JSX.Element;
+export const UserSettingsTab: (
+  props: UserSettingsTabProps,
+) => React_2.JSX.Element;
 
 // @public @deprecated (undocumented)
 export type UserSettingsTabProps = PropsWithChildren<{
@@ -154,7 +163,7 @@ export type UserSettingsTabProps = PropsWithChildren<{
 }>;
 
 // @public (undocumented)
-export const UserSettingsThemeToggle: () => JSX.Element;
+export const UserSettingsThemeToggle: () => React_2.JSX.Element;
 
 // @public (undocumented)
 export const useUserProfile: () =>

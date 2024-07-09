@@ -26,29 +26,32 @@ describe('createExtensionPoint', () => {
     const extensionPoint = createExtensionPoint({ id: 'x' });
     expect(extensionPoint).toBeDefined();
     expect(extensionPoint.id).toBe('x');
-    expect(() => extensionPoint.T).toThrow();
+    expect(() => extensionPoint.T).not.toThrow();
     expect(String(extensionPoint)).toBe('extensionPoint{x}');
   });
 });
 
 describe('createBackendPlugin', () => {
   it('should create a BackendPlugin', () => {
-    const plugin = createBackendPlugin((_options: { a: string }) => ({
+    const result = createBackendPlugin({
       pluginId: 'x',
       register(r) {
         r.registerInit({ deps: {}, async init() {} });
       },
-    }));
-    expect(plugin).toBeDefined();
-    expect(plugin({ a: 'a' })).toBeDefined();
-    expect(plugin({ a: 'a' })).toEqual({
-      $$type: '@backstage/BackendFeature',
-      version: 'v1',
-      getRegistrations: expect.any(Function),
     });
-    expect(
-      (plugin({ a: 'a' }) as InternalBackendFeature).getRegistrations(),
-    ).toEqual([
+
+    // legacy form
+    const legacy = result() as unknown as InternalBackendFeature;
+    expect(legacy.$$type).toEqual('@backstage/BackendFeature');
+    expect(legacy.version).toEqual('v1');
+    expect(legacy.getRegistrations).toEqual(expect.any(Function));
+
+    // new form
+    const plugin = result as unknown as InternalBackendFeature;
+    expect(plugin.$$type).toEqual('@backstage/BackendFeature');
+    expect(plugin.version).toEqual('v1');
+    expect(plugin.getRegistrations).toEqual(expect.any(Function));
+    expect(plugin.getRegistrations()).toEqual([
       {
         type: 'plugin',
         pluginId: 'x',
@@ -59,169 +62,47 @@ describe('createBackendPlugin', () => {
         },
       },
     ]);
-    // @ts-expect-error
-    expect(plugin()).toBeDefined();
-    // @ts-expect-error
-    expect(plugin({ b: 'b' })).toBeDefined();
-  });
 
-  it('should create plugins with optional options', () => {
-    const plugin = createBackendPlugin((_options?: { a: string }) => ({
-      pluginId: 'x',
-      register() {},
-    }));
-    expect(plugin).toBeDefined();
-    expect(plugin({ a: 'a' })).toBeDefined();
-    expect(plugin()).toBeDefined();
-    // @ts-expect-error
-    expect(plugin({ b: 'b' })).toBeDefined();
-  });
-
-  it('should create plugins without options', () => {
-    const plugin = createBackendPlugin({
-      pluginId: 'x',
-      register() {},
-    });
-    expect(plugin).toBeDefined();
     // @ts-expect-error
     expect(plugin({ a: 'a' })).toBeDefined();
-    // @ts-expect-error
-    expect(plugin({})).toBeDefined();
-  });
-
-  it('should create a BackendPlugin with options as interface', () => {
-    interface TestOptions {
-      a: string;
-    }
-    const plugin = createBackendPlugin((_options: TestOptions) => ({
-      pluginId: 'x',
-      register() {},
-    }));
-    expect(plugin).toBeDefined();
-    expect(plugin({ a: 'a' })).toBeDefined();
-    expect(plugin({ a: 'a' })).toEqual({
-      $$type: '@backstage/BackendFeature',
-      version: 'v1',
-      getRegistrations: expect.any(Function),
-    });
-    // @ts-expect-error
-    expect(plugin()).toBeDefined();
-    // @ts-expect-error
-    expect(plugin({ b: 'b' })).toBeDefined();
-  });
-
-  it('should create plugins with optional options as interface', () => {
-    interface TestOptions {
-      a: string;
-    }
-    const plugin = createBackendPlugin((_options?: TestOptions) => ({
-      pluginId: 'x',
-      register() {},
-    }));
-    expect(plugin).toBeDefined();
-    expect(plugin({ a: 'a' })).toBeDefined();
-    expect(plugin()).toBeDefined();
-    // @ts-expect-error
-    expect(plugin({ b: 'b' })).toBeDefined();
   });
 });
 
 describe('createBackendModule', () => {
   it('should create a BackendModule', () => {
-    const mod = createBackendModule((_options: { a: string }) => ({
+    const result = createBackendModule({
       pluginId: 'x',
       moduleId: 'y',
       register(r) {
         r.registerInit({ deps: {}, async init() {} });
       },
-    }));
-    expect(mod).toBeDefined();
-    expect(mod({ a: 'a' })).toBeDefined();
-    expect(mod({ a: 'a' })).toEqual({
-      $$type: '@backstage/BackendFeature',
-      version: 'v1',
-      getRegistrations: expect.any(Function),
     });
-    expect(
-      (mod({ a: 'a' }) as InternalBackendFeature).getRegistrations(),
-    ).toEqual([
+
+    // legacy form
+    const legacy = result() as unknown as InternalBackendFeature;
+    expect(legacy.$$type).toEqual('@backstage/BackendFeature');
+    expect(legacy.version).toEqual('v1');
+    expect(legacy.getRegistrations).toEqual(expect.any(Function));
+
+    // new form
+    const module = result as unknown as InternalBackendFeature;
+    expect(module.$$type).toEqual('@backstage/BackendFeature');
+    expect(module.version).toEqual('v1');
+    expect(module.getRegistrations).toEqual(expect.any(Function));
+    expect(module.getRegistrations()).toEqual([
       {
         type: 'module',
         pluginId: 'x',
         moduleId: 'y',
+        extensionPoints: [],
         init: {
           deps: expect.any(Object),
           func: expect.any(Function),
         },
       },
     ]);
-    // @ts-expect-error
-    expect(mod()).toBeDefined();
-    // @ts-expect-error
-    expect(mod({ b: 'b' })).toBeDefined();
-  });
 
-  it('should create modules with optional options', () => {
-    const mod = createBackendModule((_options?: { a: string }) => ({
-      pluginId: 'x',
-      moduleId: 'y',
-      register() {},
-    }));
-    expect(mod).toBeDefined();
-    expect(mod({ a: 'a' })).toBeDefined();
-    expect(mod()).toBeDefined();
     // @ts-expect-error
-    expect(mod({ b: 'b' })).toBeDefined();
-  });
-
-  it('should create modules without options', () => {
-    const mod = createBackendModule({
-      pluginId: 'x',
-      moduleId: 'y',
-      register() {},
-    });
-    expect(mod).toBeDefined();
-    // @ts-expect-error
-    expect(mod({ a: 'a' })).toBeDefined();
-    // @ts-expect-error
-    expect(mod({})).toBeDefined();
-  });
-
-  it('should create a BackendModule as interface', () => {
-    interface TestOptions {
-      a: string;
-    }
-    const mod = createBackendModule((_options: TestOptions) => ({
-      pluginId: 'x',
-      moduleId: 'y',
-      register() {},
-    }));
-    expect(mod).toBeDefined();
-    expect(mod({ a: 'a' })).toBeDefined();
-    expect(mod({ a: 'a' })).toEqual({
-      $$type: '@backstage/BackendFeature',
-      version: 'v1',
-      getRegistrations: expect.any(Function),
-    });
-    // @ts-expect-error
-    expect(mod()).toBeDefined();
-    // @ts-expect-error
-    expect(mod({ b: 'b' })).toBeDefined();
-  });
-
-  it('should create modules with optional options as interface', () => {
-    interface TestOptions {
-      a: string;
-    }
-    const mod = createBackendModule((_options?: TestOptions) => ({
-      pluginId: 'x',
-      moduleId: 'y',
-      register() {},
-    }));
-    expect(mod).toBeDefined();
-    expect(mod({ a: 'a' })).toBeDefined();
-    expect(mod()).toBeDefined();
-    // @ts-expect-error
-    expect(mod({ b: 'b' })).toBeDefined();
+    expect(module({ a: 'a' })).toBeDefined();
   });
 });

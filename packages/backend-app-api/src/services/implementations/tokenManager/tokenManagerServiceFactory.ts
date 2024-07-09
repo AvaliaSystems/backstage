@@ -20,16 +20,20 @@ import {
 } from '@backstage/backend-plugin-api';
 import { ServerTokenManager } from '@backstage/backend-common';
 
-/** @public */
+/**
+ * @public
+ * @deprecated Please migrate to the new `coreServices.auth`, `coreServices.httpAuth`, and `coreServices.userInfo` services as needed instead
+ */
 export const tokenManagerServiceFactory = createServiceFactory({
   service: coreServices.tokenManager,
   deps: {
-    config: coreServices.config,
+    config: coreServices.rootConfig,
     logger: coreServices.rootLogger,
   },
   createRootContext({ config, logger }) {
     return ServerTokenManager.fromConfig(config, {
       logger,
+      allowDisabledTokenManager: true,
     });
   },
   async factory(_deps, tokenManager) {

@@ -13,10 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import {
-  PluginDatabaseManager,
-  resolvePackagePath,
-} from '@backstage/backend-common';
+import { PluginDatabaseManager } from '@backstage/backend-common';
+import { resolvePackagePath } from '@backstage/backend-plugin-api';
 import { IndexableDocument } from '@backstage/plugin-search-common';
 import { Knex } from 'knex';
 import {
@@ -117,12 +115,16 @@ export class DatabaseDocumentStore implements DatabaseStore {
       .ignore();
 
     // Delete all documents that we don't expect (deleted and changed)
+    const rowsToDelete = tx<RawDocumentRow>('documents')
+      .select('documents.hash')
+      .leftJoin<RawDocumentRow>('documents_to_insert', {
+        'documents.hash': 'documents_to_insert.hash',
+      })
+      .whereNull('documents_to_insert.hash');
+
     await tx<RawDocumentRow>('documents')
       .where({ type })
-      .whereNotIn(
-        'hash',
-        tx<RawDocumentRow>('documents_to_insert').select('hash'),
-      )
+      .whereIn('hash', rowsToDelete)
       .delete();
   }
 

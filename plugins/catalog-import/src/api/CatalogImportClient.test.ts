@@ -43,18 +43,30 @@ jest.mock('@octokit/rest', () => {
       return octokit;
     }
   }
+
   return { Octokit };
+});
+
+jest.mock('./AzureRepoApiClient', () => {
+  return {
+    createAzurePullRequest: jest.fn(),
+  };
 });
 
 import { ConfigReader, UrlPatternDiscovery } from '@backstage/core-app-api';
 import { ScmIntegrations } from '@backstage/integration';
 import { ScmAuthApi } from '@backstage/integration-react';
 import { CatalogApi } from '@backstage/plugin-catalog-react';
-import { setupRequestMockHandlers } from '@backstage/test-utils';
+import { MockFetchApi, setupRequestMockHandlers } from '@backstage/test-utils';
 import { Octokit } from '@octokit/rest';
 import { rest } from 'msw';
 import { setupServer } from 'msw/node';
 import { CatalogImportClient } from './CatalogImportClient';
+import {
+  AzurePrOptions,
+  AzurePrResult,
+  createAzurePullRequest,
+} from './AzureRepoApiClient';
 
 describe('CatalogImportClient', () => {
   const server = setupServer();
@@ -66,14 +78,7 @@ describe('CatalogImportClient', () => {
   const scmAuthApi: jest.Mocked<ScmAuthApi> = {
     getCredentials: jest.fn().mockResolvedValue({ token: 'token' }),
   };
-  const identityApi = {
-    signOut: () => {
-      return Promise.resolve();
-    },
-    getProfileInfo: jest.fn(),
-    getBackstageIdentity: jest.fn(),
-    getCredentials: jest.fn().mockResolvedValue({ token: 'token' }),
-  };
+  const fetchApi = new MockFetchApi();
 
   const scmIntegrationsApi = ScmIntegrations.fromConfig(
     new ConfigReader({
@@ -110,7 +115,7 @@ describe('CatalogImportClient', () => {
       discoveryApi,
       scmAuthApi,
       scmIntegrationsApi,
-      identityApi,
+      fetchApi,
       catalogApi: catalogApi as Partial<CatalogApi> as CatalogApi,
       configApi: new ConfigReader({
         app: {
@@ -269,7 +274,7 @@ describe('CatalogImportClient', () => {
       });
     });
 
-    it('should reject for integrations that are not github ones', async () => {
+    it('should reject for integrations that are not github or azure', async () => {
       await expect(
         catalogImportClient.analyzeUrl(
           'https://registered-but-not-github.com/backstage/backstage',
@@ -288,7 +293,7 @@ describe('CatalogImportClient', () => {
         ),
       ).rejects.toThrow(
         new Error(
-          'This URL was not recognized as a valid GitHub URL because there was no configured integration that matched the given host name. You could try to paste the full URL to a catalog-info.yaml file instead.',
+          'This URL was not recognized as a valid git URL because there was no configured integration that matched the given host name. Currently GitHub and Azure DevOps are supported. You could try to paste the full URL to a catalog-info.yaml file instead.',
         ),
       );
     });
@@ -456,7 +461,7 @@ describe('CatalogImportClient', () => {
         discoveryApi,
         scmAuthApi,
         scmIntegrationsApi,
-        identityApi,
+        fetchApi,
         catalogApi: catalogApi as Partial<CatalogApi> as CatalogApi,
         configApi: new ConfigReader({
           catalog: {
@@ -556,10 +561,29 @@ describe('CatalogImportClient', () => {
 
   describe('submitPullRequest', () => {
     it('should create GitHub pull request', async () => {
+      catalogApi.validateEntity.mockResolvedValueOnce({
+        valid: true,
+      });
       await expect(
         catalogImportClient.submitPullRequest({
           repositoryUrl: 'https://github.com/backstage/backstage',
-          fileContent: 'some content 🤖',
+          fileContent: `
+            {
+                "apiVersion": "backstage.io/v1alpha1",
+                "kind": "Component",
+                "metadata": {
+                  "name": "valid-name",
+                  "annotations": {
+                      "github.com/project-slug": "backstage/example-repo"
+                }
+              },
+              "spec": {
+                  "type": "other",
+                  "lifecycle": "unknown",
+                  "owner": "backstage"
+              }
+            }
+          `,
           title: 'A title/message',
           body: 'A body',
         }),
@@ -568,7 +592,7 @@ describe('CatalogImportClient', () => {
         location:
           'https://github.com/backstage/backstage/blob/main/catalog-info.yaml',
       });
-
+      expect(catalogApi.validateEntity).toHaveBeenCalledTimes(1);
       expect(
         (new Octokit().git.createRef as any as jest.Mock).mock.calls[0][0],
       ).toEqual({
@@ -585,7 +609,8 @@ describe('CatalogImportClient', () => {
         repo: 'backstage',
         path: 'catalog-info.yaml',
         message: 'A title/message',
-        content: 'c29tZSBjb250ZW50IPCfpJY=',
+        content:
+          'CiAgICAgICAgICAgIHsKICAgICAgICAgICAgICAgICJhcGlWZXJzaW9uIjogImJhY2tzdGFnZS5pby92MWFscGhhMSIsCiAgICAgICAgICAgICAgICAia2luZCI6ICJDb21wb25lbnQiLAogICAgICAgICAgICAgICAgIm1ldGFkYXRhIjogewogICAgICAgICAgICAgICAgICAibmFtZSI6ICJ2YWxpZC1uYW1lIiwKICAgICAgICAgICAgICAgICAgImFubm90YXRpb25zIjogewogICAgICAgICAgICAgICAgICAgICAgImdpdGh1Yi5jb20vcHJvamVjdC1zbHVnIjogImJhY2tzdGFnZS9leGFtcGxlLXJlcG8iCiAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgICAgfSwKICAgICAgICAgICAgICAic3BlYyI6IHsKICAgICAgICAgICAgICAgICAgInR5cGUiOiAib3RoZXIiLAogICAgICAgICAgICAgICAgICAibGlmZWN5Y2xlIjogInVua25vd24iLAogICAgICAgICAgICAgICAgICAib3duZXIiOiAiYmFja3N0YWdlIgogICAgICAgICAgICAgIH0KICAgICAgICAgICAgfQogICAgICAgICAg',
         branch: 'backstage-integration',
       });
       expect(
@@ -599,8 +624,94 @@ describe('CatalogImportClient', () => {
         base: 'main',
       });
     });
+    it('should create AzureDevops pull request', async () => {
+      catalogApi.validateEntity.mockResolvedValueOnce({
+        valid: true,
+      });
+      const azureMock = createAzurePullRequest as jest.Mock;
+      azureMock.mockResolvedValueOnce({
+        repository: {
+          name: 'backstage',
+          webUrl: 'https://dev.azure.com/spotify/backstage/_git/backstage',
+        },
+        pullRequestId: '01',
+      } satisfies AzurePrResult);
+      const expectedPrOptions: AzurePrOptions = {
+        title: 'A title/message',
+        description: 'A body',
+        repository: 'backstage',
+        fileName: 'catalog-info.yaml',
+        project: 'backstage',
+        tenantUrl: 'https://dev.azure.com/spotify',
+        branchName: 'backstage-integration',
+        token: 'token',
+        fileContent: `
+            {
+                "apiVersion": "backstage.io/v1alpha1",
+                "kind": "Component",
+                "metadata": {
+                  "name": "valid-name",
+                  "annotations": {
+                      "github.com/project-slug": "backstage/example-repo"
+                }
+              },
+              "spec": {
+                  "type": "other",
+                  "lifecycle": "unknown",
+                  "owner": "backstage"
+              }
+            }
+          `,
+      };
+      await expect(
+        catalogImportClient.submitPullRequest({
+          repositoryUrl:
+            'https://dev.azure.com/spotify/backstage/_git/backstage',
+          fileContent: expectedPrOptions.fileContent,
+          title: expectedPrOptions.title,
+          body: expectedPrOptions.description,
+        }),
+      ).resolves.toEqual({
+        link: 'https://dev.azure.com/spotify/backstage/_git/backstage/pullrequest/01',
+        location:
+          'https://dev.azure.com/spotify/backstage/_git/backstage?path=/catalog-info.yaml',
+      });
 
+      expect(azureMock).toHaveBeenCalledWith(expectedPrOptions);
+    });
+    it('Submit Pull Request with invalid component name', async () => {
+      const ErrorMessage =
+        'Policy check failed for component:default/invalid name; caused by Error: "metadata.name" is not valid; expected a string that is sequences of [a-zA-Z0-9] separated by any of [-_.], at most 63 characters in total but found "invalid name". To learn more about catalog file format, visit: https://github.com/backstage/backstage/blob/master/docs/architecture-decisions/adr002-default-catalog-file-format.md';
+      catalogApi.validateEntity.mockRejectedValueOnce(new Error(ErrorMessage));
+      await expect(
+        catalogImportClient.submitPullRequest({
+          repositoryUrl: 'https://github.com/acme-corp/our-awesome-api',
+          fileContent: `
+            {
+                "apiVersion": "backstage.io/v1alpha1",
+                "kind": "Component",
+                "metadata": {
+                  "name": "invalid name",
+                  "annotations": {
+                      "github.com/project-slug": "backstage/example-repo"
+                }
+              },
+              "spec": {
+                  "type": "other",
+                  "lifecycle": "unknown",
+                  "owner": "backstage"
+              }
+            }
+          `,
+          title: 'A title/message',
+          body: 'A body',
+        }),
+      ).rejects.toThrow(ErrorMessage);
+    });
     it('should create GitHub pull request with custom filename and branch name', async () => {
+      catalogApi.validateEntity.mockResolvedValueOnce({
+        valid: true,
+      });
       const entityFilename = 'anvil.yaml';
       const pullRequestBranchName = 'anvil-integration';
 
@@ -608,7 +719,7 @@ describe('CatalogImportClient', () => {
         discoveryApi,
         scmAuthApi,
         scmIntegrationsApi,
-        identityApi,
+        fetchApi,
         catalogApi: catalogApi as Partial<CatalogApi> as CatalogApi,
         configApi: new ConfigReader({
           catalog: {
@@ -623,7 +734,23 @@ describe('CatalogImportClient', () => {
       await expect(
         catalogImportClient.submitPullRequest({
           repositoryUrl: 'https://github.com/acme-corp/our-awesome-api',
-          fileContent: '',
+          fileContent: `
+            {
+                "apiVersion": "backstage.io/v1alpha1",
+                "kind": "Component",
+                "metadata": {
+                  "name": "valid-name",
+                  "annotations": {
+                      "github.com/project-slug": "backstage/example-repo"
+                }
+              },
+              "spec": {
+                  "type": "other",
+                  "lifecycle": "unknown",
+                  "owner": "backstage"
+              }
+            }
+          `,
           title: `Add ${entityFilename} config file`,
           body: `Add ${entityFilename} config file`,
         }),
@@ -678,7 +805,7 @@ describe('CatalogImportClient', () => {
         discoveryApi,
         scmAuthApi,
         scmIntegrationsApi,
-        identityApi,
+        fetchApi,
         catalogApi: catalogApi as Partial<CatalogApi> as CatalogApi,
         configApi: new ConfigReader({
           catalog: {

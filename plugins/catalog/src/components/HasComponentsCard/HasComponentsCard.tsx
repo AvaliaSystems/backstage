@@ -23,22 +23,26 @@ import {
   componentEntityHelpLink,
   RelatedEntitiesCard,
 } from '../RelatedEntitiesCard';
+import { catalogTranslationRef } from '../../translation';
+import { useTranslationRef } from '@backstage/core-plugin-api/alpha';
 
 /** @public */
 export interface HasComponentsCardProps {
   variant?: InfoCardVariants;
+  title?: string;
 }
 
 export function HasComponentsCard(props: HasComponentsCardProps) {
-  const { variant = 'gridItem' } = props;
+  const { t } = useTranslationRef(catalogTranslationRef);
+  const { variant = 'gridItem', title = t('hasComponentsCard.title') } = props;
   return (
     <RelatedEntitiesCard
       variant={variant}
-      title="Has components"
+      title={title}
       entityKind="Component"
       relationType={RELATION_HAS_PART}
       columns={componentEntityColumns}
-      emptyMessage="No component is part of this system"
+      emptyMessage={t('hasComponentsCard.emptyMessage')}
       emptyHelpLink={componentEntityHelpLink}
       asRenderableEntities={asComponentEntities}
     />

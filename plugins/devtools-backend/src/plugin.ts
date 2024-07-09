@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import { loggerToWinstonLogger } from '@backstage/backend-common';
 import {
   coreServices,
   createBackendPlugin,
@@ -31,19 +30,34 @@ export const devtoolsPlugin = createBackendPlugin({
   register(env) {
     env.registerInit({
       deps: {
-        config: coreServices.config,
+        config: coreServices.rootConfig,
         logger: coreServices.logger,
         permissions: coreServices.permissions,
         httpRouter: coreServices.httpRouter,
+        discovery: coreServices.discovery,
+        httpAuth: coreServices.httpAuth,
       },
-      async init({ config, logger, permissions, httpRouter }) {
+      async init({
+        config,
+        logger,
+        permissions,
+        httpRouter,
+        discovery,
+        httpAuth,
+      }) {
         httpRouter.use(
           await createRouter({
             config,
-            logger: loggerToWinstonLogger(logger),
+            logger,
             permissions,
+            discovery,
+            httpAuth,
           }),
         );
+        httpRouter.addAuthPolicy({
+          path: '/health',
+          allow: 'unauthenticated',
+        });
       },
     });
   },
